@@ -3,11 +3,18 @@ title: Edge example
 description: A Cloudflare Worker in ParaScript with per-request signal scope, a derived Cache-Control header, and a Durable Object rate limiter using a `when` block for once-per-window alerting.
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 A Cloudflare Worker with per-request signal scope. Includes a derived `Cache-Control` header, and a Durable Object rate limiter that uses a `when` block to log the first time a window crosses the threshold.
 
 The same code shape works on Vercel Edge Functions, Deno Deploy, and AWS Lambda@Edge — anywhere V8 runs without Node APIs.
 
+You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript superset). Both compile to identical output. The tabs below sync — pick one and the rest of the page follows.
+
 ## Project layout
+
+<Tabs syncKey="lang">
+<TabItem label=".pts">
 
 ```
 my-worker/
@@ -17,7 +24,23 @@ my-worker/
 └── tsconfig.json
 ```
 
-## src/index.pts
+</TabItem>
+<TabItem label=".pjs">
+
+```
+my-worker/
+├── src/index.pjs
+├── wrangler.jsonc
+└── package.json
+```
+
+</TabItem>
+</Tabs>
+
+## Source
+
+<Tabs syncKey="lang">
+<TabItem label=".pts">
 
 ```pts
 export interface Env {
@@ -95,6 +118,82 @@ export class RateLimiter {
 }
 ```
 
+</TabItem>
+<TabItem label=".pjs">
+
+```pjs
+export default {
+  async fetch(req, env) {
+    const url = new URL(req.url);
+    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+
+    signal status = 200;
+    signal bodyKind = "json";
+    signal cacheControl =
+      bodyKind === "asset" ? "public, max-age=31536000, immutable" :
+      bodyKind === "error" ? "public, max-age=10" :
+                             "no-store";
+
+    const id = env.RATE_LIMIT.idFromName(ip);
+    const stub = env.RATE_LIMIT.get(id);
+    const limitRes = await stub.fetch("https://internal/check");
+    const { allowed, remaining } = await limitRes.json();
+
+    if (!allowed) {
+      status = 429;
+      bodyKind = "error";
+      return new Response("rate limited", {
+        status,
+        headers: { "Cache-Control": cacheControl, "Retry-After": "60" },
+      });
+    }
+
+    bodyKind = url.pathname.startsWith("/api/") ? "json" : "asset";
+
+    return new Response(
+      JSON.stringify({ ok: true, path: url.pathname, remaining }),
+      {
+        status,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": cacheControl,
+          "X-RateLimit-Remaining": String(remaining),
+        },
+      },
+    );
+  },
+};
+
+export class RateLimiter {
+  signal count = 0;
+  signal windowStart = Date.now();
+  signal overLimit = count > 100;
+
+  constructor(state) {
+    this.state = state;
+    when overLimit {
+      console.log(`rate limit crossed: ${count} requests in window`);
+    }
+  }
+
+  async fetch(req) {
+    if (Date.now() - windowStart > 60_000) {
+      count = 0;
+      windowStart = Date.now();
+    }
+    count++;
+
+    return Response.json({
+      allowed: !overLimit,
+      remaining: Math.max(0, 100 - count),
+    });
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
 ### Notes on the source
 
 - Signals declared inside `fetch` are scoped to one request. They go out of scope when the response is returned.
@@ -102,6 +201,9 @@ export class RateLimiter {
 - The `RateLimiter` Durable Object holds long-lived per-IP signals. The `when overLimit { ... }` block fires once per false→true transition of the predicate, which corresponds to the first request of a window that crosses the threshold. Subsequent over-limit requests do not re-fire the body until `count` drops back below 100 and rises again.
 
 ## wrangler.jsonc
+
+<Tabs syncKey="lang">
+<TabItem label=".pts">
 
 ```jsonc
 {
@@ -115,7 +217,28 @@ export class RateLimiter {
 }
 ```
 
+</TabItem>
+<TabItem label=".pjs">
+
+```jsonc
+{
+  "name": "my-worker",
+  "main": "dist/index.js",
+  "compatibility_date": "2026-04-30",
+  "durable_objects": {
+    "bindings": [{ "name": "RATE_LIMIT", "class_name": "RateLimiter" }],
+  },
+  "migrations": [{ "tag": "v1", "new_classes": ["RateLimiter"] }],
+}
+```
+
+</TabItem>
+</Tabs>
+
 ## package.json
+
+<Tabs syncKey="lang">
+<TabItem label=".pts">
 
 ```json
 {
@@ -129,6 +252,25 @@ export class RateLimiter {
   "devDependencies": { "@cloudflare/workers-types": "*", "wrangler": "^4" }
 }
 ```
+
+</TabItem>
+<TabItem label=".pjs">
+
+```json
+{
+  "name": "my-worker",
+  "type": "module",
+  "scripts": {
+    "build": "parabun build src/index.pjs --target browser --outfile dist/index.js",
+    "deploy": "parabun run build && wrangler deploy"
+  },
+  "dependencies": { "parabun-browser-shims": "*" },
+  "devDependencies": { "wrangler": "^4" }
+}
+```
+
+</TabItem>
+</Tabs>
 
 `--target browser` is correct for Workers — the V8 isolate runtime has web-platform globals but no Node APIs.
 
