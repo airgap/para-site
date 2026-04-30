@@ -1,0 +1,14 @@
+{
+  "name": "para-site",
+  "private": true,
+  "scripts": {
+    "dev": "bun --bun astro dev",
+    "build": "bun --bun astro build",
+    "preview": "bun --bun astro preview",
+    "highlight-landing": "bun run scripts/highlight-landing.ts"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.4",
+    "astro": "^6.1.10"
+  }
+}

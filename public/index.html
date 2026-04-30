@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ParaScript</title>
+    <meta
+      name="description"
+      content="A portable TypeScript dialect with reactive signals, edge-triggered handlers, integer ranges, pipelines, and compile-time purity. Compile with bun build, run anywhere V8/JSC runs."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("parabun-ligatures");
+        if (pref !== "off") document.documentElement.classList.add("ligatures");
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <span class="brand"><span class="marker">/</span> parascript</span>
+        <nav class="nav">
+          <a href="#what">what</a>
+          <a href="#anywhere">anywhere</a>
+          <a href="#vs">vs. ts</a>
+          <a href="/docs/">docs</a>
+          <a href="https://parabun.script.dev">parabun</a>
+          <a href="https://github.com/airgap/parabun" target="_blank" rel="noopener">github</a>
+        </nav>
+      </header>
+
+      <h1>ParaScript</h1>
+      <p class="lede">
+        A TypeScript dialect that adds the things JavaScript still doesn't have built in: reactive signals,
+        edge-triggered handlers, integer ranges, a pipeline operator, error-chain operators, and compile-time purity.
+      </p>
+      <p class="lede">
+        Files end in <code>.pts</code>. Every extension desugars to standard JavaScript at parse time. Compile with
+        <code>bun build</code>, alias <code>para:*</code> in your bundler to
+        <a href="https://www.npmjs.com/package/parabun-browser-shims">parabun-browser-shims</a>, and the result runs in
+        a browser, on a Lambda, on Cloudflare Workers, on Deno, or on Node.
+      </p>
+
+      <section id="what">
+        <h2>What you write</h2>
+        <pre><code>signal count = 0;
+signal doubled = count * 2;          // derived — re-runs when count changes
+
+effect { console.log(doubled); }     // logs every change
+
+when count >= 10 {                   // edge-triggered: fires once per 0&rarr;1
+  alert("ten!");
+}
+
+count++;                             // bare-read sugar: count.set(count.get() + 1)</code></pre>
+      </section>
+
+      <section>
+        <h2>What it compiles to</h2>
+        <pre><code>const __s = require("para:signals");
+const count = __s.signal(0);
+const doubled = __s.derived(() =&gt; count.get() * 2);
+__s.effect(() =&gt; { console.log(doubled.get()); });
+__s.onRising(() =&gt; count.get() &gt;= 10, () =&gt; { alert("ten!"); });
+count.set(count.get() + 1);</code></pre>
+        <p>
+          No virtual DOM, no compiler runtime, no magic. The <code>para:*</code> modules are small, normal JS — see
+          <a href="/docs/signals/">para:signals</a> for the entire reactive engine.
+        </p>
+      </section>
+
+      <section id="anywhere">
+        <h2>Run it anywhere</h2>
+        <p>Five-line bundler alias is the whole story:</p>
+        <pre><code>// vite.config.ts
+export default defineConfig({
+  resolve: {
+    alias: [{ find: /^para:(.*)$/, replacement: "parabun-browser-shims/$1" }],
+  },
+});</code></pre>
+        <p>
+          Then <code>bun build src/main.pts</code> and bundle as normal. The output is plain JavaScript that ships to a
+          browser, an edge function, a Lambda, or any Node runtime. See the
+          <a href="/docs/install/">install guide</a> for the esbuild / webpack / rollup variants.
+        </p>
+      </section>
+
+      <section id="vs">
+        <h2>Why not just TypeScript</h2>
+        <p>
+          Because plain TS makes you write the boilerplate by hand every time. <code>signal x = 0</code> is one line;
+          the equivalent reactive-store wiring across React, Solid, Svelte, MobX, Zustand, Jotai, etc. is whatever
+          ceremony the framework demands, and the syntax never collapses. ParaScript treats the things you write a
+          hundred times a week — reactive bindings, edge-triggered handlers, ranges, pipelines, error chains — as
+          first-class syntax instead of library APIs.
+        </p>
+        <p>
+          Every extension is opt-in and parse-time. Plain <code>.ts</code> files behave exactly as TypeScript expects;
+          ParaScript only kicks in when you switch the extension to <code>.pts</code>.
+        </p>
+      </section>
+
+      <section>
+        <h2>Sister project &mdash; Parabun</h2>
+        <p>
+          <a href="https://parabun.script.dev">Parabun</a> is a fork of Bun that bundles ParaScript natively (no build
+          step, no bundler alias) plus a stack of native runtime modules &mdash; raw CUDA / Metal kernels, V4L2 camera
+          capture, ALSA audio, on-device LLM inference, GPIO / I&sup2;C / SPI for Linux SBCs. If you control the server
+          (or you're on a Pi / Jetson / NUC) and you want hardware acceleration in TypeScript, that's the runtime.
+        </p>
+        <p>
+          ParaScript is the language. Parabun is the runtime that ships it with batteries. Use either, both, or just
+          ParaScript and a normal Node host.
+        </p>
+      </section>
+
+      <footer>
+        <p>
+          <a href="/docs/">docs</a> &middot; <a href="https://github.com/airgap/parabun">github</a> &middot;
+          <a href="https://parabun.script.dev">parabun.script.dev</a>
+        </p>
+      </footer>
+    </main>
+    <script src="fx.js"></script>
+  </body>
+</html>
