@@ -38,8 +38,8 @@ export default {
 
     const id = env.RATE_LIMIT.idFromName(ip);
     const stub = env.RATE_LIMIT.get(id);
-    const limitRes ..= stub.fetch("https://internal/check");
-    const { allowed, remaining } ..= limitRes.json<{ allowed: boolean; remaining: number }>();
+    const limitRes = await stub.fetch("https://internal/check");
+    const { allowed, remaining } = await limitRes.json<{ allowed: boolean; remaining: number }>();
 
     if (!allowed) {
       status = 429;
@@ -99,7 +99,6 @@ export class RateLimiter {
 
 - Signals declared inside `fetch` are scoped to one request. They go out of scope when the response is returned.
 - `signal cacheControl = ...` is a derived signal; the RHS reads `bodyKind`. The header value reflects whatever `bodyKind` last was at the point it's read.
-- `..=` is await-assign in declaration position. `const limitRes ..= stub.fetch(...)` desugars to `const limitRes = await stub.fetch(...)`.
 - The `RateLimiter` Durable Object holds long-lived per-IP signals. The `when overLimit { ... }` block fires once per false→true transition of the predicate, which corresponds to the first request of a window that crosses the threshold. Subsequent over-limit requests do not re-fire the body until `count` drops back below 100 and rises again.
 
 ## wrangler.jsonc
