@@ -5,7 +5,7 @@ description: A todo list using ParaScript signals against the vanilla DOM, built
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-A todo list using ParaScript against the vanilla DOM, built with Vite. Demonstrates `signal`, derived signals, `effect { }`, `when { }`, and the bare-read sugar.
+A todo list using ParaScript against the vanilla DOM, built with Vite. Demonstrates `signal`, derived signals, `effect { }`, the `~>` reactive-binding operator, and the bare-read sugar.
 
 You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript superset). Both compile to identical output. The tabs below sync — pick one and the rest of the page follows.
 
@@ -108,10 +108,9 @@ effect {
   count.hidden = openCount === 0 && items.length === 0;
 }
 
-// Paired form: show toast on the rising edge of "all done", hide on
-// the falling edge. No setTimeout — toast tracks the actual state.
-when items.length > 0 && openCount === 0 { toast.hidden = false; }
-when not                                 { toast.hidden = true;  }
+// Toast visibility tracks "all done" state — bind reactively.
+// `A ~> B` desugars to effect(() => { B = A; }), so this stays in sync.
+!items.length || openCount > 0 ~> toast.hidden;
 
 list.addEventListener("click", e => {
   if (!(e.target instanceof HTMLInputElement)) return;
@@ -169,10 +168,9 @@ effect {
   count.hidden = openCount === 0 && items.length === 0;
 }
 
-// Paired form: show toast on the rising edge of "all done", hide on
-// the falling edge. No setTimeout — toast tracks the actual state.
-when items.length > 0 && openCount === 0 { toast.hidden = false; }
-when not                                 { toast.hidden = true;  }
+// Toast visibility tracks "all done" state — bind reactively.
+// `A ~> B` desugars to effect(() => { B = A; }), so this stays in sync.
+!items.length || openCount > 0 ~> toast.hidden;
 
 list.addEventListener("click", e => {
   if (e.target.tagName !== "INPUT") return;
@@ -191,7 +189,7 @@ list.addEventListener("click", e => {
 - `signal items = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
 - `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
 - Each `effect { }` block tracks the signals it reads and re-runs when any of them changes. The two effects in this file are independent: changing `filter` re-runs the list effect but not the count effect.
-- `when items.length > 0 && openCount === 0 { ... } when not { ... }` is the paired form: the second arm is a bare `when not { … }` that reuses the first arm's predicate inverted. The toast appears on the rising edge of "all done" and disappears on the falling edge — no `setTimeout`, the visibility tracks the actual state.
+- `!items.length || openCount > 0 ~> toast.hidden` is the reactive-binding operator: `A ~> B` desugars to `effect(() => { B = A; })`, so `toast.hidden` stays in sync with `!allDone` continuously. This is the right primitive for *value bindings* — when you want a DOM property to track an expression. For *side effects* that should fire only on transitions (playing a sound, sending analytics), `when EXPR { … }` and the paired `when not { … }` form are the edge-triggered alternative.
 - The `$` shorthand binds `document.querySelector` once. In `.pts` it's a small generic helper so each call site can pass its element type (`$<HTMLInputElement>("#new")`) and the result stays cast-free; in `.pjs` it's just `document.querySelector.bind(document)` since there are no types to thread.
 - The `.pts` version queries each element ref once at the top with its concrete type so handlers stay cast-free; the one remaining `as` is `filterEl.value as typeof filter` (TS can't narrow `<select>.value` to a literal union without a runtime check). The `.pjs` version skips all of that.
 
