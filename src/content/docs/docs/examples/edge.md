@@ -123,8 +123,8 @@ export class RateLimiter {
   "name": "my-worker",
   "type": "module",
   "scripts": {
-    "build": "bun build src/index.pts --target browser --outfile dist/index.js",
-    "deploy": "bun run build && wrangler deploy"
+    "build": "parabun build src/index.pts --target browser --outfile dist/index.js",
+    "deploy": "parabun run build && wrangler deploy"
   },
   "dependencies": { "parabun-browser-shims": "*" },
   "devDependencies": { "@cloudflare/workers-types": "*", "wrangler": "^4" }
@@ -136,6 +136,6 @@ export class RateLimiter {
 ## Build and deploy
 
 ```bash
-bun install
-bun run deploy
+parabun install
+parabun run deploy
 ```

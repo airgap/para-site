@@ -1,21 +1,23 @@
 ---
 title: Install
-description: Build .pts files with bun build, alias para:* in your bundler, ship to any JavaScript runtime.
+description: Build .pts files with parabun build, alias para:* in your bundler, ship to any JavaScript runtime.
 ---
 
-ParaScript is a parse-time syntax extension over TypeScript. To use it outside of [Parabun](https://parabun.script.dev), you need three things:
+ParaScript is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [Parabun](https://parabun.script.dev) fork of Bun — mainline Bun does not recognize the syntax. To use ParaScript on a host that isn't Parabun itself, you need three things:
 
-1. **A transpiler** that recognizes `.pts` files. Today this is `bun build` — Bun's parser is what implements the syntax.
+1. **The Parabun transpiler** to compile `.pts` → `.js`. The output is plain JavaScript and runs anywhere; Parabun is only needed at build time.
 2. **A bundler alias** that maps `para:*` import specifiers to the runtime shim package. One line of bundler config.
 3. **The runtime package**, [`parabun-browser-shims`](https://www.npmjs.com/package/parabun-browser-shims).
 
-A standalone `@parascript/transpile` npm package (no Bun required) is on the roadmap. Until it ships, the build host needs Bun installed; runtime hosts (browser, Lambda, Workers, Node, Deno) do not.
+A standalone `@parascript/transpile` npm package (no Parabun required) is on the roadmap. Until it ships, the build host needs Parabun installed; runtime hosts (browser, Lambda, Workers, Node, Bun, Deno) do not.
 
-## 1. Install Bun on the build host
+## 1. Install Parabun on the build host
 
 ```bash
-curl -fsSL https://bun.sh/install | bash
+curl -fsSL https://raw.githubusercontent.com/airgap/parabun/main/install.sh | bash
 ```
+
+This installs the `parabun` binary (with `pb` as a short alias) into `~/.parabun/bin/`.
 
 ## 2. Install the runtime package
 
@@ -82,7 +84,7 @@ module.exports = {
 ## 4. Build
 
 ```bash
-bun build src/main.pts --outdir dist/
+parabun build src/main.pts --outdir dist/
 ```
 
 The output is standard JavaScript. Bundle it with your normal toolchain (`vite build`, `webpack`, etc.); the alias takes care of the `para:*` imports.

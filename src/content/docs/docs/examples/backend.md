@@ -93,7 +93,7 @@ server.listen(8080, () => console.log("listening on :8080"));
   "name": "my-server",
   "type": "module",
   "scripts": {
-    "build": "bun build src/server.pts --target node --outfile dist/server.js",
+    "build": "parabun build src/server.pts --target node --outfile dist/server.js",
     "start": "node dist/server.js"
   },
   "dependencies": {
@@ -104,13 +104,13 @@ server.listen(8080, () => console.log("listening on :8080"));
 }
 ```
 
-The `bun build --target node` invocation handles `para:*` resolution by way of an esbuild-style plugin if you have one configured, or you can replace the imports in source with the explicit `parabun-browser-shims/<module>` path. Both work.
+The `parabun build --target node` invocation handles `para:*` resolution by way of an esbuild-style plugin if you have one configured, or you can replace the imports in source with the explicit `parabun-browser-shims/<module>` path. Both work.
 
 ## Build and run
 
 ```bash
-bun install
-bun run build
+parabun install
+parabun run build
 node dist/server.js
 ```
 

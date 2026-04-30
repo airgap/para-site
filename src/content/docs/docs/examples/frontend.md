@@ -119,8 +119,8 @@ export default defineConfig({
   "name": "my-todo",
   "type": "module",
   "scripts": {
-    "build": "bun build src/main.pts --outfile dist/main.js && vite build",
-    "dev": "bun build src/main.pts --watch --outfile dist/main.js & vite"
+    "build": "parabun build src/main.pts --outfile dist/main.js && vite build",
+    "dev": "parabun build src/main.pts --watch --outfile dist/main.js & vite"
   },
   "dependencies": { "parabun-browser-shims": "*" },
   "devDependencies": { "vite": "^5", "bun-types": "*" }
@@ -130,8 +130,8 @@ export default defineConfig({
 ## Build and deploy
 
 ```bash
-bun install
-bun run build
+parabun install
+parabun run build
 ```
 
 Output is a static `dist/` directory. Deploy to any static host (Cloudflare Pages, Vercel, S3, GitHub Pages, etc.).

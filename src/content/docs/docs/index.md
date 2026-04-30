@@ -9,7 +9,7 @@ The desugared output imports a small npm package, `parabun-browser-shims`, which
 
 ## Sections
 
-- **[Install](/docs/install/)** — set up the build pipeline. The compile step uses `bun build` today; the runtime side is the `parabun-browser-shims` package, aliased to the `para:*` specifier in your bundler.
+- **[Install](/docs/install/)** — set up the build pipeline. The compile step uses `parabun build` today; the runtime side is the `parabun-browser-shims` package, aliased to the `para:*` specifier in your bundler.
 - **[Language reference](/docs/language/)** — every extension, with the desugaring it emits.
 - **Examples** — three worked projects: [frontend](/docs/examples/frontend/) (DOM, Vite), [backend](/docs/examples/backend/) (Node WebSocket server), [edge](/docs/examples/edge/) (Cloudflare Workers).
 - **Modules** — API reference for each `para:*` import the language compiles into: [`signals`](/docs/signals/), [`arena`](/docs/arena/), [`parallel`](/docs/parallel/), [`pipeline`](/docs/pipeline/), [`simd`](/docs/simd/), [`arrow`](/docs/arrow/), [`csv`](/docs/csv/).

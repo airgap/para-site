@@ -17,12 +17,12 @@ All three projects use the same setup:
 npm install parabun-browser-shims
 ```
 
-…plus a one-line bundler alias mapping `para:*` to `parabun-browser-shims/*` (see the [install guide](/docs/install/) for the per-bundler snippets), and `bun build` to transpile `.pts` files.
+…plus a one-line bundler alias mapping `para:*` to `parabun-browser-shims/*` (see the [install guide](/docs/install/) for the per-bundler snippets), and `parabun build` to transpile `.pts` files.
 
 ## Build targets
 
-| Project | Bun build target | Bundler |
+| Project | `parabun build` target | Bundler |
 | --- | --- | --- |
 | Frontend | `--target browser` | Vite |
-| Backend | `--target node` | (Bun build alone) |
+| Backend | `--target node` | (`parabun build` alone) |
 | Edge | `--target browser` | Wrangler |

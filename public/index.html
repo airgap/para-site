@@ -57,7 +57,9 @@
         <code>.get()</code>. Bare writes compile to <code>.set()</code>. A signal whose initializer reads other signals
         is auto-promoted to a derived value.
       </p>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
 <span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> doubled </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;       </span><span style="color:#6A737D">// derived; recomputes when count changes</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F97583">effect</span><span style="color:#E1E4E8"> { console.</span><span style="color:#B392F0">log</span><span style="color:#E1E4E8">(doubled); }  </span><span style="color:#6A737D">// runs once now, again on each change</span></span>
@@ -70,7 +72,9 @@
         <code>when not</code> fires on the true&rarr;false transition. The predicate is tracked the same way an effect
         body is.
       </p>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F97583">when</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 100</span><span style="color:#E1E4E8"> { </span><span style="color:#B392F0">unlockAchievement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"century"</span><span style="color:#E1E4E8">); }</span></span>
 <span class="line"><span style="color:#F97583">when</span><span style="color:#F97583"> not</span><span style="color:#E1E4E8"> online   { </span><span style="color:#B392F0">showOfflineBanner</span><span style="color:#E1E4E8">(); }</span></span></code></pre>
@@ -81,7 +85,9 @@
         <code>A -&gt; fn</code> desugars to <code>effect(() =&gt; { fn(A); })</code>, a call binding. Both are shorthand
         for the common single-statement effect.
       </p>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> name </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "world"</span><span style="color:#E1E4E8">;</span></span>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> name </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "world"</span><span style="color:#E1E4E8">;</span></span>
 <span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">~></span><span style="color:#E1E4E8"> document.title;          </span><span style="color:#6A737D">// title tracks name</span></span>
 <span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> console.log;             </span><span style="color:#6A737D">// logs on every change</span></span></code></pre>
 
@@ -90,7 +96,9 @@
         <code>a..b</code> is an exclusive integer range; <code>a..=b</code> is inclusive. The pipeline operator
         <code>|&gt;</code> threads a value through a sequence of unary calls.
       </p>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">const</span><span style="color:#79B8FF"> i</span><span style="color:#F97583"> of</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.n) </span><span style="color:#B392F0">work</span><span style="color:#E1E4E8">(i);</span></span>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">const</span><span style="color:#79B8FF"> i</span><span style="color:#F97583"> of</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.n) </span><span style="color:#B392F0">work</span><span style="color:#E1E4E8">(i);</span></span>
 <span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> evens</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.</span><span style="color:#F97583">=</span><span style="color:#79B8FF">20</span><span style="color:#F97583"> |></span><span style="color:#B392F0"> filter</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">i</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> ===</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">);</span></span>
 <span class="line"></span>
 <span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> out</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> pixels </span><span style="color:#F97583">|></span><span style="color:#B392F0"> map</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">p</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 1.2</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">|></span><span style="color:#B392F0"> clamp</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">255</span><span style="color:#E1E4E8">);</span></span></code></pre>
@@ -101,18 +109,21 @@
         <code>await</code>-assign in declaration position; combined, they remove the boilerplate from a
         <code>try</code>/<code>catch</code> chain.
       </p>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> data</span><span style="color:#F97583"> ..=</span><span style="color:#E1E4E8"> fetch(url).then(r </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">())</span></span>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> data</span><span style="color:#F97583"> ..=</span><span style="color:#E1E4E8"> fetch(url).then(r </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">())</span></span>
 <span class="line"><span style="color:#F97583">  ..!</span><span style="color:#FFAB70"> err</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> defaults</span></span>
 <span class="line"><span style="color:#F97583">  ..&#x26;</span><span style="color:#E1E4E8"> ()  </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> spinner.</span><span style="color:#B392F0">hide</span><span style="color:#E1E4E8">();</span></span></code></pre>
 
       <h2 id="compile">Compilation</h2>
       <p>
-        ParaScript files (<code>.pts</code>) are parsed by Bun's transpiler, which understands the syntax. The output is
-        standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
+        ParaScript files (<code>.pts</code>) are parsed by <a href="https://parabun.script.dev">Parabun</a>'s
+        transpiler. (Mainline Bun doesn't recognize the syntax — the parser additions are part of the Parabun fork.) The
+        output is standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
       </p>
       <p>
-        To resolve those specifiers in a non-Bun runtime, alias them to <code>parabun-browser-shims</code> in your
-        bundler.
+        On Parabun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,
+        Cloudflare Workers, …) alias them to <code>parabun-browser-shims</code> in your bundler.
       </p>
       <pre data-lang="ts"><code><span class="line"><span style="color:#6A737D">// vite.config.ts</span></span>
 <span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { defineConfig } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> "vite"</span><span style="color:#E1E4E8">;</span></span>
@@ -125,11 +136,11 @@
       <p>The same one-line alias works for esbuild, webpack, and rollup. See the install guide for the variants.</p>
 
       <div class="install"><span class="prompt">$</span>npm install parabun-browser-shims</div>
-      <div class="install"><span class="prompt">$</span>bun build src/main.pts --outdir dist/</div>
+      <div class="install"><span class="prompt">$</span>parabun build src/main.pts --outdir dist/</div>
 
       <p class="caveat">
-        Bun is required for the build step today. A standalone npm-installable transpiler
-        (<code>@parascript/transpile</code>) is on the roadmap.
+        Parabun is required for the build step today (it owns the <code>.pts</code> parser). A standalone
+        npm-installable transpiler (<code>@parascript/transpile</code>) is on the roadmap.
       </p>
 
       <h2 id="examples">Examples</h2>
