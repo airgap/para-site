@@ -50,21 +50,28 @@ signal visible = filter === "all"
 signal openCount = items.filter(t => !t.done).length;
 
 let nextId = 1;
-const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!;
 
-$<HTMLButtonElement>("#add").addEventListener("click", () => {
-  const input = $<HTMLInputElement>("#new");
+// Query each element once with its concrete type. Handlers reference these
+// captured refs directly instead of casting `e.target` at every use.
+const input    = document.querySelector<HTMLInputElement>("#new")!;
+const addBtn   = document.querySelector<HTMLButtonElement>("#add")!;
+const filterEl = document.querySelector<HTMLSelectElement>("#filter")!;
+const list     = document.querySelector<HTMLUListElement>("#list")!;
+const count    = document.querySelector<HTMLParagraphElement>("#count")!;
+const toast    = document.querySelector<HTMLParagraphElement>("#toast")!;
+
+addBtn.addEventListener("click", () => {
   if (!input.value.trim()) return;
   items = [...items, { id: nextId++, text: input.value.trim(), done: false }];
   input.value = "";
 });
 
-$<HTMLSelectElement>("#filter").addEventListener("change", e => {
-  filter = (e.target as HTMLSelectElement).value as typeof filter;
+filterEl.addEventListener("change", () => {
+  filter = filterEl.value as typeof filter;
 });
 
 effect {
-  $<HTMLUListElement>("#list").innerHTML = visible
+  list.innerHTML = visible
     .map(t => `
       <li data-id="${t.id}">
         <input type="checkbox" ${t.done ? "checked" : ""} />
@@ -74,20 +81,19 @@ effect {
 }
 
 effect {
-  const el = $<HTMLParagraphElement>("#count");
-  el.textContent = `${openCount} open`;
-  el.hidden = openCount === 0 && items.length === 0;
+  count.textContent = `${openCount} open`;
+  count.hidden = openCount === 0 && items.length === 0;
 }
 
 when items.length > 0 && openCount === 0 {
-  const t = $<HTMLParagraphElement>("#toast");
-  t.hidden = false;
-  setTimeout(() => (t.hidden = true), 2000);
+  toast.hidden = false;
+  setTimeout(() => (toast.hidden = true), 2000);
 }
 
-$<HTMLUListElement>("#list").addEventListener("click", e => {
-  const li = (e.target as HTMLElement).closest<HTMLLIElement>("li[data-id]");
-  if (!li || (e.target as HTMLElement).tagName !== "INPUT") return;
+list.addEventListener("click", e => {
+  if (!(e.target instanceof HTMLInputElement)) return;
+  const li = e.target.closest<HTMLLIElement>("li[data-id]");
+  if (!li) return;
   const id = +li.dataset.id!;
   items = items.map(t => (t.id === id ? { ...t, done: !t.done } : t));
 });
@@ -95,10 +101,12 @@ $<HTMLUListElement>("#list").addEventListener("click", e => {
 
 ### Notes on the source
 
+- Element refs are queried once at the top with their concrete type, so handlers stay cast-free. The one remaining `as` is `filterEl.value as typeof filter` — `<select>.value` is `string`, and TypeScript can't narrow it to a literal union without a runtime check.
 - `signal items: Todo[] = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
 - `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
 - Each `effect { }` block tracks the signals it reads and re-runs when any of them changes. The two effects in this file are independent: changing `filter` re-runs the list effect but not the count effect.
 - `when items.length > 0 && openCount === 0 { ... }` fires once on each false→true transition of the predicate. Toggling the last unchecked item triggers the body once; toggling it back and re-completing it triggers it again.
+- The list-click handler uses `e.target instanceof HTMLInputElement` as both the "is this a checkbox?" guard and the type narrowing — afterward TS knows `e.target` is `HTMLInputElement` and `.closest()` works without a cast.
 
 ## vite.config.ts
 
