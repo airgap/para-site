@@ -75,12 +75,13 @@ signal openCount = items.filter(t => !t.done).length;
 
 let nextId = 1;
 
-const input    = document.querySelector<HTMLInputElement>("#new")!;
-const addBtn   = document.querySelector<HTMLButtonElement>("#add")!;
-const filterEl = document.querySelector<HTMLSelectElement>("#filter")!;
-const list     = document.querySelector<HTMLUListElement>("#list")!;
-const count    = document.querySelector<HTMLParagraphElement>("#count")!;
-const toast    = document.querySelector<HTMLParagraphElement>("#toast")!;
+const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!;
+const input    = $<HTMLInputElement>("#new");
+const addBtn   = $<HTMLButtonElement>("#add");
+const filterEl = $<HTMLSelectElement>("#filter");
+const list     = $<HTMLUListElement>("#list");
+const count    = $<HTMLParagraphElement>("#count");
+const toast    = $<HTMLParagraphElement>("#toast");
 
 addBtn.addEventListener("click", () => {
   if (!input.value.trim()) return;
@@ -107,10 +108,10 @@ effect {
   count.hidden = openCount === 0 && items.length === 0;
 }
 
-when items.length > 0 && openCount === 0 {
-  toast.hidden = false;
-  setTimeout(() => (toast.hidden = true), 2000);
-}
+// Paired form: show toast on the rising edge of "all done", hide on
+// the falling edge. No setTimeout — toast tracks the actual state.
+when items.length > 0 && openCount === 0 { toast.hidden = false; }
+when not                                 { toast.hidden = true;  }
 
 list.addEventListener("click", e => {
   if (!(e.target instanceof HTMLInputElement)) return;
@@ -135,12 +136,13 @@ signal openCount = items.filter(t => !t.done).length;
 
 let nextId = 1;
 
-const input    = document.querySelector("#new");
-const addBtn   = document.querySelector("#add");
-const filterEl = document.querySelector("#filter");
-const list     = document.querySelector("#list");
-const count    = document.querySelector("#count");
-const toast    = document.querySelector("#toast");
+const $ = document.querySelector.bind(document);
+const input    = $("#new");
+const addBtn   = $("#add");
+const filterEl = $("#filter");
+const list     = $("#list");
+const count    = $("#count");
+const toast    = $("#toast");
 
 addBtn.addEventListener("click", () => {
   if (!input.value.trim()) return;
@@ -167,10 +169,10 @@ effect {
   count.hidden = openCount === 0 && items.length === 0;
 }
 
-when items.length > 0 && openCount === 0 {
-  toast.hidden = false;
-  setTimeout(() => (toast.hidden = true), 2000);
-}
+// Paired form: show toast on the rising edge of "all done", hide on
+// the falling edge. No setTimeout — toast tracks the actual state.
+when items.length > 0 && openCount === 0 { toast.hidden = false; }
+when not                                 { toast.hidden = true;  }
 
 list.addEventListener("click", e => {
   if (e.target.tagName !== "INPUT") return;
@@ -189,7 +191,8 @@ list.addEventListener("click", e => {
 - `signal items = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
 - `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
 - Each `effect { }` block tracks the signals it reads and re-runs when any of them changes. The two effects in this file are independent: changing `filter` re-runs the list effect but not the count effect.
-- `when items.length > 0 && openCount === 0 { ... }` fires once on each false→true transition of the predicate. Toggling the last unchecked item triggers the body once; toggling it back and re-completing it triggers it again.
+- `when items.length > 0 && openCount === 0 { ... } when not { ... }` is the paired form: the second arm is a bare `when not { … }` that reuses the first arm's predicate inverted. The toast appears on the rising edge of "all done" and disappears on the falling edge — no `setTimeout`, the visibility tracks the actual state.
+- The `$` shorthand binds `document.querySelector` once. In `.pts` it's a small generic helper so each call site can pass its element type (`$<HTMLInputElement>("#new")`) and the result stays cast-free; in `.pjs` it's just `document.querySelector.bind(document)` since there are no types to thread.
 - The `.pts` version queries each element ref once at the top with its concrete type so handlers stay cast-free; the one remaining `as` is `filterEl.value as typeof filter` (TS can't narrow `<select>.value` to a literal union without a runtime check). The `.pjs` version skips all of that.
 
 ## vite.config
