@@ -2,9 +2,9 @@
   "name": "para-site",
   "private": true,
   "scripts": {
-    "dev": "bun --bun astro dev",
-    "build": "bun --bun astro build",
-    "preview": "bun --bun astro preview",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
     "highlight-landing": "bun run scripts/highlight-landing.ts"
   },
   "dependencies": {
