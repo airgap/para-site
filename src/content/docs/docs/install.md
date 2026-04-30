@@ -1,36 +1,31 @@
 ---
 title: Install
-description: Build .pts files with bun build, alias para:* in your bundler, ship to browser / Lambda / Workers / Node.
+description: Build .pts files with bun build, alias para:* in your bundler, ship to any JavaScript runtime.
 ---
 
-ParaScript is the syntax + the small runtime modules it desugars to. To use it, you need:
+ParaScript is a parse-time syntax extension over TypeScript. To use it outside of [Parabun](https://parabun.script.dev), you need three things:
 
-1. **A transpiler** that turns `.pts` files into JavaScript. Today that's `bun build` (Parabun's parser shipped as a build tool — works fine even on a server you don't control at runtime).
-2. **A bundler that resolves `para:*`** to the runtime shim package — five lines of config in Vite, esbuild, webpack, rollup, or whatever you use.
-3. **The shim package**: [`parabun-browser-shims`](https://www.npmjs.com/package/parabun-browser-shims) on npm. Pure JS, browser/Node/edge-safe.
+1. **A transpiler** that recognizes `.pts` files. Today this is `bun build` — Bun's parser is what implements the syntax.
+2. **A bundler alias** that maps `para:*` import specifiers to the runtime shim package. One line of bundler config.
+3. **The runtime package**, [`parabun-browser-shims`](https://www.npmjs.com/package/parabun-browser-shims).
 
-If you're shipping the server with [Parabun](https://parabun.script.dev) (the runtime fork of Bun), skip all of this — `.pts` runs natively and `para:*` resolves to built-in modules. The recipes below are for everywhere else.
+A standalone `@parascript/transpile` npm package (no Bun required) is on the roadmap. Until it ships, the build host needs Bun installed; runtime hosts (browser, Lambda, Workers, Node, Deno) do not.
 
-## Step 1 — install Bun (or Parabun) on your build machine
+## 1. Install Bun on the build host
 
 ```bash
-curl -fsSL https://bun.sh/install | bash       # plain Bun is enough to run `bun build`
-# or, for the all-batteries fork:
-curl -fsSL https://raw.githubusercontent.com/airgap/parabun/main/install.sh | bash
+curl -fsSL https://bun.sh/install | bash
 ```
 
-A standalone `@parascript/transpile` npm package (no Bun required) is on the roadmap. Until then, your CI machine needs Bun installed for the build step. Runtime hosts (browser, Lambda, Workers, Node) need nothing.
-
-## Step 2 — install the shim package
+## 2. Install the runtime package
 
 ```bash
 npm install parabun-browser-shims
-# or: bun add parabun-browser-shims
 ```
 
-This is a normal npm package — pure JS, no native deps, ~kb-scale. It exports the runtime side of every `para:*` module ParaScript desugars into (`signals`, `arena`, `parallel`, `pipeline`, `simd`, `arrow`, `csv`).
+`parabun-browser-shims` is pure JavaScript with no native dependencies. It exports the runtime side of every `para:*` module the language uses: `signals`, `arena`, `parallel`, `pipeline`, `simd`, `arrow`, `csv`.
 
-## Step 3 — alias `para:*` in your bundler
+## 3. Configure your bundler
 
 ### Vite
 
@@ -84,40 +79,24 @@ module.exports = {
 };
 ```
 
-## Step 4 — write `.pts`, build, ship
-
-```pts
-// src/main.pts
-signal count = 0;
-effect { document.getElementById("c").textContent = count; }
-document.getElementById("inc").addEventListener("click", () => count++);
-```
+## 4. Build
 
 ```bash
-# Transpile .pts → .js (or skip and let your Vite/esbuild plugin call bun build)
 bun build src/main.pts --outdir dist/
-
-# Then bundle as normal — your bundler's alias handles `para:*` resolution
-vite build
 ```
 
-The output is plain JavaScript that ships anywhere. No ParaScript runtime, no compiler-level magic — every extension you write becomes a normal JS call into a normal npm package.
+The output is standard JavaScript. Bundle it with your normal toolchain (`vite build`, `webpack`, etc.); the alias takes care of the `para:*` imports.
 
 ## Editor extension
 
-The VS Code-family extension (works for `code`, `cursor`, and `kiro`) provides:
-
-- TextMate grammar for `.pts` / `.ptsx` / `.pjs` / `.pjsx` files.
-- An LSP with hover, go-to-definition, semantic highlighting, purity diagnostics, memo arity hints, and operator documentation.
-
-Install:
+A VS Code-family extension provides the `.pts` / `.ptsx` / `.pjs` / `.pjsx` TextMate grammar and an LSP with hover, go-to-definition, semantic highlighting, purity diagnostics, and operator documentation.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/airgap/parabun/main/install-extension.sh | bash
 ```
 
-The script picks up whichever IDE binaries are on `$PATH` and installs the extension into all of them. Works whether or not you've installed Parabun the runtime.
+The script installs into any of `code`, `cursor`, or `kiro` it finds on `$PATH`.
 
 ## Platform notes
 
-The build step (Bun + bundler) runs on Linux, macOS, and Windows. The output is plain JS — runs anywhere a JS engine runs. The shim package targets ES2022 and uses no APIs that require a specific host.
+The build step (Bun + bundler) runs on Linux, macOS, and Windows. The output is standard JavaScript; runtime targets are anywhere a JavaScript engine runs. The shim package targets ES2022.

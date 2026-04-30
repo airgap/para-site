@@ -1,18 +1,11 @@
 ---
-title: Backend — reactive state on a plain Node server
-description: A worked ParaScript example — WebSocket server with per-connection signals, edge-triggered idle timeout, and a reactive counter endpoint. Runs on plain Node, Bun, or Deno.
+title: Backend example
+description: A WebSocket server in ParaScript with per-connection signals, an idle-timeout via a `when` block, and a server-wide reactive SSE stats endpoint. Runs on Node 18+.
 ---
 
-A WebSocket server where every connection has its own reactive state. Each socket gets a `messages` count and a `lastSeen` timestamp; an idle-timeout fires once per false→true transition of the predicate; an HTTP `/stats` endpoint streams server-wide counts via a derived signal.
+A WebSocket server with per-connection reactive state, an idle-timeout implemented as a `when` block, and an HTTP `/stats` endpoint that streams server-wide counts as Server-Sent Events. Runs on Node 18+.
 
-## What you build
-
-- A WebSocket endpoint at `ws://localhost:8080/ws` that echoes messages and tracks per-connection activity.
-- An HTTP endpoint at `http://localhost:8080/stats` that returns server-wide live counts as Server-Sent Events.
-- Edge-triggered idle disconnect (60s) per connection.
-- An `effect { }` per connection that logs state changes — fires only when something actually changed, never on no-op writes.
-
-## File layout
+## Project layout
 
 ```
 my-server/
@@ -27,10 +20,8 @@ my-server/
 import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 
-// Server-wide state
 signal totalConnections = 0;
 signal totalMessages = 0;
-signal active = totalConnections;          // alias — derived from itself, just for the example
 
 const server = createServer((req, res) => {
   if (req.url !== "/stats") return res.writeHead(404).end();
@@ -40,12 +31,9 @@ const server = createServer((req, res) => {
     "cache-control": "no-cache",
   });
 
-  // Stream live updates as SSE. The `effect` tracks every signal it reads;
-  // when any change, it re-runs and pushes a new SSE frame.
   const stop = effect {
     res.write(`data: ${JSON.stringify({
-      active: active,
-      total: totalConnections,
+      active: totalConnections,
       messages: totalMessages,
     })}\n\n`);
   };
@@ -65,16 +53,13 @@ wss.on("connection", (ws: WebSocket) => {
   signal idle = (Date.now() - lastSeen) > 60_000;
   signal closed = false;
 
-  // Heartbeat tick — every 5s, re-write `lastSeen` so `idle` recomputes.
-  // (No-op writes still trigger derived recomputation; the effect below
-  // only fires when a *value* it reads actually changed.)
   const ping = setInterval(() => lastSeen = lastSeen, 5_000);
 
   ws.on("message", buf => {
     messages++;
     totalMessages++;
     lastSeen = Date.now();
-    ws.send(buf);                // echo
+    ws.send(buf);
   });
 
   ws.on("close", () => {
@@ -83,21 +68,23 @@ wss.on("connection", (ws: WebSocket) => {
     totalConnections--;
   });
 
-  // Edge-triggered: fires once per false→true of `idle`. Even though the
-  // ping tick re-writes lastSeen every 5s, this only fires the FIRST time
-  // it crosses the threshold.
   when idle && !closed {
     console.log(`[${id}] idle 60s, closing`);
     ws.close(1000, "idle timeout");
   }
 
-  // Per-connection log line — re-fires only when one of the read values
-  // genuinely changed. The microtask flush dedupes coalesced writes.
   effect { console.log(`[${id}] msgs=${messages} idle=${idle}`); }
 });
 
 server.listen(8080, () => console.log("listening on :8080"));
 ```
+
+### Notes on the source
+
+- Module-level `signal` declarations (`totalConnections`, `totalMessages`) are server-wide state. Any tracked context that reads them recomputes when they change.
+- `signal idle = (Date.now() - lastSeen) > 60_000` is a derived signal; it recomputes when `lastSeen` changes. The 5-second `setInterval` re-writes `lastSeen` to its current value to force re-evaluation, since the elapsed time depends on wall-clock state that signals don't observe directly.
+- `when idle && !closed { ... }` fires once on the false→true transition. The 5-second tick that keeps re-evaluating `idle` does not re-fire the body unless the predicate transitions.
+- `effect { res.write(...) }` inside the `/stats` handler creates one effect per connected client. The effect returns a stop function, which the request's `close` handler calls to detach.
 
 ## package.json
 
@@ -107,49 +94,24 @@ server.listen(8080, () => console.log("listening on :8080"));
   "type": "module",
   "scripts": {
     "build": "bun build src/server.pts --target node --outfile dist/server.js",
-    "start": "node dist/server.js",
-    "dev": "bun build src/server.pts --watch --target node --outfile dist/server.js & nodemon dist/server.js"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "ws": "^8",
     "parabun-browser-shims": "*"
   },
-  "devDependencies": { "@types/ws": "*", "nodemon": "^3" }
+  "devDependencies": { "@types/ws": "*" }
 }
 ```
 
-For Node, the bundler alias is in your bundler step (esbuild, tsup, etc.) instead of Vite. With `bun build`, you can pre-resolve `para:*` by pointing imports at the shim package directly:
+The `bun build --target node` invocation handles `para:*` resolution by way of an esbuild-style plugin if you have one configured, or you can replace the imports in source with the explicit `parabun-browser-shims/<module>` path. Both work.
 
-```ts
-// In src/server.pts, swap:
-//   import { signal } from "para:signals";    →    import { signal } from "parabun-browser-shims/signals";
-// …or add a tiny resolver plugin to bun build. Both work.
-```
-
-## What's happening
-
-- **Server-wide signals (`totalConnections`, `totalMessages`)** — module-level reactive state. Any tracked context that reads them gets re-evaluated on change.
-- **Per-connection signals** — `messages`, `lastSeen`, `idle`, `closed` are scoped to the connection callback. They go out of scope (and are GC'd) when the socket closes.
-- **`signal idle = (Date.now() - lastSeen) > 60_000`** — auto-promotes to a derived signal because the RHS reads `lastSeen`. The 5s ping tick re-writes `lastSeen` (even with the same value), which triggers a `derived` recompute and lets the `when idle` block re-evaluate.
-- **`when idle && !closed { ... }`** — fires *once* per false→true transition of the predicate. Without this, you'd be tracking previous values by hand: `let wasIdle = false; if (idle && !wasIdle) { ... } wasIdle = idle;`.
-- **`effect { res.write(...) }` inside the SSE handler** — when any of `active`, `totalConnections`, or `totalMessages` change, the effect fires and pushes a fresh SSE frame to that client. Each connected `/stats` client has its own `effect`, so disconnect cleanup is per-client (`stop()` on close).
-
-## Without ParaScript
-
-The reactive HTTP and WebSocket pattern in plain Node usually means either:
-
-1. **Polling**: a `setInterval` that re-reads state and pushes if changed. You write change detection yourself.
-2. **Event emitters**: `events.EventEmitter` per-resource, manual subscribe/unsubscribe in the request handler, manual `removeListener` on close. Verbose; easy to leak listeners.
-3. **A reactive library**: RxJS, MobX, etc. Same downsides as the frontend story — boilerplate, no edge-detection primitive, no concise inline syntax.
-
-The ParaScript version reads top-to-bottom: declare state, write the side-effect inline, the runtime handles tracking and dedup.
-
-## Build &amp; ship
+## Build and run
 
 ```bash
 bun install
-bun run build              # → dist/server.js (single bundled file)
-node dist/server.js        # plain Node, no Bun runtime needed
+bun run build
+node dist/server.js
 ```
 
-For Lambda: same `bun build --target node` → upload the `dist/server.js` as the handler. The shim package gets bundled in. Works on Node 18+ (no syntax ES2022+ used).
+The output is a single bundled JS file. For Lambda, upload `dist/server.js` as the handler.

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ParaScript — TypeScript with reactivity, ranges, and pipelines</title>
+    <title>ParaScript</title>
     <meta
       name="description"
-      content="A portable TypeScript dialect with reactive signals, edge-triggered handlers, integer ranges, pipelines, error chains, and compile-time purity. Compiles to standard JavaScript — runs in the browser, on Lambda, on Workers, on Deno, on Node."
+      content="A TypeScript dialect with reactive signals, integer ranges, a pipeline operator, and edge-triggered handlers. Files end in .pts. Compiles to standard JavaScript."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,80 +27,93 @@
       <header>
         <span class="brand"><span class="marker">/</span> parascript</span>
         <nav class="nav">
-          <a href="#what">what</a>
-          <a href="#anywhere">anywhere</a>
-          <a href="#frontend">frontend</a>
-          <a href="#backend">backend</a>
-          <a href="#pipelines">pipelines</a>
-          <a href="#errors">errors</a>
+          <a href="#syntax">syntax</a>
+          <a href="#compile">compile</a>
+          <a href="#examples">examples</a>
           <a href="/docs/">docs</a>
           <a href="https://parabun.script.dev">parabun</a>
-          <a href="https://github.com/airgap/parabun" target="_blank" rel="noopener">github</a>
+          <a href="https://github.com/airgap/para-site" target="_blank" rel="noopener">github</a>
         </nav>
       </header>
 
       <h1>ParaScript</h1>
       <p class="lede">
-        A TypeScript dialect that adds the things JavaScript still doesn't have built in: reactive signals,
-        edge-triggered handlers, integer ranges, a pipeline operator, error-chain operators, and compile-time purity.
-        Files end in <code>.pts</code>.
+        A TypeScript dialect with reactive signals, integer ranges, a pipeline operator, edge-triggered handlers,
+        chained <code>.catch</code> / <code>.finally</code> / <code>await</code>, and compile-time function purity.
       </p>
       <p class="lede">
-        Every extension desugars to standard JavaScript at parse time. There is no ParaScript runtime layer beyond a
-        small npm package the desugarings call into &mdash; so the output of a <code>.pts</code> file ships to a
-        browser, an edge function, a Lambda, Deno, or any Node host. <strong>No runtime fork required.</strong>
+        Files end in <code>.pts</code>. All extensions desugar to standard JavaScript at parse time. The output imports
+        a small npm package,
+        <a href="https://www.npmjs.com/package/parabun-browser-shims"><code>parabun-browser-shims</code></a
+        >, that provides the runtime side of the language.
       </p>
 
-      <h2 id="what">What you write</h2>
+      <h2 id="syntax">Syntax</h2>
+
+      <h3>Signals and effects</h3>
       <p>
-        Five things to know on the way in. Each desugars to a normal JS call &mdash; the language only adds syntax, not
-        semantics.
+        A <code>signal</code> declaration creates a reactive cell. Bare reads inside a tracked context (an
+        <code>effect</code>, a <code>derived</code>, a <code>when</code> block, or another signal's RHS) compile to
+        <code>.get()</code>. Bare writes compile to <code>.set()</code>. A signal whose initializer reads other signals
+        is auto-promoted to a derived value.
       </p>
-
-      <h3>Reactive signals</h3>
       <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> doubled </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;          </span><span style="color:#6A737D">// derived — re-runs when count changes</span></span>
+<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> doubled </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;       </span><span style="color:#6A737D">// derived; recomputes when count changes</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F97583">effect</span><span style="color:#E1E4E8"> { console.</span><span style="color:#B392F0">log</span><span style="color:#E1E4E8">(doubled); }     </span><span style="color:#6A737D">// logs every change</span></span>
+<span class="line"><span style="color:#F97583">effect</span><span style="color:#E1E4E8"> { console.</span><span style="color:#B392F0">log</span><span style="color:#E1E4E8">(doubled); }  </span><span style="color:#6A737D">// runs once now, again on each change</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">count</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;                             </span><span style="color:#6A737D">// bare-read sugar: count.set(count.get() + 1)</span></span></code></pre>
+<span class="line"><span style="color:#E1E4E8">count</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;                          </span><span style="color:#6A737D">// count.set(count.get() + 1)</span></span></code></pre>
 
       <h3>Edge-triggered handlers</h3>
+      <p>
+        A <code>when</code> block fires its body once on each false&rarr;true transition of the predicate.
+        <code>when not</code> fires on the true&rarr;false transition. The predicate is tracked the same way an effect
+        body is.
+      </p>
       <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F97583">when</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 100</span><span style="color:#E1E4E8"> {                  </span><span style="color:#6A737D">// fires once per false→true transition</span></span>
-<span class="line"><span style="color:#B392F0">  unlockAchievement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"century"</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#E1E4E8">}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">when</span><span style="color:#F97583"> not</span><span style="color:#E1E4E8"> online {                    </span><span style="color:#6A737D">// fires on the true→false transition</span></span>
-<span class="line"><span style="color:#B392F0">  showOfflineBanner</span><span style="color:#E1E4E8">();</span></span>
-<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<span class="line"><span style="color:#F97583">when</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 100</span><span style="color:#E1E4E8"> { </span><span style="color:#B392F0">unlockAchievement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"century"</span><span style="color:#E1E4E8">); }</span></span>
+<span class="line"><span style="color:#F97583">when</span><span style="color:#F97583"> not</span><span style="color:#E1E4E8"> online   { </span><span style="color:#B392F0">showOfflineBanner</span><span style="color:#E1E4E8">(); }</span></span></code></pre>
 
-      <h3>Reactive bindings (no effect block)</h3>
+      <h3>Reactive bindings</h3>
+      <p>
+        <code>A ~&gt; B</code> desugars to <code>effect(() =&gt; { B = A; })</code>, an assignment that stays in sync.
+        <code>A -&gt; fn</code> desugars to <code>effect(() =&gt; { fn(A); })</code>, a call binding. Both are shorthand
+        for the common single-statement effect.
+      </p>
       <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> name </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "world"</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">~></span><span style="color:#E1E4E8"> document.title;              </span><span style="color:#6A737D">// assignment binding: title stays in sync</span></span>
-<span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> console.log;                 </span><span style="color:#6A737D">// call binding: console.log fires on every change</span></span></code></pre>
+<span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">~></span><span style="color:#E1E4E8"> document.title;          </span><span style="color:#6A737D">// title tracks name</span></span>
+<span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> console.log;             </span><span style="color:#6A737D">// logs on every change</span></span></code></pre>
 
-      <h3>Pipelines &amp; ranges</h3>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#6A737D">// Integer ranges</span></span>
-<span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">const</span><span style="color:#79B8FF"> i</span><span style="color:#F97583"> of</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.n) </span><span style="color:#B392F0">work</span><span style="color:#E1E4E8">(i);</span></span>
+      <h3>Ranges and pipelines</h3>
+      <p>
+        <code>a..b</code> is an exclusive integer range; <code>a..=b</code> is inclusive. The pipeline operator
+        <code>|&gt;</code> threads a value through a sequence of unary calls.
+      </p>
+      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">const</span><span style="color:#79B8FF"> i</span><span style="color:#F97583"> of</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.n) </span><span style="color:#B392F0">work</span><span style="color:#E1E4E8">(i);</span></span>
 <span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> evens</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.</span><span style="color:#F97583">=</span><span style="color:#79B8FF">20</span><span style="color:#F97583"> |></span><span style="color:#B392F0"> filter</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">i</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> ===</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">);</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#6A737D">// Pipeline operator threads values left-to-right</span></span>
 <span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> out</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> pixels </span><span style="color:#F97583">|></span><span style="color:#B392F0"> map</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">p</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 1.2</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">|></span><span style="color:#B392F0"> clamp</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">255</span><span style="color:#E1E4E8">);</span></span></code></pre>
 
-      <h3>Error chains</h3>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#6A737D">// `..!` is .catch, `..&#x26;` is .finally, `..=` is await-assign.</span></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> data</span><span style="color:#F97583"> ..=</span><span style="color:#E1E4E8"> fetch(url).then(r </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">()) </span><span style="color:#F97583">..!</span><span style="color:#79B8FF"> err</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> defaults </span><span style="color:#F97583">..&#x26;</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> spinner.</span><span style="color:#B392F0">hide</span><span style="color:#E1E4E8">();</span></span></code></pre>
-
-      <h2 id="anywhere">Run it anywhere</h2>
+      <h3>Error and await operators</h3>
       <p>
-        ParaScript compiles to standard JavaScript with a handful of import calls into a normal npm package
-        (<code>parabun-browser-shims</code>, the runtime side of the language). To make those import strings resolve,
-        your bundler needs a five-line alias. That's the whole story.
+        <code>..!</code> is <code>.catch</code>. <code>..&amp;</code> is <code>.finally</code>. <code>..=</code> is
+        <code>await</code>-assign in declaration position; combined, they remove the boilerplate from a
+        <code>try</code>/<code>catch</code> chain.
       </p>
+      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> data</span><span style="color:#F97583"> ..=</span><span style="color:#E1E4E8"> fetch(url).then(r </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">())</span></span>
+<span class="line"><span style="color:#F97583">  ..!</span><span style="color:#FFAB70"> err</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> defaults</span></span>
+<span class="line"><span style="color:#F97583">  ..&#x26;</span><span style="color:#E1E4E8"> ()  </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> spinner.</span><span style="color:#B392F0">hide</span><span style="color:#E1E4E8">();</span></span></code></pre>
 
+      <h2 id="compile">Compilation</h2>
+      <p>
+        ParaScript files (<code>.pts</code>) are parsed by Bun's transpiler, which understands the syntax. The output is
+        standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
+      </p>
+      <p>
+        To resolve those specifiers in a non-Bun runtime, alias them to <code>parabun-browser-shims</code> in your
+        bundler.
+      </p>
       <pre data-lang="ts"><code><span class="line"><span style="color:#6A737D">// vite.config.ts</span></span>
 <span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { defineConfig } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> "vite"</span><span style="color:#E1E4E8">;</span></span>
 <span class="line"></span>
@@ -109,211 +122,46 @@
 <span class="line"><span style="color:#E1E4E8">    alias: [{ find:</span><span style="color:#9ECBFF"> /</span><span style="color:#F97583">^</span><span style="color:#DBEDFF">para:(</span><span style="color:#79B8FF">.</span><span style="color:#F97583">*</span><span style="color:#DBEDFF">)</span><span style="color:#F97583">$</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">, replacement: </span><span style="color:#9ECBFF">"parabun-browser-shims/$1"</span><span style="color:#E1E4E8"> }],</span></span>
 <span class="line"><span style="color:#E1E4E8">  },</span></span>
 <span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
-
-      <p class="caveat">
-        esbuild, webpack, rollup &mdash; all the same idea, four lines of plugin or config. See the
-        <a href="/docs/install/">install guide</a> for the recipes.
-      </p>
-
-      <p>
-        For the build step itself you need a transpiler that understands <code>.pts</code>. Today that's
-        <code>bun build</code> &mdash; Bun's parser is what knows how to parse the syntax, even if you ship the output
-        to a non-Bun host. A standalone <code>@parascript/transpile</code> npm package (no Bun required) is on the
-        roadmap.
-      </p>
+      <p>The same one-line alias works for esbuild, webpack, and rollup. See the install guide for the variants.</p>
 
       <div class="install"><span class="prompt">$</span>npm install parabun-browser-shims</div>
       <div class="install"><span class="prompt">$</span>bun build src/main.pts --outdir dist/</div>
 
-      <h2 id="frontend">Frontend example &mdash; live search, no framework</h2>
-      <p>
-        A search input that filters a list reactively. <code>signal</code> for the query,
-        <code>derived</code> (autopromoted from a <code>signal</code> with a tracked RHS) for the filtered list,
-        <code>effect</code> to repaint the DOM.
-        <strong>No React, no Vue, no Svelte, no compiler runtime</strong> &mdash; this ships as ~2 KB of JS plus the
-        shim package.
-      </p>
-
-      <pre data-lang="pts"><code><span class="line"><span style="color:#6A737D">// src/search.pts</span></span>
-<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> items </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> "./items.json"</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> query </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> ""</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> results </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> items.</span><span style="color:#B392F0">filter</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">it</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> it.name.</span><span style="color:#B392F0">toLowerCase</span><span style="color:#E1E4E8">().</span><span style="color:#B392F0">includes</span><span style="color:#E1E4E8">(query.</span><span style="color:#B392F0">toLowerCase</span><span style="color:#E1E4E8">()));</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> input</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">HTMLInputElement</span><span style="color:#E1E4E8">>(</span><span style="color:#9ECBFF">"#q"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> list</span><span style="color:#F97583">  =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">HTMLUListElement</span><span style="color:#E1E4E8">>(</span><span style="color:#9ECBFF">"#results"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">input.</span><span style="color:#B392F0">addEventListener</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"input"</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">e</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> query </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (e.target </span><span style="color:#F97583">as</span><span style="color:#B392F0"> HTMLInputElement</span><span style="color:#E1E4E8">).value);</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">effect</span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#E1E4E8">  list.innerHTML </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> results.</span><span style="color:#B392F0">slice</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">10</span><span style="color:#E1E4E8">)</span></span>
-<span class="line"><span style="color:#E1E4E8">    .</span><span style="color:#B392F0">map</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">it</span><span style="color:#F97583"> =></span><span style="color:#9ECBFF"> `&#x3C;li>${</span><span style="color:#E1E4E8">it</span><span style="color:#9ECBFF">.</span><span style="color:#E1E4E8">name</span><span style="color:#9ECBFF">}&#x3C;/li>`</span><span style="color:#E1E4E8">)</span></span>
-<span class="line"><span style="color:#E1E4E8">    .</span><span style="color:#B392F0">join</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">""</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#E1E4E8">}</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">when</span><span style="color:#E1E4E8"> results.</span><span style="color:#79B8FF">length</span><span style="color:#F97583"> ===</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#E1E4E8">  list.innerHTML </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "&#x3C;li class='empty'>no matches&#x3C;/li>"</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
-
-      <p>
-        The <code>signal results = items.filter(...)</code> declaration auto-promotes to a
-        <code>derived()</code> because its RHS reads <code>query</code>. The <code>effect { }</code> repaints whenever
-        <code>results</code> changes; the <code>when</code> block fires once each time <code>results.length</code>
-        transitions to zero, not on every keystroke that keeps it zero.
-      </p>
-
-      <h2 id="backend">Backend example &mdash; live connection state on a plain Node server</h2>
-      <p>
-        WebSocket server with per-connection signals. Each socket gets its own <code>messages</code> count and
-        <code>idle</code> derived; an edge-triggered <code>when</code> closes the connection after 60s of silence. Runs
-        on plain Node, Bun, Deno, anywhere.
-      </p>
-
-      <pre data-lang="pts"><code><span class="line"><span style="color:#6A737D">// src/server.pts</span></span>
-<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { WebSocketServer } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> "ws"</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> wss</span><span style="color:#F97583"> =</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> WebSocketServer</span><span style="color:#E1E4E8">({ port: </span><span style="color:#79B8FF">8080</span><span style="color:#E1E4E8"> });</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">wss.</span><span style="color:#B392F0">on</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"connection"</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">ws</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#F97583">  signal</span><span style="color:#E1E4E8"> messages </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">  signal</span><span style="color:#E1E4E8"> lastSeen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Date.</span><span style="color:#B392F0">now</span><span style="color:#E1E4E8">();</span></span>
-<span class="line"><span style="color:#F97583">  signal</span><span style="color:#E1E4E8"> idle </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (Date.</span><span style="color:#B392F0">now</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> lastSeen) </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 60_000</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">  ws.</span><span style="color:#B392F0">on</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"message"</span><span style="color:#E1E4E8">, () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#E1E4E8">    messages</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#E1E4E8">    lastSeen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> Date.</span><span style="color:#B392F0">now</span><span style="color:#E1E4E8">();</span></span>
-<span class="line"><span style="color:#E1E4E8">  });</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#6A737D">  // Heartbeat tick refreshes `idle` so the `when` below can fire</span></span>
-<span class="line"><span style="color:#F97583">  const</span><span style="color:#79B8FF"> ping</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> setInterval</span><span style="color:#E1E4E8">(() </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> lastSeen </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> lastSeen, </span><span style="color:#79B8FF">5_000</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">  when</span><span style="color:#E1E4E8"> idle {</span></span>
-<span class="line"><span style="color:#E1E4E8">    ws.</span><span style="color:#B392F0">close</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1000</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"idle timeout"</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#B392F0">    clearInterval</span><span style="color:#E1E4E8">(ping);</span></span>
-<span class="line"><span style="color:#E1E4E8">  }</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#6A737D">  // Per-connection log line that re-fires on every meaningful state change</span></span>
-<span class="line"><span style="color:#F97583">  effect</span><span style="color:#E1E4E8"> { console.</span><span style="color:#B392F0">log</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">`conn ${</span><span style="color:#E1E4E8">ws</span><span style="color:#9ECBFF">.</span><span style="color:#E1E4E8">id</span><span style="color:#9ECBFF">}: ${</span><span style="color:#E1E4E8">messages</span><span style="color:#9ECBFF">} msgs, idle=${</span><span style="color:#E1E4E8">idle</span><span style="color:#9ECBFF">}`</span><span style="color:#E1E4E8">); }</span></span>
-<span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
-
-      <p>
-        The Lambda / Workers shape is the same: each request gets its own scope, signals stand in for what would
-        otherwise be a per-request closure or a hand-rolled state object. Cleanup &mdash; the
-        <code>setInterval</code> &mdash; lives next to the state it manages.
-      </p>
-
-      <h2 id="pipelines">Pipeline example &mdash; image processing in the browser</h2>
-      <p>
-        The pipeline operator <code>|&gt;</code> chains typed-array kernels into a single fused pass &mdash; one loop,
-        no intermediate arrays. This runs on the canvas <code>ImageData</code> straight from the browser, no WASM and no
-        GPU.
-      </p>
-
-      <pre data-lang="pts"><code><span class="line"><span style="color:#6A737D">// src/filter.pts</span></span>
-<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { mulScalar, add, clamp } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> "para:simd"</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> canvas</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">HTMLCanvasElement</span><span style="color:#E1E4E8">>(</span><span style="color:#9ECBFF">"#in"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> out</span><span style="color:#F97583">    =</span><span style="color:#E1E4E8"> document.</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">HTMLCanvasElement</span><span style="color:#E1E4E8">>(</span><span style="color:#9ECBFF">"#out"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> ctx</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> canvas.</span><span style="color:#B392F0">getContext</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"2d"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">octx</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> out.</span><span style="color:#B392F0">getContext</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"2d"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> brightness </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 1.0</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> img </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> ctx.</span><span style="color:#B392F0">getImageData</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, canvas.width, canvas.height);</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">document.</span><span style="color:#B392F0">querySelector</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">HTMLInputElement</span><span style="color:#E1E4E8">>(</span><span style="color:#9ECBFF">"#bright"</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">!</span></span>
-<span class="line"><span style="color:#E1E4E8">  .</span><span style="color:#B392F0">addEventListener</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"input"</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">e</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> brightness </span><span style="color:#F97583">=</span><span style="color:#F97583"> +</span><span style="color:#E1E4E8">(e.target </span><span style="color:#F97583">as</span><span style="color:#B392F0"> HTMLInputElement</span><span style="color:#E1E4E8">).value);</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#F97583">effect</span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#6A737D">  // Fused: one pass over the pixel buffer, no intermediate Float32Arrays.</span></span>
-<span class="line"><span style="color:#F97583">  const</span><span style="color:#79B8FF"> px</span><span style="color:#F97583"> =</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Float32Array</span><span style="color:#E1E4E8">(img.data);</span></span>
-<span class="line"><span style="color:#F97583">  const</span><span style="color:#79B8FF"> adjusted</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> px </span><span style="color:#F97583">|></span><span style="color:#B392F0"> mulScalar</span><span style="color:#E1E4E8">(brightness) </span><span style="color:#F97583">|></span><span style="color:#B392F0"> clamp</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">255</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#E1E4E8">  octx.</span><span style="color:#B392F0">putImageData</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> ImageData</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">new</span><span style="color:#B392F0"> Uint8ClampedArray</span><span style="color:#E1E4E8">(adjusted), canvas.width), </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
-
-      <p>
-        On Parabun the same pipeline lifts to a single GPU dispatch when the input is large enough; in the browser you
-        stay on CPU but still get the fusion win &mdash; one tight loop instead of three.
-      </p>
-
-      <h2 id="errors">Error chains &mdash; flat .catch / .finally without ceremony</h2>
-      <p>
-        <code>..!</code> is <code>.catch</code>, <code>..&amp;</code> is <code>.finally</code>, <code>..=</code> is
-        <code>await</code>-assign. They compose: read the chain top-to-bottom, no nesting, no
-        <code>try/catch</code> indent rabbit hole.
-      </p>
-
-      <pre data-lang="pts"><code><span class="line"><span style="color:#6A737D">// API call cascade with a fallback, a cleanup, and an awaited assignment.</span></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> profile</span><span style="color:#F97583"> ..=</span><span style="color:#E1E4E8"> fetch(</span><span style="color:#9ECBFF">`/api/users/${</span><span style="color:#E1E4E8">id</span><span style="color:#9ECBFF">}`</span><span style="color:#E1E4E8">)</span></span>
-<span class="line"><span style="color:#E1E4E8">  .</span><span style="color:#B392F0">then</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">r</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">())</span></span>
-<span class="line"><span style="color:#F97583">  ..!</span><span style="color:#FFAB70"> err</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> ({ id, name: </span><span style="color:#9ECBFF">"anonymous"</span><span style="color:#E1E4E8">, _stub: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8"> })   </span><span style="color:#6A737D">// fallback on any failure</span></span>
-<span class="line"><span style="color:#F97583">  ..&#x26;</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> loading.</span><span style="color:#B392F0">set</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">false</span><span style="color:#E1E4E8">);                         </span><span style="color:#6A737D">// always runs</span></span>
-<span class="line"></span>
-<span class="line"><span style="color:#6A737D">// Without ParaScript:</span></span>
-<span class="line"><span style="color:#F97583">let</span><span style="color:#E1E4E8"> profile;</span></span>
-<span class="line"><span style="color:#F97583">try</span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#F97583">  const</span><span style="color:#79B8FF"> r</span><span style="color:#F97583"> =</span><span style="color:#F97583"> await</span><span style="color:#B392F0"> fetch</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">`/api/users/${</span><span style="color:#E1E4E8">id</span><span style="color:#9ECBFF">}`</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#E1E4E8">  profile </span><span style="color:#F97583">=</span><span style="color:#F97583"> await</span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">();</span></span>
-<span class="line"><span style="color:#E1E4E8">} </span><span style="color:#F97583">catch</span><span style="color:#E1E4E8"> (err) {</span></span>
-<span class="line"><span style="color:#E1E4E8">  profile </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> { id, name: </span><span style="color:#9ECBFF">"anonymous"</span><span style="color:#E1E4E8">, _stub: </span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8"> };</span></span>
-<span class="line"><span style="color:#E1E4E8">} </span><span style="color:#F97583">finally</span><span style="color:#E1E4E8"> {</span></span>
-<span class="line"><span style="color:#E1E4E8">  loading.</span><span style="color:#B392F0">set</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">false</span><span style="color:#E1E4E8">);</span></span>
-<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
-
-      <h2 id="why">Why not just TypeScript</h2>
-      <p>
-        Because plain TS makes you write the boilerplate by hand every time. <code>signal x = 0</code> is one line; the
-        equivalent reactive-store wiring across React, Solid, Svelte, MobX, Zustand, Jotai, Pinia,
-        whatever-shipped-this-month is whatever ceremony the framework demands &mdash; and the syntax never collapses to
-        the same place. ParaScript treats the things you write a hundred times a week as first-class syntax instead of
-        library APIs.
-      </p>
-      <p>
-        Every extension is opt-in and parse-time. Plain <code>.ts</code> files behave exactly as TypeScript expects
-        &mdash; ParaScript only kicks in when you switch the extension to <code>.pts</code>. Your existing codebase
-        doesn't change; new files can adopt the syntax incrementally.
-      </p>
-
-      <h2 id="parabun">Sister project &mdash; Parabun</h2>
-      <p>
-        <a href="https://parabun.script.dev">Parabun</a> is a fork of <a href="https://bun.com">Bun</a> that bundles
-        ParaScript natively (no build step, no bundler alias) plus a stack of native runtime modules: raw CUDA / Metal
-        kernels, V4L2 camera capture, ALSA audio, on-device LLM inference, GPIO / I&sup2;C / SPI for Linux SBCs,
-        statically-linked image / audio / CSV codecs.
-      </p>
-      <p>
-        ParaScript is the language. Parabun is the runtime that ships it with batteries. Use either, both, or just
-        ParaScript and a plain Node / browser host &mdash; the language doesn't care.
-      </p>
-
-      <h2 id="get-started">Get started</h2>
-      <ol>
-        <li>
-          <code>npm install parabun-browser-shims</code> &mdash; the runtime side of the language, ~kb-scale, pure JS.
-        </li>
-        <li>
-          <code>curl -fsSL https://bun.sh/install | bash</code> &mdash; Bun for the build step (until the standalone
-          transpiler ships).
-        </li>
-        <li>
-          Add the bundler alias from the <a href="/docs/install/">install guide</a> (Vite / esbuild / webpack / rollup).
-        </li>
-        <li>
-          Rename a <code>.ts</code> file to <code>.pts</code> and start using <code>signal</code> /
-          <code>effect { }</code> / <code>when { }</code>.
-        </li>
-      </ol>
-
       <p class="caveat">
-        Editor support:
-        <code>curl -fsSL https://raw.githubusercontent.com/airgap/parabun/main/install-extension.sh | bash</code>
-        installs the VS Code / Cursor / Kiro extension &mdash; <code>.pts</code> grammar plus an LSP with hover,
-        go-to-definition, purity diagnostics, and operator documentation.
+        Bun is required for the build step today. A standalone npm-installable transpiler
+        (<code>@parascript/transpile</code>) is on the roadmap.
+      </p>
+
+      <h2 id="examples">Examples</h2>
+      <p>
+        Three worked projects, one per host environment. Each is a complete project with file layout, source, and build
+        commands.
+      </p>
+      <ul>
+        <li>
+          <a href="/docs/examples/frontend/">Frontend</a> &mdash; todo list with reactive DOM updates. Vite + vanilla
+          DOM.
+        </li>
+        <li>
+          <a href="/docs/examples/backend/">Backend</a> &mdash; WebSocket server with per-connection signals. Node.
+        </li>
+        <li>
+          <a href="/docs/examples/edge/">Edge</a> &mdash; HTTP handler with per-request signals. Cloudflare Workers.
+        </li>
+      </ul>
+
+      <h2 id="related">Related projects</h2>
+      <p>
+        <a href="https://parabun.script.dev">Parabun</a> is a fork of <a href="https://bun.com">Bun</a> that ships
+        ParaScript natively (no build or alias step) along with native modules for parallel CPU work, raw CUDA / Metal
+        kernels, V4L2 camera capture, ALSA audio, GGUF LLM inference, and GPIO / I&sup2;C / SPI on Linux SBCs.
       </p>
 
       <footer>
         <p>
           <a href="/docs/">docs</a> &middot; <a href="/docs/language/">language reference</a> &middot;
-          <a href="/docs/install/">install</a> &middot; <a href="https://github.com/airgap/parabun">github</a> &middot;
-          <a href="https://parabun.script.dev">parabun.script.dev</a>
+          <a href="/docs/install/">install</a> &middot;
+          <a href="https://github.com/airgap/para-site">github</a>
         </p>
       </footer>
     </main>

@@ -1,15 +1,11 @@
 ---
-title: Frontend — reactive DOM without a framework
-description: A worked ParaScript example — todo list with reactive signals, edge-triggered handlers, and effect-driven DOM updates. No React, no Vue, no Svelte, no compiler runtime.
+title: Frontend example
+description: A todo list using ParaScript signals against the vanilla DOM, built with Vite. Demonstrates signal declarations, derived signals, effect blocks, and when blocks.
 ---
 
-A todo list, written in `.pts`, that reads as if you had a framework but ships ~3 KB of JS plus the shim package. Demonstrates `signal`, derived signals, `effect { }`, `when { }`, and the bare-read sugar.
+A todo list using ParaScript against the vanilla DOM, built with Vite. Demonstrates `signal`, derived signals, `effect { }`, `when { }`, and the bare-read sugar.
 
-## What you build
-
-A textbox + button that adds items, a list that filters by completion state, a counter that hides itself when the list is empty, and an "all done!" toast that fires once each time the open count crosses zero.
-
-## File layout
+## Project layout
 
 ```
 my-todo/
@@ -34,7 +30,7 @@ my-todo/
     </select>
     <ul id="list"></ul>
     <p id="count"></p>
-    <p id="toast" hidden>all done!</p>
+    <p id="toast" hidden>all done</p>
     <script type="module" src="./src/main.pts"></script>
   </body>
 </html>
@@ -48,7 +44,6 @@ type Todo = { id: number; text: string; done: boolean };
 signal items: Todo[] = [];
 signal filter: "all" | "open" | "done" = "all";
 
-// Derived signals — auto-promoted because the RHS reads `items` / `filter`.
 signal visible = filter === "all"
   ? items
   : items.filter(t => (filter === "done" ? t.done : !t.done));
@@ -68,7 +63,6 @@ $<HTMLSelectElement>("#filter").addEventListener("change", e => {
   filter = (e.target as HTMLSelectElement).value as typeof filter;
 });
 
-// Effect: paints the list whenever `visible` changes.
 effect {
   $<HTMLUListElement>("#list").innerHTML = visible
     .map(t => `
@@ -79,21 +73,18 @@ effect {
     `).join("");
 }
 
-// Effect: count text. Hides itself when there's nothing open.
 effect {
   const el = $<HTMLParagraphElement>("#count");
   el.textContent = `${openCount} open`;
   el.hidden = openCount === 0 && items.length === 0;
 }
 
-// Edge-triggered: fires once per false→true of "everything is done"
 when items.length > 0 && openCount === 0 {
   const t = $<HTMLParagraphElement>("#toast");
   t.hidden = false;
   setTimeout(() => (t.hidden = true), 2000);
 }
 
-// Click on a checkbox toggles done. Event delegation on the list.
 $<HTMLUListElement>("#list").addEventListener("click", e => {
   const li = (e.target as HTMLElement).closest<HTMLLIElement>("li[data-id]");
   if (!li || (e.target as HTMLElement).tagName !== "INPUT") return;
@@ -101,6 +92,13 @@ $<HTMLUListElement>("#list").addEventListener("click", e => {
   items = items.map(t => (t.id === id ? { ...t, done: !t.done } : t));
 });
 ```
+
+### Notes on the source
+
+- `signal items: Todo[] = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
+- `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
+- Each `effect { }` block tracks the signals it reads and re-runs when any of them changes. The two effects in this file are independent: changing `filter` re-runs the list effect but not the count effect.
+- `when items.length > 0 && openCount === 0 { ... }` fires once on each false→true transition of the predicate. Toggling the last unchecked item triggers the body once; toggling it back and re-completing it triggers it again.
 
 ## vite.config.ts
 
@@ -129,24 +127,11 @@ export default defineConfig({
 }
 ```
 
-## What's happening
-
-- **`signal items: Todo[] = []`** — declares a reactive array. Every `items = ...` is an `items.set(...)` under the hood.
-- **`signal visible = ...`** — the RHS reads `items` and `filter`, so this auto-promotes to `derived(() => ...)`. Whenever either dep changes, `visible` recomputes lazily.
-- **`signal openCount = items.filter(...).length`** — same auto-promotion. Plain integer; just a derived view.
-- **`effect { }`** — tracks every signal it reads. The list-painting effect re-runs only when `visible` changes; the count-painting effect re-runs only when `openCount` or `items.length` changes. The microtask flush dedupes between writes in the same tick.
-- **`when items.length > 0 && openCount === 0`** — this is **edge-triggered**, not level-triggered. The toast fires once per false→true transition of the predicate, not every keystroke that keeps it true. If you check off the last item, toast appears; if you uncheck, the predicate goes false; check it again, toast reappears.
-- **Bare-read sugar** — `items` inside an `effect`/`when`/`derived` rewrites to `items.get()`; `items = ...` rewrites to `items.set(...)`. Outside a tracked context (e.g., the click handler) the same rules apply.
-
-## Without ParaScript
-
-The same logic in plain TypeScript with one of the popular reactive libraries lands somewhere between 30% and 100% more lines of code — the boilerplate is the create-store, subscribe-to-store, hand-coded "did this change?" checks, plus the fact that `when` (true edge detection) usually doesn't exist as a primitive at all and you end up tracking the previous value yourself. Compare your last reactive UI you wrote in any framework with the file above.
-
-## Build &amp; ship
+## Build and deploy
 
 ```bash
 bun install
-bun run build           # → dist/index.html + dist/assets/*
+bun run build
 ```
 
-Static output. Drop the `dist/` directory on any static host (Cloudflare Pages, Vercel, S3, GitHub Pages) — there's no server-side runtime requirement.
+Output is a static `dist/` directory. Deploy to any static host (Cloudflare Pages, Vercel, S3, GitHub Pages, etc.).
