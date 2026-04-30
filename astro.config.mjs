@@ -21,6 +21,12 @@ const guides = [
   { label: "Install", link: `${docsRoot}/install/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
 ];
+const examples = [
+  { label: "Overview", link: `${docsRoot}/examples/` },
+  { label: "Frontend (DOM)", link: `${docsRoot}/examples/frontend/` },
+  { label: "Backend (Node)", link: `${docsRoot}/examples/backend/` },
+  { label: "Edge (Workers)", link: `${docsRoot}/examples/edge/` },
+];
 const modules = ["signals", "arena", "parallel", "pipeline", "simd", "arrow", "csv"].map(slug => ({
   label: `para:${slug}`,
   link: `${docsRoot}/${slug}/`,
@@ -37,6 +43,7 @@ export default defineConfig({
       customCss: ["./src/styles/parabun.css"],
       sidebar: [
         { label: "Guides", items: guides },
+        { label: "Examples", items: examples },
         { label: "Modules", items: modules },
         {
           label: "Hardware (Parabun runtime)",

@@ -54,6 +54,7 @@ No magic, no virtual DOM, no compiler runtime. The `para:*` modules are small, n
 ## Sidebar
 
 - **Guides** — [Install](/docs/install/) + the build recipes for browser / Lambda / Workers / Node, and the full [Language reference](/docs/language/).
+- **Examples** — three complete worked projects, one per host: [Frontend (DOM)](/docs/examples/frontend/), [Backend (Node)](/docs/examples/backend/), [Edge (Workers)](/docs/examples/edge/). Full file layouts, build commands, deploy notes — none require Parabun the runtime.
 - **Modules** — every `para:*` module that ParaScript desugars into. These are the runtime pieces you ship with your app.
 - **Hardware (Parabun runtime)** — for the Bun-fork runtime that bundles GPU compute, on-device LLM inference, V4L2 capture, GPIO/I²C/SPI, and the rest, see [parabun.script.dev](https://parabun.script.dev/docs/).
 
