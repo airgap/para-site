@@ -1,7 +1,7 @@
 ---
-// /playground — in-browser ParaScript transpiler.
+// /playground — in-browser Para transpiler.
 //
-// Runs entirely client-side: @parascript/transpile is bundled into the
+// Runs entirely client-side: @para/transpile is bundled into the
 // page (~600 KB; Babel parser + generator + traverse account for most),
 // CodeMirror 6 provides the input editor, and a read-only CodeMirror
 // pane shows the JS output. Live transpile-on-keystroke with a 150 ms
@@ -16,10 +16,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ParaScript Playground</title>
+    <title>Para Playground</title>
     <meta
       name="description"
-      content="Try ParaScript in the browser. Live transpile to plain JavaScript — pipelines, ranges, signals, defer, error chains."
+      content="Try Para in the browser. Live transpile to plain JavaScript — pipelines, ranges, signals, defer, error chains."
     />
     <script is:inline>
       // Dark-first (Stellar Atlas night-sky default). Respects an
@@ -44,7 +44,7 @@
           <circle class="star-a" cx="11" cy="16" r="6" />
           <circle class="star-b" cx="27" cy="16" r="4" />
         </svg>
-        ParaScript
+        Para
       </a>
       <span class="pg-sep">/</span>
       <span class="pg-title">Playground</span>
@@ -66,7 +66,7 @@
     </header>
     <main class="pg-main">
       <section class="pg-pane">
-        <div class="pg-pane-head"><span class="pg-pane-label">ParaScript</span><span id="pg-status" class="pg-status"></span></div>
+        <div class="pg-pane-head"><span class="pg-pane-label">Para</span><span id="pg-status" class="pg-status"></span></div>
         <div id="pg-input" class="pg-editor"></div>
       </section>
       <section class="pg-pane">
@@ -87,10 +87,10 @@
       } from "@codemirror/language";
       import { tags as t } from "@lezer/highlight";
       import { closeBrackets } from "@codemirror/autocomplete";
-      import { transpile } from "@parascript/transpile";
+      import { transpile } from "@para/transpile";
 
       // Stellar Atlas highlight — keywords paint in the Parabun companion
-      // (amber), functions / types paint in the ParaScript primary
+      // (amber), functions / types paint in the Para primary
       // (blue-white). The two halves of the binary system showing up
       // together in code is the brand metaphor at the syntax level.
       // Strings get the warmer mid-spectrum (between the two stars);
@@ -140,9 +140,9 @@
       }
 
       // Curated samples — every one round-trips through the standalone
-      // transpiler in <50 ms, exercises a single ParaScript feature.
+      // transpiler in <50 ms, exercises a single Para feature.
       const SAMPLES = {
-        welcome: `// Welcome to ParaScript — pick a sample, or just start typing.
+        welcome: `// Welcome to Para — pick a sample, or just start typing.
 // Output JavaScript shows up live on the right.
 
 const handler = err => console.error(err);
@@ -286,7 +286,7 @@ pure function distance(a, b) {
         }
       }
 
-      // Input editor — JS-flavoured highlighting (the ParaScript ops fall
+      // Input editor — JS-flavoured highlighting (the Para ops fall
       // back gracefully; we don't ship a custom CM grammar in v1).
       const initial = SAMPLES.welcome;
       const inputState = EditorState.create({

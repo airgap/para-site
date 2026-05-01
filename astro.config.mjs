@@ -11,13 +11,13 @@ import parabunJsxGrammar from "./src/grammars/parabun-jsx.tmLanguage.json" with 
 import parabunInjectGrammar from "./src/grammars/parabun-inject.tmLanguage.json" with { type: "json" };
 
 // Hand-curated sidebar — the docs sit flat under src/content/docs/docs/* to
-// preserve simple /docs/<slug>/ URLs. ParaScript's surface is the language
+// preserve simple /docs/<slug>/ URLs. Para's surface is the language
 // itself plus the runtime modules the language compiles down to. Hardware-
 // bound modules (gpu, llm, camera, gpio, …) live on parabun.script.dev — we
 // link there rather than mirror them.
 const docsRoot = "/docs";
 const guides = [
-  { label: "ParaScript docs", link: `${docsRoot}/` },
+  { label: "Para docs", link: `${docsRoot}/` },
   { label: "Playground", link: "/playground" },
   { label: "Install", link: `${docsRoot}/install/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
@@ -37,7 +37,7 @@ export default defineConfig({
   site: "https://para.script.dev",
   integrations: [
     starlight({
-      title: "ParaScript",
+      title: "Para",
       description:
         "A portable JavaScript dialect with reactive signals, edge-triggered handlers, ranges, pipelines, and purity. Compile with bun build, run anywhere V8/JSC runs.",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/airgap/parabun" }],

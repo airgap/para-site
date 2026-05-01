@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Three worked ParaScript projects, one per host environment — frontend (DOM), backend (Node), edge (Cloudflare Workers).
+description: Three worked Para projects, one per host environment — frontend (DOM), backend (Node), edge (Cloudflare Workers).
 ---
 
 Three worked projects. Each is a complete project: file layout, source, build commands, deploy notes.

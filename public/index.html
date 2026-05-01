@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ParaScript</title>
+    <title>Para</title>
     <meta
       name="description"
       content="A TypeScript dialect with reactive signals, integer ranges, a pipeline operator, and edge-triggered handlers. Files end in .pts. Compiles to standard JavaScript."
@@ -49,7 +49,7 @@
             <circle class="star-a" cx="11" cy="16" r="6" />
             <circle class="star-b" cx="27" cy="16" r="4" />
           </svg>
-          parascript</span
+          Para</span
         >
         <nav class="nav">
           <a href="#syntax">syntax</a>
@@ -61,7 +61,7 @@
         </nav>
       </header>
 
-      <h1>ParaScript</h1>
+      <h1>Para</h1>
       <p class="lede">
         A TypeScript dialect with reactive signals, integer ranges, a pipeline operator, edge-triggered handlers,
         chained <code>.catch</code> / <code>.finally</code> / <code>await</code>, and compile-time function purity.
@@ -141,7 +141,7 @@
 
       <h2 id="compile">Compilation</h2>
       <p>
-        ParaScript files (<code>.pts</code>) are parsed by <a href="https://parabun.script.dev">Parabun</a>'s
+        Para files (<code>.pts</code>) are parsed by <a href="https://parabun.script.dev">Parabun</a>'s
         transpiler. (Mainline Bun doesn't recognize the syntax — the parser additions are part of the Parabun fork.) The
         output is standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
       </p>
@@ -166,7 +166,7 @@
 
       <p class="caveat">
         Parabun is required for the build step today (it owns the <code>.pts</code> parser). A standalone
-        npm-installable transpiler (<code>@parascript/transpile</code>) is on the roadmap.
+        npm-installable transpiler (<code>@para/transpile</code>) is on the roadmap.
       </p>
 
       <h2 id="examples">Examples</h2>
@@ -190,7 +190,7 @@
       <h2 id="related">Related projects</h2>
       <p>
         <a href="https://parabun.script.dev">Parabun</a> is a fork of <a href="https://bun.com">Bun</a> that ships
-        ParaScript natively (no build or alias step) along with native modules for parallel CPU work, raw CUDA / Metal
+        Para natively (no build or alias step) along with native modules for parallel CPU work, raw CUDA / Metal
         kernels, V4L2 camera capture, ALSA audio, GGUF LLM inference, and GPIO / I&sup2;C / SPI on Linux SBCs.
       </p>
 

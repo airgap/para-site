@@ -1,11 +1,11 @@
 ---
-title: ParaScript docs
-description: Reference for ParaScript — a TypeScript dialect with reactive signals, integer ranges, a pipeline operator, edge-triggered handlers, error-chain operators, and compile-time purity.
+title: Para docs
+description: Reference for Para — a TypeScript dialect with reactive signals, integer ranges, a pipeline operator, edge-triggered handlers, error-chain operators, and compile-time purity.
 ---
 
-ParaScript is a TypeScript dialect. Files end in `.pts`. The added syntax — signals and effects, `when` blocks, `~>` and `->` reactive bindings, `|>`, integer ranges, `..!` / `..&` / `..=`, `pure`, `memo`, `defer`, `arena` — desugars to standard JavaScript at parse time.
+Para is a TypeScript dialect. Files end in `.pts`. The added syntax — signals and effects, `when` blocks, `~>` and `->` reactive bindings, `|>`, integer ranges, `..!` / `..&` / `..=`, `pure`, `memo`, `defer`, `arena` — desugars to standard JavaScript at parse time.
 
-The desugared output imports a small npm package, `parabun-browser-shims`, which contains the runtime side of the language. There is no other ParaScript runtime layer; the output is plain JS.
+The desugared output imports a small npm package, `parabun-browser-shims`, which contains the runtime side of the language. There is no other Para runtime layer; the output is plain JS.
 
 ## Sections
 
@@ -16,6 +16,6 @@ The desugared output imports a small npm package, `parabun-browser-shims`, which
 
 ## Related projects
 
-[Parabun](https://parabun.script.dev) is a fork of Bun that ships ParaScript natively, plus a stack of native runtime modules (GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, GPIO/I²C/SPI). Use Parabun if you want hardware acceleration in TypeScript on a Linux SBC, NUC, or similar.
+[Parabun](https://parabun.script.dev) is a fork of Bun that ships Para natively, plus a stack of native runtime modules (GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, GPIO/I²C/SPI). Use Parabun if you want hardware acceleration in TypeScript on a Linux SBC, NUC, or similar.
 
 The standalone path documented here works on any host with a JavaScript engine — browsers, Lambda, Cloudflare Workers, Deno, Node 18+.

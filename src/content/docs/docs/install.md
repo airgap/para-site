@@ -3,13 +3,13 @@ title: Install
 description: Build .pts files with parabun build, alias para:* in your bundler, ship to any JavaScript runtime.
 ---
 
-ParaScript is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [Parabun](https://parabun.script.dev) fork of Bun — mainline Bun does not recognize the syntax. To use ParaScript on a host that isn't Parabun itself, you need three things:
+Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [Parabun](https://parabun.script.dev) fork of Bun — mainline Bun does not recognize the syntax. To use Para on a host that isn't Parabun itself, you need three things:
 
 1. **The Parabun transpiler** to compile `.pts` → `.js`. The output is plain JavaScript and runs anywhere; Parabun is only needed at build time.
 2. **A bundler alias** that maps `para:*` import specifiers to the runtime shim package. One line of bundler config.
 3. **The runtime package**, [`parabun-browser-shims`](https://www.npmjs.com/package/parabun-browser-shims).
 
-A standalone `@parascript/transpile` npm package (no Parabun required) is on the roadmap. Until it ships, the build host needs Parabun installed; runtime hosts (browser, Lambda, Workers, Node, Bun, Deno) do not.
+A standalone `@para/transpile` npm package (no Parabun required) is on the roadmap. Until it ships, the build host needs Parabun installed; runtime hosts (browser, Lambda, Workers, Node, Bun, Deno) do not.
 
 ## 1. Install Parabun on the build host
 

@@ -1,5 +1,5 @@
 /* ─── Stellar Atlas: dark (Night Sky, default) + light (Atlas) ─────────
-   ParaScript and Parabun are a binary star system. The site reflects
+   Para and Parabun are a binary star system. The site reflects
    that — dark mode is "observation": deep midnight bg with the binary
    pair as the accent system. Light mode is "atlas": parchment paper,
    ink markings, the same binary expressed as deep blue + vermillion.
@@ -14,7 +14,7 @@
   --text: #e8e6dd;
   --text-dim: #8a8b94;
   --text-faint: #4a4d5a;
-  /* Binary stars — primary = ParaScript (blue-white), companion = Parabun (amber). */
+  /* Binary stars — primary = Para (blue-white), companion = Parabun (amber). */
   --star-primary: #6db4ff;
   --star-companion: #ffa855;
   --accent: var(--star-primary);
@@ -129,7 +129,7 @@ body::before {
 
 /* ─── Soft nebulae (dark mode only) ───────────────────────────────────
    Three large, very-low-opacity radial-gradients give the page depth.
-   The blue nebula dominates (matches the ParaScript primary star),
+   The blue nebula dominates (matches the Para primary star),
    amber sits opposite for tension, deep magenta in the third corner
    adds a "background galaxy" hint. All three feather out to transparent
    so they never have hard edges. */
