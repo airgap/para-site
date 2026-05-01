@@ -42,6 +42,7 @@ export default defineConfig({
         "A portable JavaScript dialect with reactive signals, edge-triggered handlers, ranges, pipelines, and purity. Compile with bun build, run anywhere V8/JSC runs.",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/airgap/parabun" }],
       customCss: ["./src/styles/parabun.css"],
+      components: { SiteTitle: "./src/components/SiteTitle.astro" },
       sidebar: [
         { label: "Guides", items: guides },
         { label: "Examples", items: examples },

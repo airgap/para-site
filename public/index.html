@@ -49,7 +49,11 @@
             <circle class="star-a" cx="11" cy="16" r="6" />
             <circle class="star-b" cx="27" cy="16" r="4" />
           </svg>
-          Para</span
+          <span class="brand-pair">
+            <span class="brand-active">Para</span>
+            <span class="brand-sep">/</span>
+            <a class="brand-link" href="https://parabun.script.dev">ParaBun</a>
+          </span></span
         >
         <nav class="nav">
           <a href="#syntax">syntax</a>
@@ -141,9 +145,9 @@
 
       <h2 id="compile">Compilation</h2>
       <p>
-        Para files (<code>.pts</code>) are parsed by <a href="https://parabun.script.dev">ParaBun</a>'s
-        transpiler. (Mainline Bun doesn't recognize the syntax — the parser additions are part of the ParaBun fork.) The
-        output is standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
+        Para files (<code>.pts</code>) are parsed by <a href="https://parabun.script.dev">ParaBun</a>'s transpiler.
+        (Mainline Bun doesn't recognize the syntax — the parser additions are part of the ParaBun fork.) The output is
+        standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
       </p>
       <p>
         On ParaBun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,
@@ -189,9 +193,9 @@
 
       <h2 id="related">Related projects</h2>
       <p>
-        <a href="https://parabun.script.dev">ParaBun</a> is a fork of <a href="https://bun.com">Bun</a> that ships
-        Para natively (no build or alias step) along with native modules for parallel CPU work, raw CUDA / Metal
-        kernels, V4L2 camera capture, ALSA audio, GGUF LLM inference, and GPIO / I&sup2;C / SPI on Linux SBCs.
+        <a href="https://parabun.script.dev">ParaBun</a> is a fork of <a href="https://bun.com">Bun</a> that ships Para
+        natively (no build or alias step) along with native modules for parallel CPU work, raw CUDA / Metal kernels,
+        V4L2 camera capture, ALSA audio, GGUF LLM inference, and GPIO / I&sup2;C / SPI on Linux SBCs.
       </p>
 
       <footer>
