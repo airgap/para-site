@@ -93,6 +93,8 @@ filterEl.addEventListener("change", () => {
   filter = filterEl.value as typeof filter;
 });
 
+// Effect for the list — long body, multiple template lines. Effect
+// blocks are the right shape when the body isn't a single sink.
 effect {
   list.innerHTML = visible
     .map(t => `
@@ -103,13 +105,11 @@ effect {
     `).join("");
 }
 
-effect {
-  count.textContent = `${openCount} open`;
-  count.hidden = openCount === 0 && items.length === 0;
-}
-
-// Toast visibility tracks "all done" state — bind reactively.
-// `A ~> B` desugars to effect(() => { B = A; }), so this stays in sync.
+// Single-sink reactive bindings. Each `A ~> B` desugars to
+// effect(() => { B = A; }). One per line keeps the dep set tight —
+// the textContent binding only re-fires on openCount changes.
+`${openCount} open`            ~> count.textContent;
+!openCount && !items.length    ~> count.hidden;
 !items.length || openCount > 0 ~> toast.hidden;
 
 list.addEventListener("click", e => {
@@ -153,6 +153,8 @@ filterEl.addEventListener("change", () => {
   filter = filterEl.value;
 });
 
+// Effect for the list — long body, multiple template lines. Effect
+// blocks are the right shape when the body isn't a single sink.
 effect {
   list.innerHTML = visible
     .map(t => `
@@ -163,13 +165,11 @@ effect {
     `).join("");
 }
 
-effect {
-  count.textContent = `${openCount} open`;
-  count.hidden = openCount === 0 && items.length === 0;
-}
-
-// Toast visibility tracks "all done" state — bind reactively.
-// `A ~> B` desugars to effect(() => { B = A; }), so this stays in sync.
+// Single-sink reactive bindings. Each `A ~> B` desugars to
+// effect(() => { B = A; }). One per line keeps the dep set tight —
+// the textContent binding only re-fires on openCount changes.
+`${openCount} open`            ~> count.textContent;
+!openCount && !items.length    ~> count.hidden;
 !items.length || openCount > 0 ~> toast.hidden;
 
 list.addEventListener("click", e => {
@@ -188,8 +188,8 @@ list.addEventListener("click", e => {
 
 - `signal items = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
 - `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
-- Each `effect { }` block tracks the signals it reads and re-runs when any of them changes. The two effects in this file are independent: changing `filter` re-runs the list effect but not the count effect.
-- `!items.length || openCount > 0 ~> toast.hidden` is the reactive-binding operator: `A ~> B` desugars to `effect(() => { B = A; })`, so `toast.hidden` stays in sync with `!allDone` continuously. This is the right primitive for *value bindings* — when you want a DOM property to track an expression. For *side effects* that should fire only on transitions (playing a sound, sending analytics), `when EXPR { … }` and the paired `when not { … }` form are the edge-triggered alternative.
+- The list `effect { }` tracks `visible` and re-runs when it changes. Effect blocks are the right shape when the body is multi-line or has more than one statement; for single-sink value bindings, the `~>` operator is more direct.
+- `A ~> B` is the reactive-binding operator — desugars to `effect(() => { B = A; })`. Three of them at the bottom of the file: `count.textContent`, `count.hidden`, `toast.hidden` each track their own expression. One per line keeps the dep set tight: `count.textContent` only re-runs on `openCount` changes, not on the unrelated `items.length` reads. For *side effects* that should fire only on transitions (playing a sound, sending analytics), `when EXPR { … }` (and the paired `when not { … }`) are the edge-triggered alternative.
 - The `$` shorthand binds `document.querySelector` once. In `.pts` it's a small generic helper so each call site can pass its element type (`$<HTMLInputElement>("#new")`) and the result stays cast-free; in `.pjs` it's just `document.querySelector.bind(document)` since there are no types to thread.
 - The `.pts` version queries each element ref once at the top with its concrete type so handlers stay cast-free; the one remaining `as` is `filterEl.value as typeof filter` (TS can't narrow `<select>.value` to a literal union without a runtime check). The `.pjs` version skips all of that.
 
