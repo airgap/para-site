@@ -68,46 +68,55 @@
 
       <h1>Para</h1>
       <p class="lede">
-        A TypeScript library suite — <code>signals</code>, <code>parallel</code>, <code>pipeline</code>,
-        <code>arena</code>, <code>simd</code>, <code>csv</code>, <code>arrow</code>, <code>rtp</code>,
-        <code>mcp</code> — with optional <code>.pts</code> syntax sugar. Pure JS / Wasm, runs on any JS runtime.
+        Para is two things: a set of TypeScript libraries (<code>signals</code>, <code>parallel</code>,
+        <code>pipeline</code>, <code>arena</code>, <code>simd</code>, <code>csv</code>, <code>arrow</code>,
+        <code>rtp</code>, <code>mcp</code>) and an optional <code>.pts</code> syntax that compiles to JS calls into
+        them. The libraries are pure JS / Wasm and work in any JS runtime.
       </p>
       <p class="lede">
-        For GPU compute, hardware capture, and on-device LLM inference there's
-        <a href="https://parabun.script.dev">ParaBun</a> — a Bun fork that bakes these libraries in and adds the native
-        modules.
+        <a href="https://parabun.script.dev">ParaBun</a> is a separate runtime (Bun fork) that bundles Para and adds
+        modules for GPU, camera, audio, GPIO/I²C/SPI, and on-device LLM.
       </p>
 
       <h2 id="pieces">Lib + Lang</h2>
 
       <div class="pieces">
         <div class="piece">
-          <h3>Para Lib — the libraries</h3>
+          <h3>Para Lib</h3>
           <p>
-            Nine cross-runtime modules importable as <code>para:*</code>. <code>signals</code> is the foundation
-            (reactive cells, derived values, effects); the rest expose their state through it (<code>para:audio</code>'s
-            capture stream surfaces a <code>peakLevel</code> signal, <code>para:gpio</code>'s line value is a signal,
-            etc.) so reactive composition is uniform across the suite.
+            Nine modules under the <code>para:*</code> import prefix. <code>para:signals</code> provides reactive cells,
+            derived values, and effects. The other modules use it to expose their state — <code>para:audio</code>'s
+            capture stream has a <code>peakLevel</code> signal, <code>para:gpio</code>'s line value is a signal, and so
+            on. So <code>effect()</code> from <code>para:signals</code> works against any of them.
           </p>
           <p>
             Distributed today as
-            <a href="https://www.npmjs.com/package/parabun-browser-shims"><code>parabun-browser-shims</code></a
-            >; individual <code>@para/*</code> packages on the roadmap. <a href="/docs/">Module docs →</a>
+            <a href="https://www.npmjs.com/package/parabun-browser-shims"><code>parabun-browser-shims</code></a> (one
+            package); individual <code>@para/*</code> packages planned. <a href="/docs/">Module docs →</a>
           </p>
         </div>
 
         <div class="piece">
-          <h3>Para Lang — the syntax</h3>
+          <h3>Para Lang</h3>
           <p>
-            An optional <code>.pts</code> / <code>.pjs</code> syntax that desugars to standard JavaScript imports from
-            Para Lib. Adds <code>pure</code> / <code>memo</code> functions, <code>signal</code> / <code>effect</code> /
-            <code>~&gt;</code> / <code>-&gt;</code> reactive bindings, <code>defer</code> / <code>arena</code> blocks,
-            <code>|&gt;</code> pipelines, <code>..!</code> / <code>..&amp;</code> error operators, integer ranges. The
-            language depends on at minimum <code>para:signals</code>; the JS API works without it.
+            <code>.pts</code> / <code>.pjs</code> files compile to standard JavaScript that imports from Para Lib. Added
+            forms:
           </p>
+          <ul>
+            <li><code>pure</code> / <code>memo</code> function declarators</li>
+            <li>
+              <code>signal x = 0</code> / <code>effect { … }</code> / <code>x ~&gt; y</code> / <code>x -&gt; fn</code>
+              (reactive bindings)
+            </li>
+            <li><code>defer EXPR</code> / <code>arena { … }</code> blocks</li>
+            <li><code>|&gt;</code> pipelines, integer ranges (<code>0..n</code>, <code>0..=n</code>)</li>
+            <li><code>..!</code> / <code>..&amp;</code> chained <code>.catch</code> / <code>.finally</code></li>
+          </ul>
           <p>
-            Compiler today is bundled inside <a href="https://parabun.script.dev">ParaBun</a>; standalone
-            <code>@para/transpile</code> in development. <a href="/docs/language/">Language reference →</a>
+            The reactive forms desugar to <code>para:signals</code> imports, so the language requires at least that
+            module at runtime. The other libraries' JS APIs work without the language. Compiler today is bundled in
+            <a href="https://parabun.script.dev">ParaBun</a>; standalone <code>@para/transpile</code> in development.
+            <a href="/docs/language/">Language reference →</a>
           </p>
         </div>
       </div>
