@@ -103,6 +103,8 @@ body {
   display: inline-block;
   width: 32px;
   height: 32px;
+  /* let the star glow paint past the viewBox bounds instead of clipping. */
+  overflow: visible;
 }
 .pg-binary circle {
   transform-box: view-box;
