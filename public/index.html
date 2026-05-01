@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Para</title>
+    <title>Para — JS ecosystem (Lib + Lang + Runtime)</title>
     <meta
       name="description"
-      content="A TypeScript dialect with reactive signals, integer ranges, a pipeline operator, and edge-triggered handlers. Files end in .pts. Compiles to standard JavaScript."
+      content="Para is a JavaScript ecosystem in three pieces. Para Lib: cross-runtime npm packages (signals, parallel, pipeline, simd, csv, arrow). Para Lang: optional .pts syntax sugar that compiles to JS. Para Runtime (ParaBun): a Bun fork that bakes the libs in and adds native modules for GPU, hardware capture, and on-device LLM."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -56,28 +56,73 @@
           </span></span
         >
         <nav class="nav">
+          <a href="#pieces">pieces</a>
           <a href="#syntax">syntax</a>
           <a href="#compile">compile</a>
           <a href="#examples">examples</a>
           <a href="/docs/">docs</a>
-          <a href="https://parabun.script.dev">parabun</a>
+          <a href="https://parabun.script.dev">runtime</a>
           <a href="https://github.com/airgap/para-site" target="_blank" rel="noopener">github</a>
         </nav>
       </header>
 
       <h1>Para</h1>
       <p class="lede">
-        A TypeScript dialect with reactive signals, integer ranges, a pipeline operator, edge-triggered handlers,
-        chained <code>.catch</code> / <code>.finally</code> / <code>await</code>, and compile-time function purity.
-      </p>
-      <p class="lede">
-        Files end in <code>.pts</code>. All extensions desugar to standard JavaScript at parse time. The output imports
-        a small npm package,
-        <a href="https://www.npmjs.com/package/parabun-browser-shims"><code>parabun-browser-shims</code></a
-        >, that provides the runtime side of the language.
+        A JavaScript ecosystem in three pieces. Pick whichever ones you need; they don't depend on each other.
       </p>
 
-      <h2 id="syntax">Syntax</h2>
+      <h2 id="pieces">The three pieces</h2>
+
+      <div class="pieces">
+        <div class="piece">
+          <h3>Para Lib</h3>
+          <p>
+            Cross-runtime npm packages: <code>signals</code>, <code>parallel</code>, <code>pipeline</code>,
+            <code>arena</code>, <code>simd</code>, <code>csv</code>, <code>arrow</code>, <code>rtp</code>,
+            <code>mcp</code>. Pure JS / Wasm, no platform bindings. Runs on Node, Bun, Deno, browsers, Cloudflare
+            Workers — anywhere V8 or JSC runs.
+          </p>
+          <p>
+            Distributed today as
+            <a href="https://www.npmjs.com/package/parabun-browser-shims"><code>parabun-browser-shims</code></a
+            >; individual <code>@para/*</code> packages on the roadmap. <a href="/docs/">Module docs →</a>
+          </p>
+        </div>
+
+        <div class="piece">
+          <h3>Para Lang</h3>
+          <p>
+            Optional <code>.pts</code> / <code>.pjs</code> syntax over the libs: <code>pure</code> /
+            <code>memo</code> functions, <code>signal</code> / <code>effect</code> / <code>~&gt;</code> /
+            <code>-&gt;</code> reactive bindings, <code>defer</code> / <code>arena</code> blocks,
+            <code>|&gt;</code> pipelines, <code>..!</code> / <code>..&amp;</code> error operators, integer ranges.
+            Compiles to standard JavaScript that imports from Para Lib. The output runs anywhere — the language is
+            build-time only.
+          </p>
+          <p>
+            Compiler today is bundled inside the Para Runtime; standalone <code>@para/transpile</code> in development.
+            <a href="/docs/language/">Language reference →</a>
+          </p>
+        </div>
+
+        <div class="piece">
+          <h3>Para Runtime (<a href="https://parabun.script.dev">ParaBun</a>)</h3>
+          <p>
+            A fork of <a href="https://bun.com">Bun</a> that bundles Para Lib + Para Lang and adds native-only modules:
+            <code>para:gpu</code> (libcuda + Metal FFI), <code>para:camera</code> (V4L2), <code>para:audio</code> (ALSA
+            + codecs + DSP), <code>para:image</code> (codecs + resize / blur / sharpen), <code>para:gpio</code> /
+            <code>para:i2c</code> / <code>para:spi</code> (Linux peripheral I/O), <code>para:llm</code> (Llama 3, Qwen2,
+            BERT, Whisper, OpenAI-compatible HTTP), and the higher-level composers (<code>speech</code>,
+            <code>vision</code>, <code>assistant</code>).
+          </p>
+          <p>
+            Native modules require ParaBun — there's no Node or browser equivalent for direct CUDA dispatch or kernel
+            chardev access. <a href="https://parabun.script.dev">parabun.script.dev →</a>
+          </p>
+        </div>
+      </div>
+
+      <h2 id="syntax">Syntax (Para Lang)</h2>
 
       <h3>Signals and effects</h3>
       <p>
@@ -190,13 +235,6 @@
           <a href="/docs/examples/edge/">Edge</a> &mdash; HTTP handler with per-request signals. Cloudflare Workers.
         </li>
       </ul>
-
-      <h2 id="related">Related projects</h2>
-      <p>
-        <a href="https://parabun.script.dev">ParaBun</a> is a fork of <a href="https://bun.com">Bun</a> that ships Para
-        natively (no build or alias step) along with native modules for parallel CPU work, raw CUDA / Metal kernels,
-        V4L2 camera capture, ALSA audio, GGUF LLM inference, and GPIO / I&sup2;C / SPI on Linux SBCs.
-      </p>
 
       <footer>
         <p>
