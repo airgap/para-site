@@ -487,12 +487,12 @@ h1 em {
     "SOFT" 50;
 }
 
-/* Three-piece grid on the landing — Lib / Lang / Runtime side by side
-   on wide screens, stacked on narrow. Each piece keeps its own column
-   border so the structural separation is visible at a glance. */
+/* Lib + Lang side by side on wide screens, stacked on narrow. Each
+   keeps its own column border so the structural separation is visible
+   at a glance. */
 .pieces {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 0;
   margin: 0 0 40px;
   border-top: 1px solid var(--rule);
