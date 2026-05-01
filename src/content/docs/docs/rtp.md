@@ -7,7 +7,7 @@ description: RFC 3550 packet pack / parse and a jitter buffer. Wire transport fo
 import rtp from "para:rtp";
 ```
 
-A small RTP toolkit — pack a payload into an RFC 3550 packet, parse one off the wire, and reorder by sequence number with a configurable depth. Built to sit under [`para:audio`](/docs/audio/)'s Opus encoder for a WebRTC-style send/receive path.
+A small RTP toolkit — pack a payload into an RFC 3550 packet, parse one off the wire, and reorder by sequence number with a configurable depth. Built to sit under [`parabun:audio`](/docs/audio/)'s Opus encoder for a WebRTC-style send/receive path.
 
 ## `pack(opts)`
 
@@ -80,10 +80,10 @@ effect(() => {
 
 ## A full audio pipeline
 
-Combined with [`para:audio`](/docs/audio/):
+Combined with [`parabun:audio`](/docs/audio/):
 
 ```ts
-import audio from "para:audio";
+import audio from "parabun:audio";
 import rtp from "para:rtp";
 
 await using mic = await audio.capture({ sampleRate: 48000, channels: 1 });
@@ -116,5 +116,5 @@ for await (const frame of mic.frames()) {
 ## Limits
 
 - Single-stream — no SDES / RTCP companion.
-- The jitter buffer is sequence-only. Packet-loss concealment, FEC, and rate-adaptive depth are all on the encoder/decoder side ([`para:audio.OpusDecoder`](/docs/audio/) handles in-band PLC).
+- The jitter buffer is sequence-only. Packet-loss concealment, FEC, and rate-adaptive depth are all on the encoder/decoder side ([`parabun:audio.OpusDecoder`](/docs/audio/) handles in-band PLC).
 - IPv4 / IPv6 wire transport itself is up to the caller — `para:rtp` produces / consumes bytes, not sockets.

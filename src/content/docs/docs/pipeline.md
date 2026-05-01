@@ -1,13 +1,13 @@
 ---
 title: para:pipeline
-description: Chained iterators that fuse adjacent kernels into one pass. Lifts to para:gpu when the input is large enough.
+description: Chained iterators that fuse adjacent kernels into one pass. Lifts to parabun:gpu when the input is large enough.
 ---
 
 ```ts
 import pipeline from "para:pipeline";
 ```
 
-`para:pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `para:simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`para:gpu`](https://parabun.script.dev/docs/gpu/) `simdMap` instead.
+`para:pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `para:simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`parabun:gpu`](https://parabun.script.dev/docs/gpu/) `simdMap` instead.
 
 ## Stage operators
 
@@ -51,7 +51,7 @@ const evenSquares = pipeline.range(0, 1_000)
 
 ### Bring your own
 
-Any iterable / async iterable works as a source — typed arrays, [`para:csv`](/docs/csv/) row streams, [`para:audio`](https://parabun.script.dev/docs/audio/) capture frames, anything.
+Any iterable / async iterable works as a source — typed arrays, [`para:csv`](/docs/csv/) row streams, [`parabun:audio`](https://parabun.script.dev/docs/audio/) capture frames, anything.
 
 ```ts
 for (const piece of pipeline.range(0, 1000).filter(x => x % 2).map(x => x * x).chunk(100)) {

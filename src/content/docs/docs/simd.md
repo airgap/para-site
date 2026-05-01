@@ -9,7 +9,7 @@ import simd from "para:simd";
 
 `para:simd` is the CPU-side numerical primitive layer. WebAssembly v128 vectorizes `Float32Array` (4-lane f32) and `Float64Array` (2-lane f64) ops; for inputs above ~4 MiB, the wasm module reads straight from the original buffer rather than copying into wasm linear memory.
 
-The same operations exist on [`para:gpu`](https://parabun.script.dev/docs/gpu/) with device-dispatch fallback — `para:simd` is the floor that always works.
+The same operations exist on [`parabun:gpu`](https://parabun.script.dev/docs/gpu/) with device-dispatch fallback — `para:simd` is the floor that always works.
 
 ## Element-wise
 
@@ -38,13 +38,13 @@ const w = simd.mul(a, b);
 
 ### `matVec(matrix, vector, nRows, nCols)`
 
-`matrix[nRows, nCols]` row-major × `vector[nCols]` → result `[nRows]`. Used as the CPU fallback inside [`para:gpu`](https://parabun.script.dev/docs/gpu/)'s `matVec`.
+`matrix[nRows, nCols]` row-major × `vector[nCols]` → result `[nRows]`. Used as the CPU fallback inside [`parabun:gpu`](https://parabun.script.dev/docs/gpu/)'s `matVec`.
 
 ## Map
 
 ### `simdMap(fn, a)`
 
-Element-wise function application. `fn` is `(x, i) => number`. Significantly faster than `Array.prototype.map` for typed arrays of plausible size — the wasm side compiles a per-call closure. CPU ceiling unless [`para:gpu`](https://parabun.script.dev/docs/gpu/) gates this through to a runtime-compiled GPU kernel.
+Element-wise function application. `fn` is `(x, i) => number`. Significantly faster than `Array.prototype.map` for typed arrays of plausible size — the wasm side compiles a per-call closure. CPU ceiling unless [`parabun:gpu`](https://parabun.script.dev/docs/gpu/) gates this through to a runtime-compiled GPU kernel.
 
 ```ts
 const r = simd.simdMap(x => Math.sqrt(x * x + 1), input);
@@ -68,11 +68,11 @@ True when `arr.buffer` is the wasm linear-memory `ArrayBuffer`.
 
 ### `isWasmAvailable()` / `wasmWinsForSize(op, n, elemBytes)`
 
-`isWasmAvailable` is `false` on hosts without v128 (typical x86-32, some embedded). `wasmWinsForSize` returns the calibrated CPU-vs-wasm crossover — for very small arrays the wasm dispatch overhead loses to a tight scalar JS loop, so the higher-level callers (and [`para:gpu`](https://parabun.script.dev/docs/gpu/)) gate on this.
+`isWasmAvailable` is `false` on hosts without v128 (typical x86-32, some embedded). `wasmWinsForSize` returns the calibrated CPU-vs-wasm crossover — for very small arrays the wasm dispatch overhead loses to a tight scalar JS loop, so the higher-level callers (and [`parabun:gpu`](https://parabun.script.dev/docs/gpu/)) gate on this.
 
 ## Capability checks
 
-`hasUnifiedMemoryGPU()` and `hasDiscreteGPU()` return whether the host has a Metal-style unified-memory accelerator or a separate-memory CUDA-style one. Useful for choosing residency strategy upstream of [`para:gpu`](https://parabun.script.dev/docs/gpu/).
+`hasUnifiedMemoryGPU()` and `hasDiscreteGPU()` return whether the host has a Metal-style unified-memory accelerator or a separate-memory CUDA-style one. Useful for choosing residency strategy upstream of [`parabun:gpu`](https://parabun.script.dev/docs/gpu/).
 
 ## Performance
 

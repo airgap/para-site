@@ -1,13 +1,13 @@
 ---
 title: para:mcp
-description: Model Context Protocol client. Stdio + WebSocket transports. Composes with para:assistant's tool dispatch.
+description: Model Context Protocol client. Stdio + WebSocket transports. Composes with parabun:assistant's tool dispatch.
 ---
 
 ```ts
 import mcp from "para:mcp";
 ```
 
-A Model Context Protocol client. Two transports for v1 — stdio (subprocess over newline-delimited JSON-RPC 2.0) and ws (WebSocket text frames) — plus the structural surface [`para:assistant`](/docs/assistant/) reuses for its `tools:` option. Out of scope for v1: server hosting, HTTP / SSE transport, OAuth wrappers, resources / prompts surfaces (`tools/*` only).
+A Model Context Protocol client. Two transports for v1 — stdio (subprocess over newline-delimited JSON-RPC 2.0) and ws (WebSocket text frames) — plus the structural surface [`parabun:assistant`](/docs/assistant/) reuses for its `tools:` option. Out of scope for v1: server hosting, HTTP / SSE transport, OAuth wrappers, resources / prompts surfaces (`tools/*` only).
 
 ## `mcp.connect(transport, target, opts?)`
 
@@ -66,12 +66,12 @@ try {
 }
 ```
 
-## Composing with `para:assistant`
+## Composing with `parabun:assistant`
 
-The connection object is structurally compatible with `para:assistant`'s `tools:` option — the assistant flattens every tool the connection exposes into its own catalog and routes calls back through `conn.call`.
+The connection object is structurally compatible with `parabun:assistant`'s `tools:` option — the assistant flattens every tool the connection exposes into its own catalog and routes calls back through `conn.call`.
 
 ```ts
-import assistant from "para:assistant";
+import assistant from "parabun:assistant";
 import mcp from "para:mcp";
 
 await using conn = await mcp.connect("stdio", "home-assistant-mcp");
