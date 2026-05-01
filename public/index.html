@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap"
     />
     <link rel="stylesheet" href="styles.css" />
     <script>
@@ -59,12 +59,12 @@
       </p>
       <pre
         data-lang="pts"
-      ><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> doubled </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> count </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">;       </span><span style="color:#6A737D">// derived; recomputes when count changes</span></span>
+      ><code><span class="line"><span style="color:#AB5959">signal</span><span style="color:#B07D48"> count</span><span style="color:#999999"> =</span><span style="color:#2F798A"> 0</span><span style="color:#999999">;</span></span>
+<span class="line"><span style="color:#AB5959">signal</span><span style="color:#B07D48"> doubled</span><span style="color:#999999"> =</span><span style="color:#B07D48"> count</span><span style="color:#AB5959"> *</span><span style="color:#2F798A"> 2</span><span style="color:#999999">;</span><span style="color:#A0ADA0">       // derived; recomputes when count changes</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F97583">effect</span><span style="color:#E1E4E8"> { console.</span><span style="color:#B392F0">log</span><span style="color:#E1E4E8">(doubled); }  </span><span style="color:#6A737D">// runs once now, again on each change</span></span>
+<span class="line"><span style="color:#1E754F">effect</span><span style="color:#999999"> {</span><span style="color:#B07D48"> console</span><span style="color:#999999">.</span><span style="color:#59873A">log</span><span style="color:#999999">(</span><span style="color:#B07D48">doubled</span><span style="color:#999999">);</span><span style="color:#999999"> }</span><span style="color:#A0ADA0">  // runs once now, again on each change</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#E1E4E8">count</span><span style="color:#F97583">++</span><span style="color:#E1E4E8">;                          </span><span style="color:#6A737D">// count.set(count.get() + 1)</span></span></code></pre>
+<span class="line"><span style="color:#B07D48">count</span><span style="color:#AB5959">++</span><span style="color:#999999">;</span><span style="color:#A0ADA0">                          // count.set(count.get() + 1)</span></span></code></pre>
 
       <h3>Edge-triggered handlers</h3>
       <p>
@@ -74,10 +74,10 @@
       </p>
       <pre
         data-lang="pts"
-      ><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;</span></span>
+      ><code><span class="line"><span style="color:#AB5959">signal</span><span style="color:#B07D48"> score</span><span style="color:#999999"> =</span><span style="color:#2F798A"> 0</span><span style="color:#999999">;</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F97583">when</span><span style="color:#E1E4E8"> score </span><span style="color:#F97583">>=</span><span style="color:#79B8FF"> 100</span><span style="color:#E1E4E8"> { </span><span style="color:#B392F0">unlockAchievement</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">"century"</span><span style="color:#E1E4E8">); }</span></span>
-<span class="line"><span style="color:#F97583">when</span><span style="color:#F97583"> not</span><span style="color:#E1E4E8"> online   { </span><span style="color:#B392F0">showOfflineBanner</span><span style="color:#E1E4E8">(); }</span></span></code></pre>
+<span class="line"><span style="color:#1E754F">when</span><span style="color:#B07D48"> score</span><span style="color:#999999"> >=</span><span style="color:#2F798A"> 100</span><span style="color:#999999"> {</span><span style="color:#59873A"> unlockAchievement</span><span style="color:#999999">(</span><span style="color:#B5695977">"</span><span style="color:#B56959">century</span><span style="color:#B5695977">"</span><span style="color:#999999">);</span><span style="color:#999999"> }</span></span>
+<span class="line"><span style="color:#1E754F">when</span><span style="color:#1E754F"> not</span><span style="color:#B07D48"> online</span><span style="color:#999999">   {</span><span style="color:#59873A"> showOfflineBanner</span><span style="color:#999999">();</span><span style="color:#999999"> }</span></span></code></pre>
 
       <h3>Reactive bindings</h3>
       <p>
@@ -87,9 +87,9 @@
       </p>
       <pre
         data-lang="pts"
-      ><code><span class="line"><span style="color:#F97583">signal</span><span style="color:#E1E4E8"> name </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "world"</span><span style="color:#E1E4E8">;</span></span>
-<span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">~></span><span style="color:#E1E4E8"> document.title;          </span><span style="color:#6A737D">// title tracks name</span></span>
-<span class="line"><span style="color:#E1E4E8">name </span><span style="color:#F97583">-></span><span style="color:#E1E4E8"> console.log;             </span><span style="color:#6A737D">// logs on every change</span></span></code></pre>
+      ><code><span class="line"><span style="color:#AB5959">signal</span><span style="color:#B07D48"> name</span><span style="color:#999999"> =</span><span style="color:#B5695977"> "</span><span style="color:#B56959">world</span><span style="color:#B5695977">"</span><span style="color:#999999">;</span></span>
+<span class="line"><span style="color:#B07D48">name</span><span style="color:#AB5959"> ~></span><span style="color:#B07D48"> document</span><span style="color:#999999">.</span><span style="color:#B07D48">title</span><span style="color:#999999">;</span><span style="color:#A0ADA0">          // title tracks name</span></span>
+<span class="line"><span style="color:#B07D48">name</span><span style="color:#AB5959"> -></span><span style="color:#B07D48"> console</span><span style="color:#999999">.</span><span style="color:#B07D48">log</span><span style="color:#999999">;</span><span style="color:#A0ADA0">             // logs on every change</span></span></code></pre>
 
       <h3>Ranges and pipelines</h3>
       <p>
@@ -98,19 +98,21 @@
       </p>
       <pre
         data-lang="pts"
-      ><code><span class="line"><span style="color:#F97583">for</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">const</span><span style="color:#79B8FF"> i</span><span style="color:#F97583"> of</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.n) </span><span style="color:#B392F0">work</span><span style="color:#E1E4E8">(i);</span></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> evens</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> 0.</span><span style="color:#E1E4E8">.</span><span style="color:#F97583">=</span><span style="color:#79B8FF">20</span><span style="color:#F97583"> |></span><span style="color:#B392F0"> filter</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">i</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">%</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> ===</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">);</span></span>
+      ><code><span class="line"><span style="color:#1E754F">for</span><span style="color:#999999"> (</span><span style="color:#AB5959">const </span><span style="color:#B07D48">i</span><span style="color:#AB5959"> of</span><span style="color:#2F798A"> 0.</span><span style="color:#999999">.</span><span style="color:#B07D48">n</span><span style="color:#999999">)</span><span style="color:#59873A"> work</span><span style="color:#999999">(</span><span style="color:#B07D48">i</span><span style="color:#999999">);</span></span>
+<span class="line"><span style="color:#AB5959">const </span><span style="color:#B07D48">evens</span><span style="color:#999999"> =</span><span style="color:#2F798A"> 0.</span><span style="color:#999999">.=</span><span style="color:#2F798A">20</span><span style="color:#AB5959"> |> </span><span style="color:#59873A">filter</span><span style="color:#999999">(</span><span style="color:#B07D48">i</span><span style="color:#999999"> =></span><span style="color:#B07D48"> i</span><span style="color:#AB5959"> % </span><span style="color:#2F798A">2</span><span style="color:#AB5959"> === </span><span style="color:#2F798A">0</span><span style="color:#999999">);</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> out</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> pixels </span><span style="color:#F97583">|></span><span style="color:#B392F0"> map</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">p</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> p </span><span style="color:#F97583">*</span><span style="color:#79B8FF"> 1.2</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">|></span><span style="color:#B392F0"> clamp</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">255</span><span style="color:#E1E4E8">);</span></span></code></pre>
+<span class="line"><span style="color:#AB5959">const </span><span style="color:#B07D48">out</span><span style="color:#999999"> =</span><span style="color:#B07D48"> pixels</span><span style="color:#AB5959"> |> </span><span style="color:#59873A">map</span><span style="color:#999999">(</span><span style="color:#B07D48">p</span><span style="color:#999999"> =></span><span style="color:#B07D48"> p</span><span style="color:#AB5959"> * </span><span style="color:#2F798A">1.2</span><span style="color:#999999">)</span><span style="color:#AB5959"> |> </span><span style="color:#59873A">clamp</span><span style="color:#999999">(</span><span style="color:#2F798A">0</span><span style="color:#999999">,</span><span style="color:#2F798A"> 255</span><span style="color:#999999">);</span></span></code></pre>
 
       <h3>Error operators</h3>
       <p>
         <code>..!</code> is <code>.catch</code>. <code>..&amp;</code> is <code>.finally</code>. They chain naturally
         with <code>await</code> to flatten a <code>try</code>/<code>catch</code> block.
       </p>
-      <pre data-lang="pts"><code><span class="line"><span style="color:#F97583">const</span><span style="color:#79B8FF"> data</span><span style="color:#F97583"> =</span><span style="color:#F97583"> await</span><span style="color:#B392F0"> fetch</span><span style="color:#E1E4E8">(url).</span><span style="color:#B392F0">then</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">r</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> r.</span><span style="color:#B392F0">json</span><span style="color:#E1E4E8">())</span></span>
-<span class="line"><span style="color:#F97583">  ..!</span><span style="color:#FFAB70"> err</span><span style="color:#F97583"> =></span><span style="color:#E1E4E8"> defaults</span></span>
-<span class="line"><span style="color:#F97583">  ..&#x26;</span><span style="color:#E1E4E8"> ()  </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> spinner.</span><span style="color:#B392F0">hide</span><span style="color:#E1E4E8">();</span></span></code></pre>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="color:#AB5959">const </span><span style="color:#B07D48">data</span><span style="color:#999999"> =</span><span style="color:#1E754F"> await</span><span style="color:#59873A"> fetch</span><span style="color:#999999">(</span><span style="color:#B07D48">url</span><span style="color:#999999">).</span><span style="color:#59873A">then</span><span style="color:#999999">(</span><span style="color:#B07D48">r</span><span style="color:#999999"> =></span><span style="color:#B07D48"> r</span><span style="color:#999999">.</span><span style="color:#59873A">json</span><span style="color:#999999">())</span></span>
+<span class="line"><span style="color:#AB5959">  ..!</span><span style="color:#B07D48"> err</span><span style="color:#999999"> =></span><span style="color:#B07D48"> defaults</span></span>
+<span class="line"><span style="color:#AB5959">  ..&#x26;</span><span style="color:#999999"> ()</span><span style="color:#999999">  =></span><span style="color:#B07D48"> spinner</span><span style="color:#999999">.</span><span style="color:#59873A">hide</span><span style="color:#999999">();</span></span></code></pre>
 
       <h2 id="compile">Compilation</h2>
       <p>
@@ -122,14 +124,14 @@
         On Parabun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,
         Cloudflare Workers, …) alias them to <code>parabun-browser-shims</code> in your bundler.
       </p>
-      <pre data-lang="ts"><code><span class="line"><span style="color:#6A737D">// vite.config.ts</span></span>
-<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { defineConfig } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> "vite"</span><span style="color:#E1E4E8">;</span></span>
+      <pre data-lang="ts"><code><span class="line"><span style="color:#A0ADA0">// vite.config.ts</span></span>
+<span class="line"><span style="color:#1E754F">import</span><span style="color:#999999"> {</span><span style="color:#B07D48"> defineConfig</span><span style="color:#999999"> }</span><span style="color:#1E754F"> from</span><span style="color:#B5695977"> "</span><span style="color:#B56959">vite</span><span style="color:#B5695977">"</span><span style="color:#999999">;</span></span>
 <span class="line"></span>
-<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> default</span><span style="color:#B392F0"> defineConfig</span><span style="color:#E1E4E8">({</span></span>
-<span class="line"><span style="color:#E1E4E8">  resolve: {</span></span>
-<span class="line"><span style="color:#E1E4E8">    alias: [{ find:</span><span style="color:#9ECBFF"> /</span><span style="color:#F97583">^</span><span style="color:#DBEDFF">para:(</span><span style="color:#79B8FF">.</span><span style="color:#F97583">*</span><span style="color:#DBEDFF">)</span><span style="color:#F97583">$</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">, replacement: </span><span style="color:#9ECBFF">"parabun-browser-shims/$1"</span><span style="color:#E1E4E8"> }],</span></span>
-<span class="line"><span style="color:#E1E4E8">  },</span></span>
-<span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
+<span class="line"><span style="color:#1E754F">export</span><span style="color:#1E754F"> default</span><span style="color:#59873A"> defineConfig</span><span style="color:#999999">({</span></span>
+<span class="line"><span style="color:#998418">  resolve</span><span style="color:#999999">: {</span></span>
+<span class="line"><span style="color:#998418">    alias</span><span style="color:#999999">: [{ </span><span style="color:#998418">find</span><span style="color:#999999">:</span><span style="color:#B5695977"> /</span><span style="color:#1E754F">^</span><span style="color:#AB5E3F">para:</span><span style="color:#999999">(</span><span style="color:#5A6AA6">.</span><span style="color:#2F798A">*</span><span style="color:#999999">)</span><span style="color:#1E754F">$</span><span style="color:#B5695977">/</span><span style="color:#999999">, </span><span style="color:#998418">replacement</span><span style="color:#999999">: </span><span style="color:#B5695977">"</span><span style="color:#B56959">parabun-browser-shims/$1</span><span style="color:#B5695977">"</span><span style="color:#999999"> }],</span></span>
+<span class="line"><span style="color:#999999">  },</span></span>
+<span class="line"><span style="color:#999999">});</span></span></code></pre>
       <p>The same one-line alias works for esbuild, webpack, and rollup. See the install guide for the variants.</p>
 
       <div class="install"><span class="prompt">$</span>npm install parabun-browser-shims</div>

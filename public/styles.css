@@ -1,17 +1,22 @@
 :root {
-  --bg: #0f0f11;
-  --bg-elev: #16161a;
-  --bg-code: #17171b;
-  --rule: #24242a;
-  --text: #e8e6e3;
-  --text-dim: #9a988f;
-  --text-faint: #6a6860;
-  --accent: #f5b041;
-  --accent-dim: #8a6626;
-  --add: #7ab87a;
-  --rem: #c96a6a;
+  /* Editorial light palette — paper background, deep text, forest accent.
+     Shared with Starlight via parabun.css. */
+  --bg: #fbfaf6;
+  --bg-elev: #ffffff;
+  --bg-code: #f4f1e8;
+  --rule: #e3ddd0;
+  --rule-strong: #cfc7b3;
+  --text: #1a1916;
+  --text-dim: #58524a;
+  --text-faint: #8a8378;
+  --accent: #1d4d3d;
+  --accent-dim: #2d6e58;
+  --accent-soft: #cfe1d8;
+  --add: #2d6e58;
+  --rem: #8a2222;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
 }
 
 * {
@@ -64,10 +69,10 @@ header {
   z-index: 10;
   padding: 14px 0;
   margin-top: -14px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: saturate(180%) blur(8px);
   -webkit-backdrop-filter: saturate(180%) blur(8px);
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid var(--rule);
 }
 
 /* Once anchor-linked, the heading would otherwise scroll under the sticky
@@ -77,14 +82,18 @@ h2[id] {
 }
 
 .brand {
-  font-family: var(--mono);
+  font-family: var(--serif);
   font-size: 22px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
+  color: var(--text);
 }
 
 .brand .marker {
   color: var(--accent);
+  font-weight: 300;
+  font-style: italic;
+  margin-right: 2px;
 }
 
 .nav {
@@ -132,7 +141,7 @@ h2[id] {
   border-radius: 999px;
   padding: 8px 14px;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 12px rgba(26, 25, 22, 0.08);
   transition:
     color 80ms,
     border-color 80ms,
@@ -170,44 +179,54 @@ html.ligatures .brand {
 }
 
 h1 {
-  font-size: 40px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 500;
-  margin: 0 0 20px;
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 1.8rem + 2.4vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.018em;
+  font-weight: 400;
+  margin: 0 0 24px;
+  color: var(--text);
 }
 
 h1 em {
-  font-style: normal;
+  font-style: italic;
+  font-weight: 300;
   color: var(--accent);
 }
 
 .lede {
-  font-size: 17px;
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 300;
+  line-height: 1.5;
   color: var(--text-dim);
   margin: 0 0 28px;
+  max-width: 38em;
 }
 
 h2 {
-  font-family: var(--mono);
-  font-size: 13px;
+  font-family: var(--serif);
+  font-size: clamp(1.5rem, 1.3rem + 0.8vw, 1.95rem);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-  margin: 64px 0 20px;
-  padding-top: 24px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 80px 0 20px;
+  padding-top: 28px;
   border-top: 1px solid var(--rule);
 }
 
 h3 {
-  font-family: var(--mono);
-  font-size: 15px;
+  font-family: var(--serif);
+  font-size: 1.25rem;
   font-weight: 500;
-  margin: 28px 0 10px;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  margin: 36px 0 10px;
 }
 
 h3 .import {
+  font-family: var(--mono);
+  font-size: 0.85em;
   color: var(--accent);
 }
 
@@ -480,8 +499,8 @@ footer a:hover {
 .disclaimer {
   margin-top: 32px;
   padding: 14px 16px;
-  border-left: 2px solid var(--accent-dim);
-  background: rgba(245, 176, 65, 0.04);
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
   font-size: 14px;
   color: var(--text-dim);
 }
@@ -550,7 +569,7 @@ a.mod-pill {
 }
 a.mod-pill:hover {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--bg-code));
+  background: var(--accent-soft);
 }
 .tier-row .mod-pill.planned {
   color: var(--text-faint);
@@ -589,7 +608,7 @@ table.bench tr.winner td {
   transition: background-color 240ms ease;
 }
 table.bench tr.winner.pulse td {
-  background-color: rgba(245, 176, 65, 0.1);
+  background-color: var(--accent-soft);
 }
 
 /* ─── Docs layout: sidebar + article column ───────────────────────────── */

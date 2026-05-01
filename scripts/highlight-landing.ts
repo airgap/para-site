@@ -72,7 +72,7 @@ const highlighter = await createHighlighter({
     parabunJsx as any,
     parabunInject as any,
   ],
-  themes: ["github-dark"],
+  themes: ["vitesse-light"],
   langAlias: {
     parabun: "parabun-ts",
     pts: "parabun-ts",
@@ -90,7 +90,7 @@ const rewritten = original.replace(
     const lang = langMatch ? langMatch[1] : "ts";
     const code = rawCode(body);
     const targetLang = lang === "ts" ? "typescript" : lang;
-    const html = highlighter.codeToHtml(code, { lang: targetLang, theme: "github-dark" });
+    const html = highlighter.codeToHtml(code, { lang: targetLang, theme: "vitesse-light" });
     const innerMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
     const inner = innerMatch ? innerMatch[1] : code;
     blockCount++;

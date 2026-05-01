@@ -77,7 +77,10 @@ export default defineConfig({
             pjsx: "parabun-jsx",
           },
         },
-        themes: ["github-dark"],
+        // Editorial-light: vitesse-light reads cleanly on the cream
+        // background and complements the forest-green accent. Pair with
+        // a dark variant so users who toggle still get sensible contrast.
+        themes: ["vitesse-light", "vitesse-dark"],
       },
     }),
   ],

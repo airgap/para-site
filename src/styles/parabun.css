@@ -1,77 +1,268 @@
-/* JetBrains Mono — keeps the parabun mono look across docs code blocks. */
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* ─── ParaScript editorial theme ────────────────────────────────────────
+   Light-first, typography-forward, generous whitespace. Distinct from
+   Parabun's dark-amber so the language brand reads separately from the
+   runtime. Newsreader (serif) for headings, Inter for body, JetBrains
+   Mono for code. Forest-green accent — high contrast on cream, doesn't
+   compete with code-block syntax colors.
 
-/* ─── Parabun palette mapped onto Starlight CSS variables ────────────────
-   Variables map onto props.css (see node_modules/@astrojs/starlight/style/
-   props.css). Both `:root` (dark) and `[data-theme='light']` are overridden
-   so the toggle has no visible effect — parabun is always dark.
+   Light is canonical; a dark variant is provided for users who toggle.
    ───────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap");
+
+/* ─── Light palette (default) ───────────────────────────────────────── */
 :root,
 :root[data-theme="light"] {
-  /* Core palette (mirrors the original styles.css :root). */
-  --pb-bg: #0f0f11;
-  --pb-bg-elev: #16161a;
-  --pb-bg-code: #17171b;
-  --pb-rule: #24242a;
-  --pb-text: #e8e6e3;
-  --pb-text-dim: #9a988f;
-  --pb-text-faint: #6a6860;
-  --pb-accent: #f5b041;
-  --pb-accent-dim: #8a6626;
+  --pb-bg: #fbfaf6;
+  --pb-bg-elev: #ffffff;
+  --pb-bg-code: #f4f1e8;
+  --pb-bg-inline-code: #efece2;
+  --pb-rule: #e3ddd0;
+  --pb-rule-strong: #cfc7b3;
+  --pb-text: #1a1916;
+  --pb-text-dim: #58524a;
+  --pb-text-faint: #8a8378;
+  --pb-accent: #1d4d3d;
+  --pb-accent-strong: #143329;
+  --pb-accent-soft: #cfe1d8;
 
-  /* Starlight overrides. */
+  /* Starlight overrides — light. */
   --sl-color-bg: var(--pb-bg);
   --sl-color-bg-nav: var(--pb-bg);
   --sl-color-bg-sidebar: var(--pb-bg);
-  --sl-color-bg-inline-code: var(--pb-bg-elev);
+  --sl-color-bg-inline-code: var(--pb-bg-inline-code);
   --sl-color-bg-accent: var(--pb-accent);
 
   --sl-color-text: var(--pb-text);
   --sl-color-text-accent: var(--pb-accent);
-  --sl-color-text-invert: var(--pb-bg);
+  --sl-color-text-invert: #ffffff;
   --sl-color-white: var(--pb-text);
+  --sl-color-black: var(--pb-text);
 
   --sl-color-accent: var(--pb-accent);
-  --sl-color-accent-low: var(--pb-accent-dim);
-  --sl-color-accent-high: var(--pb-accent);
+  --sl-color-accent-low: var(--pb-accent-soft);
+  --sl-color-accent-high: var(--pb-accent-strong);
 
   --sl-color-hairline: var(--pb-rule);
   --sl-color-hairline-light: var(--pb-rule);
-  --sl-color-hairline-shade: var(--pb-bg-elev);
+  --sl-color-hairline-shade: var(--pb-rule-strong);
 
-  /* Gray scale (used by Starlight chrome — sidebar dim labels, etc.). */
   --sl-color-gray-1: var(--pb-text);
   --sl-color-gray-2: var(--pb-text-dim);
   --sl-color-gray-3: var(--pb-text-faint);
-  --sl-color-gray-4: var(--pb-text-faint);
-  --sl-color-gray-5: var(--pb-bg-elev);
+  --sl-color-gray-4: var(--pb-rule-strong);
+  --sl-color-gray-5: var(--pb-rule);
   --sl-color-gray-6: var(--pb-bg-elev);
+  --sl-color-gray-7: var(--pb-bg);
 
-  /* Fonts. */
-  --sl-font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  --sl-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --sl-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
+
+  /* Editorial sizing — slightly larger reading column, looser leading. */
+  --sl-content-width: 50rem;
+  --sl-line-height: 1.65;
+  --sl-line-height-headings: 1.18;
 }
 
-/* Hide the light/dark toggle — parabun is dark-only. */
-starlight-theme-select {
-  display: none;
+/* ─── Dark palette (toggle) ─────────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --pb-bg: #14130f;
+  --pb-bg-elev: #1c1a16;
+  --pb-bg-code: #1f1d18;
+  --pb-bg-inline-code: #25221c;
+  --pb-rule: #2c2922;
+  --pb-rule-strong: #3a362c;
+  --pb-text: #ece7da;
+  --pb-text-dim: #a39e8d;
+  --pb-text-faint: #757163;
+  --pb-accent: #8fbfa6;
+  --pb-accent-strong: #b8d8c5;
+  --pb-accent-soft: #2d3f37;
+
+  --sl-color-text-invert: var(--pb-bg);
 }
 
-/* Subtle accents that Starlight doesn't expose as variables. */
+/* ─── Typography ────────────────────────────────────────────────────── */
+
+/* Headings: Newsreader serif. Editorial weight + tight tracking + slight
+   optical bias (Newsreader is a variable-optical font; the opsz is set
+   automatically by font-size when available). */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4,
+h1.content-panel,
+.hero h1 {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  color: var(--pb-text);
+}
+
+.sl-markdown-content h1 {
+  font-size: clamp(2.1rem, 1.7rem + 1.6vw, 2.875rem);
+  font-weight: 400;
+  margin-block-end: 0.4em;
+}
+.sl-markdown-content h2 {
+  font-size: clamp(1.55rem, 1.35rem + 0.8vw, 1.95rem);
+  font-weight: 500;
+  margin-block-start: 2.4em;
+  margin-block-end: 0.6em;
+  padding-block-end: 0.35em;
+  border-block-end: 1px solid var(--pb-rule);
+}
+.sl-markdown-content h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-block-start: 1.8em;
+}
+.sl-markdown-content h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-family: "Inter", sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: var(--pb-text-dim);
+  margin-block-start: 1.6em;
+}
+
+/* Body — Inter at a comfortable reading size. */
+.sl-markdown-content {
+  font-size: 1rem;
+}
+.sl-markdown-content p,
+.sl-markdown-content li {
+  color: var(--pb-text);
+}
+
+/* Lede — first paragraph after the auto-rendered title (the frontmatter
+   description). Editorial sites pull this larger and looser. */
+.sl-markdown-content > h1 + p {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 300;
+  font-size: 1.275rem;
+  line-height: 1.5;
+  color: var(--pb-text-dim);
+  margin-block-end: 1.8em;
+}
+
+/* Links — underline on hover, accent color, no decoration by default
+   (editorial restraint). */
+.sl-markdown-content a {
+  color: var(--pb-accent);
+  text-decoration: none;
+  border-block-end: 1px solid var(--pb-accent-soft);
+  transition: border-color 120ms ease;
+}
+.sl-markdown-content a:hover {
+  border-block-end-color: var(--pb-accent);
+}
+
+/* ─── Code ──────────────────────────────────────────────────────────── */
+
 .sl-markdown-content code:not(pre code) {
+  font-family: var(--sl-font-mono);
+  font-size: 0.88em;
+  background: var(--pb-bg-inline-code);
+  padding: 0.12em 0.36em;
+  border-radius: 3px;
   border: 1px solid var(--pb-rule);
+  color: var(--pb-text);
 }
 
-/* Use the same accent for the active sidebar link the original site used. */
+/* Code blocks — let the (light) Shiki theme paint, keep the chrome
+   minimal. */
+.expressive-code {
+  margin-block: 1.5rem !important;
+}
+.expressive-code pre {
+  border: 1px solid var(--pb-rule) !important;
+  border-radius: 6px !important;
+  background: var(--pb-bg-code) !important;
+}
+
+/* ─── Sidebar / nav chrome ──────────────────────────────────────────── */
+
+.sl-link-card,
+.card {
+  border: 1px solid var(--pb-rule);
+  background: var(--pb-bg-elev);
+}
+
+/* Active sidebar link uses accent. */
 [aria-current="page"] {
   color: var(--pb-accent) !important;
+  font-weight: 500;
 }
 
-/* Match the original lede-paragraph treatment for the first paragraph
-   following an h1 in docs content. Starlight doesn't ship a `.lede` class,
-   but the first paragraph after the auto-rendered title is the description
-   from frontmatter — give it the same dim-and-larger styling. */
-.sl-markdown-content > h1 + p {
+/* Sidebar group titles — small caps, dim. Editorial restraint. */
+.sidebar-pane summary span,
+.sidebar-pane h2,
+.sidebar-content > ul > li > span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pb-text-faint);
+  font-weight: 600;
+}
+
+/* Site title — keep it serif to match the headline treatment. */
+.site-title,
+header a.site-title,
+[data-has-hero] header a.site-title {
+  font-family: "Newsreader", Georgia, serif !important;
+  font-weight: 500 !important;
+  font-size: 1.15rem !important;
+  letter-spacing: -0.005em;
+  color: var(--pb-text) !important;
+}
+
+/* Top nav border — single hairline, no shadow. */
+header.header {
+  border-block-end: 1px solid var(--pb-rule);
+  background: var(--pb-bg);
+}
+.sidebar-pane {
+  border-inline-end: 1px solid var(--pb-rule);
+  background: var(--pb-bg);
+}
+
+/* Theme toggle stays — users can flip to dark. */
+
+/* ─── Tables, blockquotes — small editorial polish ─────────────────── */
+.sl-markdown-content blockquote {
+  border-inline-start: 3px solid var(--pb-accent);
+  background: transparent;
+  padding-inline-start: 1.1rem;
   color: var(--pb-text-dim);
-  font-size: 1.0625rem;
+  font-style: italic;
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.sl-markdown-content table {
+  border-collapse: collapse;
+}
+.sl-markdown-content th,
+.sl-markdown-content td {
+  border-block-end: 1px solid var(--pb-rule);
+  padding: 0.55rem 0.8rem;
+  text-align: start;
+}
+.sl-markdown-content th {
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pb-text-dim);
+  border-block-end-color: var(--pb-rule-strong);
+}
+
+/* Horizontal rule — wider margin, faint. */
+.sl-markdown-content hr {
+  border: 0;
+  border-block-start: 1px solid var(--pb-rule);
+  margin-block: 2.5rem;
 }
