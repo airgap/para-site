@@ -106,14 +106,16 @@ body {
 }
 .pg-binary .star-a {
   fill: var(--pg-star-primary);
-  filter: drop-shadow(0 0 3px var(--pg-star-primary));
+  filter: drop-shadow(0 0 2px var(--pg-star-primary))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--pg-star-primary) 60%, transparent));
   animation:
     pg-orbit 14s linear infinite,
     pg-twinkle-a 4.2s ease-in-out infinite;
 }
 .pg-binary .star-b {
   fill: var(--pg-star-companion);
-  filter: drop-shadow(0 0 3px var(--pg-star-companion));
+  filter: drop-shadow(0 0 2px var(--pg-star-companion))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--pg-star-companion) 60%, transparent));
   animation:
     pg-orbit 14s linear infinite,
     pg-twinkle-b 5.7s ease-in-out infinite;
