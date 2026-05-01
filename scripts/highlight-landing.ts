@@ -72,7 +72,9 @@ const highlighter = await createHighlighter({
     parabunJsx as any,
     parabunInject as any,
   ],
-  themes: ["vitesse-light"],
+  // Dual-theme: shiki emits per-span CSS variables for both themes; the
+  // landing CSS picks `--shiki-light` or `--shiki-dark` from `[data-theme]`.
+  themes: ["vitesse-light", "vitesse-dark"],
   langAlias: {
     parabun: "parabun-ts",
     pts: "parabun-ts",
@@ -90,7 +92,15 @@ const rewritten = original.replace(
     const lang = langMatch ? langMatch[1] : "ts";
     const code = rawCode(body);
     const targetLang = lang === "ts" ? "typescript" : lang;
-    const html = highlighter.codeToHtml(code, { lang: targetLang, theme: "vitesse-light" });
+    const html = highlighter.codeToHtml(code, {
+      lang: targetLang,
+      themes: { light: "vitesse-light", dark: "vitesse-dark" },
+      // No default color → both themes emit only as CSS variables on each
+      // span. CSS rules under [data-theme="…"] pick the right one. Avoids
+      // hard-coding either theme's hex into the markup, which would lock
+      // the unselected theme to a fallback color.
+      defaultColor: false,
+    });
     const innerMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
     const inner = innerMatch ? innerMatch[1] : code;
     blockCount++;

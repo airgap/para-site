@@ -11,13 +11,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap");
 
 /* ─── Light palette (default) ───────────────────────────────────────── */
-/* Light is canonical and forced for consistency with the landing page,
-   which doesn't yet have a dark variant. The dark palette block is kept
-   below as a no-op (no [data-theme="dark"] override) so a future light/
-   dark split can re-enable the toggle without rewriting variables. */
 :root,
-:root[data-theme="light"],
-:root[data-theme="dark"] {
+:root[data-theme="light"] {
   --pb-bg: #fbfaf6;
   --pb-bg-elev: #ffffff;
   --pb-bg-code: #f4f1e8;
@@ -69,11 +64,22 @@
   --sl-line-height-headings: 1.18;
 }
 
-/* Hide Starlight's theme toggle — light-only until the landing page also
-   ships a dark variant. Without this, the toggle appears but does nothing
-   visible, which is worse than not offering it at all. */
-starlight-theme-select {
-  display: none;
+/* ─── Dark palette ──────────────────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --pb-bg: #14130f;
+  --pb-bg-elev: #1c1a16;
+  --pb-bg-code: #1f1d18;
+  --pb-bg-inline-code: #25221c;
+  --pb-rule: #2c2922;
+  --pb-rule-strong: #3a362c;
+  --pb-text: #ece7da;
+  --pb-text-dim: #a39e8d;
+  --pb-text-faint: #757163;
+  --pb-accent: #8fbfa6;
+  --pb-accent-strong: #b8d8c5;
+  --pb-accent-soft: #2d3f37;
+
+  --sl-color-text-invert: var(--pb-bg);
 }
 
 /* ─── Typography ────────────────────────────────────────────────────── */

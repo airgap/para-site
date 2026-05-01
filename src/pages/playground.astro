@@ -21,6 +21,19 @@
       name="description"
       content="Try ParaScript in the browser. Live transpile to plain JavaScript — pipelines, ranges, signals, defer, error chains."
     />
+    <script is:inline>
+      // Resolve theme before paint. Same key as the docs (starlight-theme),
+      // so toggling there propagates here. Falls back to system pref.
+      try {
+        const stored = localStorage.getItem("starlight-theme");
+        const t = stored === "light" || stored === "dark"
+          ? stored
+          : matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
     <link rel="stylesheet" href="/playground.css" />
   </head>
   <body>

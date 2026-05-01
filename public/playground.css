@@ -4,7 +4,11 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap");
 
-:root {
+/* Theme is set by the inline head script in playground.astro — uses the
+   same starlight-theme localStorage key as the docs, so toggling the
+   docs theme propagates here. Falls back to prefers-color-scheme. */
+:root,
+:root[data-theme="light"] {
   --pg-bg: #fbfaf6;
   --pg-bg-elev: #ffffff;
   --pg-bg-code: #f4f1e8;
@@ -16,6 +20,24 @@
   --pg-accent: #1d4d3d;
   --pg-accent-soft: #cfe1d8;
   --pg-err: #8a2222;
+  --pg-active-bg: rgba(29, 77, 61, 0.05);
+  --pg-selection-bg: rgba(29, 77, 61, 0.18);
+}
+
+:root[data-theme="dark"] {
+  --pg-bg: #14130f;
+  --pg-bg-elev: #1c1a16;
+  --pg-bg-code: #1f1d18;
+  --pg-rule: #2c2922;
+  --pg-rule-strong: #3a362c;
+  --pg-text: #ece7da;
+  --pg-text-dim: #a39e8d;
+  --pg-text-faint: #757163;
+  --pg-accent: #8fbfa6;
+  --pg-accent-soft: #2d3f37;
+  --pg-err: #d27a7a;
+  --pg-active-bg: rgba(143, 191, 166, 0.07);
+  --pg-selection-bg: rgba(143, 191, 166, 0.22);
 }
 
 * {
@@ -185,14 +207,14 @@ body {
 }
 .pg-editor .cm-activeLineGutter,
 .pg-editor .cm-activeLine {
-  background: rgba(29, 77, 61, 0.05);
+  background: var(--pg-active-bg);
 }
 .pg-editor .cm-cursor {
   border-left-color: var(--pg-accent);
 }
 .pg-editor .cm-selectionBackground,
 .pg-editor ::selection {
-  background: rgba(29, 77, 61, 0.18) !important;
+  background: var(--pg-selection-bg) !important;
 }
 .pg-editor .cm-focused {
   outline: none;
