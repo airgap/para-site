@@ -16,6 +16,6 @@ The desugared output imports a small npm package, `parabun-browser-shims`, which
 
 ## Related projects
 
-[Parabun](https://parabun.script.dev) is a fork of Bun that ships Para natively, plus a stack of native runtime modules (GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, GPIO/I²C/SPI). Use Parabun if you want hardware acceleration in TypeScript on a Linux SBC, NUC, or similar.
+[ParaBun](https://parabun.script.dev) is a fork of Bun that ships Para natively, plus a stack of native runtime modules (GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, GPIO/I²C/SPI). Use ParaBun if you want hardware acceleration in TypeScript on a Linux SBC, NUC, or similar.
 
 The standalone path documented here works on any host with a JavaScript engine — browsers, Lambda, Cloudflare Workers, Deno, Node 18+.

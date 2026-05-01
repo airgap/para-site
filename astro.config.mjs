@@ -47,14 +47,14 @@ export default defineConfig({
         { label: "Examples", items: examples },
         { label: "Modules", items: modules },
         {
-          label: "Hardware (Parabun runtime)",
+          label: "Hardware (ParaBun runtime)",
           items: [{ label: "parabun.script.dev →", link: "https://parabun.script.dev/docs/" }],
         },
       ],
       expressiveCode: {
         // Custom TextMate grammars for `.pts` / `.ptsx` / `.pjs` / `.pjsx`.
         // Each grammar embeds the matching base TS/TSX/JS/JSX grammar via
-        // `embeddedLangs`, then layers Parabun keywords (memo / pure / fun /
+        // `embeddedLangs`, then layers ParaBun keywords (memo / pure / fun /
         // signal / effect / arena / defer) and operators (|> ~> -> ..= ..! ..&)
         // on top.
         shiki: {

@@ -1,12 +1,12 @@
 /* ─── Para: Stellar Atlas ─────────────────────────────────────────
-   Para and Parabun are a binary star system — each shines on its
+   Para and ParaBun are a binary star system — each shines on its
    own (the language ships standalone, the runtime ships standalone), but
    they orbit a shared center and combine into something brighter than
    either alone. The site's two modes lean into different sides of that
    metaphor:
 
      Dark (default) — Night Sky observation. Deep midnight bg, blue-white
-     primary star (Para), amber companion (Parabun). Subtle starfield
+     primary star (Para), amber companion (ParaBun). Subtle starfield
      under the content.
 
      Light (alternate) — Atlas. Parchment paper, ink markings, vermillion
@@ -34,7 +34,7 @@
   --pb-text-faint: #4a4d5a;
 
   /* Binary star colors — used both as accents and in the brand mark.
-     Primary = Para (this site's headline), Companion = Parabun. */
+     Primary = Para (this site's headline), Companion = ParaBun. */
   --pb-star-primary: #6db4ff;
   --pb-star-companion: #ffa855;
 

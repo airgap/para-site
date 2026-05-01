@@ -1,5 +1,5 @@
 /* ─── Stellar Atlas: dark (Night Sky, default) + light (Atlas) ─────────
-   Para and Parabun are a binary star system. The site reflects
+   Para and ParaBun are a binary star system. The site reflects
    that — dark mode is "observation": deep midnight bg with the binary
    pair as the accent system. Light mode is "atlas": parchment paper,
    ink markings, the same binary expressed as deep blue + vermillion.
@@ -14,7 +14,7 @@
   --text: #e8e6dd;
   --text-dim: #8a8b94;
   --text-faint: #4a4d5a;
-  /* Binary stars — primary = Para (blue-white), companion = Parabun (amber). */
+  /* Binary stars — primary = Para (blue-white), companion = ParaBun (amber). */
   --star-primary: #6db4ff;
   --star-companion: #ffa855;
   --accent: var(--star-primary);
@@ -642,7 +642,7 @@ figure.code > pre {
   letter-spacing: 0.02em;
 }
 
-/* Tabbed code blocks — TypeScript / Parabun toggle. Same .figure.code shell;
+/* Tabbed code blocks — TypeScript / ParaBun toggle. Same .figure.code shell;
    the lang-toggle row replaces the static .code-header. JS in fx.js syncs
    all tabs on the page (and persists choice via localStorage). */
 figure.code.lang-tabs .code-header {
