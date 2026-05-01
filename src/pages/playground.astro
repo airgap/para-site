@@ -1,0 +1,253 @@
+---
+// /playground — in-browser ParaScript transpiler.
+//
+// Runs entirely client-side: @parascript/transpile is bundled into the
+// page (~600 KB; Babel parser + generator + traverse account for most),
+// CodeMirror 6 provides the input editor, and a read-only CodeMirror
+// pane shows the JS output. Live transpile-on-keystroke with a 150 ms
+// debounce. No worker — sub-50 ms typical transform.
+//
+// Lives outside Starlight (src/pages/, not src/content/docs/) so we can
+// own the full viewport layout without fighting the docs chrome.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ParaScript Playground</title>
+    <meta
+      name="description"
+      content="Try ParaScript in the browser. Live transpile to plain JavaScript — pipelines, ranges, signals, defer, error chains."
+    />
+    <link rel="stylesheet" href="/playground.css" />
+  </head>
+  <body>
+    <header class="pg-bar">
+      <a class="pg-brand" href="/">ParaScript</a>
+      <span class="pg-sep">/</span>
+      <span class="pg-title">Playground</span>
+      <div class="pg-spacer"></div>
+      <label class="pg-sample">
+        Sample
+        <select id="pg-sample">
+          <option value="welcome">Welcome</option>
+          <option value="pipeline">Pipeline + error chain</option>
+          <option value="ranges">Ranges</option>
+          <option value="signals">Signals + effect</option>
+          <option value="when">when (edge-triggered)</option>
+          <option value="defer">defer</option>
+          <option value="memo">memo</option>
+          <option value="pure">pure</option>
+        </select>
+      </label>
+      <a class="pg-link" href="/docs/">Docs →</a>
+    </header>
+    <main class="pg-main">
+      <section class="pg-pane">
+        <div class="pg-pane-head"><span class="pg-pane-label">ParaScript</span><span id="pg-status" class="pg-status"></span></div>
+        <div id="pg-input" class="pg-editor"></div>
+      </section>
+      <section class="pg-pane">
+        <div class="pg-pane-head"><span class="pg-pane-label">JavaScript (output)</span></div>
+        <div id="pg-output" class="pg-editor"></div>
+      </section>
+    </main>
+    <script>
+      import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
+      import { EditorState } from "@codemirror/state";
+      import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+      import { javascript } from "@codemirror/lang-javascript";
+      import {
+        bracketMatching,
+        defaultHighlightStyle,
+        indentOnInput,
+        syntaxHighlighting,
+      } from "@codemirror/language";
+      import { closeBrackets } from "@codemirror/autocomplete";
+      import { transpile } from "@parascript/transpile";
+
+      // Curated samples — every one round-trips through the standalone
+      // transpiler in <50 ms, exercises a single ParaScript feature.
+      const SAMPLES = {
+        welcome: `// Welcome to ParaScript — pick a sample, or just start typing.
+// Output JavaScript shows up live on the right.
+
+const handler = err => console.error(err);
+const result = fetch("/api").then(r => r.json()) ..! handler;
+`,
+        pipeline: `// |> threads the LHS as the first arg of the next call.
+// _ is a placeholder for non-first positions.
+// ..! catches, ..& finallys.
+
+const result = data
+  |> validate
+  |> normalize(_, opts)
+  |> transform
+  ..! err => console.warn("recovered", err)
+  ..& () => metrics.flush();
+`,
+        ranges: `// 0..n is a half-open range; 0..=n is inclusive.
+// Both lower to a __parabunRange iterable.
+
+for (const i of 0..10) {
+  console.log(i);
+}
+
+const evens = 0..=20 |> filter(_, n => n % 2 === 0);
+`,
+        signals: `// signal binds a reactive cell. effect re-runs when its
+// signal reads change. derived signals auto-promote when an
+// initializer reads other signals.
+
+signal count = 0;
+signal doubled = count.get() * 2;
+
+effect {
+  console.log("count is", count, "doubled is", doubled);
+}
+
+count.set(5);
+`,
+        when: `// when EXPR { } is edge-triggered: body fires on the
+// rising transition. Paired form adds a falling handler.
+
+signal items = [];
+
+when items.length > 0 {
+  console.log("first item arrived");
+} when not {
+  console.log("list went empty");
+}
+`,
+        defer: `// defer EXPR runs at scope exit, LIFO.
+// defer await EXPR awaits an async cleanup.
+
+async function load(path) {
+  const fd = await openFile(path);
+  defer await closeFile(fd);
+
+  const lock = acquireLock();
+  defer releaseLock(lock);
+
+  return await readAll(fd);
+}
+`,
+        memo: `// memo NAME(args) { } caches by argument tuple.
+// Arrow form too: const x = memo (a) => …
+
+memo fib(n) {
+  return n < 2 ? n : fib(n - 1) + fib(n - 2);
+}
+
+const norm = memo (s) => s.trim().toLowerCase();
+`,
+        pure: `// pure marks a function as side-effect free. The keyword
+// strips at compile time — it survives only as a hint to the
+// surrounding tooling (linters, optimizers, the Parabun
+// runtime's auto-parallelization).
+
+pure function distance(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+`,
+      };
+
+      const status = document.getElementById("pg-status");
+      const sampleSel = document.getElementById("pg-sample");
+
+      function setStatus(text, kind = "ok") {
+        status.textContent = text;
+        status.dataset.kind = kind;
+      }
+
+      // Output editor — plain JS, read-only.
+      const outputState = EditorState.create({
+        doc: "",
+        extensions: [
+          lineNumbers(),
+          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          javascript(),
+          EditorView.editable.of(false),
+          EditorView.theme({
+            "&": { height: "100%", fontSize: "13px" },
+            ".cm-scroller": { fontFamily: "JetBrains Mono, ui-monospace, monospace" },
+          }),
+        ],
+      });
+      const outputView = new EditorView({
+        state: outputState,
+        parent: document.getElementById("pg-output"),
+      });
+
+      function setOutput(text) {
+        outputView.dispatch({
+          changes: { from: 0, to: outputView.state.doc.length, insert: text },
+        });
+      }
+
+      // Debounced transpile-on-change.
+      let debounceTimer = null;
+      function scheduleTranspile(src) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => doTranspile(src), 150);
+      }
+
+      function doTranspile(src) {
+        const t0 = performance.now();
+        try {
+          const out = transpile(src);
+          const ms = Math.round(performance.now() - t0);
+          setOutput(out);
+          setStatus(`transpiled in ${ms} ms`, "ok");
+        } catch (e) {
+          setOutput(String(e?.stack ?? e));
+          setStatus("transpile error", "err");
+        }
+      }
+
+      // Input editor — JS-flavoured highlighting (the ParaScript ops fall
+      // back gracefully; we don't ship a custom CM grammar in v1).
+      const initial = SAMPLES.welcome;
+      const inputState = EditorState.create({
+        doc: initial,
+        extensions: [
+          lineNumbers(),
+          highlightActiveLine(),
+          history(),
+          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          bracketMatching(),
+          closeBrackets(),
+          indentOnInput(),
+          javascript(),
+          keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+          EditorView.theme({
+            "&": { height: "100%", fontSize: "13px" },
+            ".cm-scroller": { fontFamily: "JetBrains Mono, ui-monospace, monospace" },
+          }),
+          EditorView.updateListener.of(u => {
+            if (u.docChanged) scheduleTranspile(u.state.doc.toString());
+          }),
+        ],
+      });
+      const inputView = new EditorView({
+        state: inputState,
+        parent: document.getElementById("pg-input"),
+      });
+
+      sampleSel.addEventListener("change", () => {
+        const next = SAMPLES[sampleSel.value] ?? "";
+        inputView.dispatch({
+          changes: { from: 0, to: inputView.state.doc.length, insert: next },
+        });
+        inputView.focus();
+      });
+
+      // First-paint transpile so the output pane is populated immediately.
+      doTranspile(initial);
+    </script>
+  </body>
+</html>

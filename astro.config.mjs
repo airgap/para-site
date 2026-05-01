@@ -18,6 +18,7 @@ import parabunInjectGrammar from "./src/grammars/parabun-inject.tmLanguage.json"
 const docsRoot = "/docs";
 const guides = [
   { label: "ParaScript docs", link: `${docsRoot}/` },
+  { label: "Playground", link: "/playground" },
   { label: "Install", link: `${docsRoot}/install/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
 ];

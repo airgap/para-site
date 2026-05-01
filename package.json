@@ -9,6 +9,11 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.4",
-    "astro": "^6.1.10"
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.34.0",
+    "@parascript/transpile": "file:../parabun/packages/parascript-transpile",
+    "astro": "^6.1.10",
+    "codemirror": "^6.0.1"
   }
 }
