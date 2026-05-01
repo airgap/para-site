@@ -138,11 +138,19 @@
     radial-gradient(1px 1px at 49% 88%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
     radial-gradient(1px 1px at 73% 53%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
   background-size: 100vw 100vh;
-  /* Promote to its own compositor layer so scrolling doesn't repaint it.
-     position:fixed already pins it; bg-attach: fixed forced expensive
-     per-frame repaints. */
   will-change: transform;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
+  /* Scroll-driven parallax — stars drift up faster than the nebulae layer
+     below, so the depth between them reads as you scroll. Browsers without
+     animation-timeline support fall back to static fixed positioning. */
+  animation: star-parallax linear;
+  animation-timeline: scroll(root);
+}
+
+@keyframes star-parallax {
+  to {
+    transform: translate3d(0, -25vh, 0);
+  }
 }
 
 /* Soft nebulae — three layered radial-gradients blow gas clouds across
@@ -160,7 +168,16 @@
     radial-gradient(ellipse 55vw 45vh at 12% 75%, rgba(255, 168, 85, 0.07), transparent 65%),
     radial-gradient(ellipse 45vw 50vh at 55% 105%, rgba(180, 110, 220, 0.05), transparent 60%);
   will-change: transform;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
+  /* Slower parallax — nebulae are "farther away" than the starfield. */
+  animation: nebula-parallax linear;
+  animation-timeline: scroll(root);
+}
+
+@keyframes nebula-parallax {
+  to {
+    transform: translate3d(0, -10vh, 0);
+  }
 }
 
 /* Light: a sparse dot grid like astronomical chart paper. Even spacing,

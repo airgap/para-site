@@ -119,7 +119,18 @@ body::before {
      position:fixed already pins it to the viewport — no need for the much
      more expensive background-attachment:fixed. */
   will-change: transform;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
+  /* Scroll-driven parallax: stars drift up faster than nebulae below, so
+     the layers separate visually as you scroll. Browsers without
+     animation-timeline support just see the static fixed starfield. */
+  animation: star-parallax linear;
+  animation-timeline: scroll(root);
+}
+
+@keyframes star-parallax {
+  to {
+    transform: translate3d(0, -25vh, 0);
+  }
 }
 
 :root[data-theme="light"] body::before {
@@ -145,7 +156,16 @@ body::before {
     radial-gradient(ellipse 55vw 45vh at 12% 75%, rgba(255, 168, 85, 0.07), transparent 65%),
     radial-gradient(ellipse 45vw 50vh at 55% 105%, rgba(180, 110, 220, 0.05), transparent 60%);
   will-change: transform;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
+  /* Slower parallax than the starfield — nebulae are "farther away". */
+  animation: nebula-parallax linear;
+  animation-timeline: scroll(root);
+}
+
+@keyframes nebula-parallax {
+  to {
+    transform: translate3d(0, -10vh, 0);
+  }
 }
 
 /* Lift content above the atmosphere layer. */
