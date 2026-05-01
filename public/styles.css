@@ -122,32 +122,48 @@ header {
 }
 
 /* ─── Binary star brand mark ──────────────────────────────────────────
-   Two circles with an orbital ellipse between them. Independent twinkle
-   on each star at slightly different rates, so they shimmer naturally
-   like a real eclipsing binary's photometric variability. */
+   Two circles orbiting a shared barycenter. transform-box: view-box
+   makes transform-origin reference the SVG's viewport coords (otherwise
+   it'd be relative to each circle's bounding box, which would have it
+   spin in place). 50% 50% = (16, 16) = center of viewBox = barycenter.
+
+   Both stars share the same `orbit` animation so they keep the same
+   angular velocity — the line between them is always a diameter. The
+   primary's smaller orbital radius (5 vs companion's 11) reflects the
+   real binary-star mass relationship: heavier body orbits less.
+
+   Twinkle is a second animation on opacity, running at a different
+   period per star, so the two shimmer asynchronously like real
+   eclipsing-binary photometric variability. */
 .binary {
   display: inline-block;
-  width: 36px;
-  height: 14px;
-  vertical-align: -2px;
-  margin-right: 8px;
+  width: 32px;
+  height: 32px;
+  vertical-align: -10px;
+  margin-right: 10px;
 }
-.binary .orbit {
-  fill: none;
-  stroke: var(--text-faint);
-  stroke-width: 0.6;
-  stroke-dasharray: 1.5 1.5;
-  opacity: 0.7;
+.binary circle {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
 }
 .binary .star-a {
   fill: var(--star-primary);
-  filter: drop-shadow(0 0 2px var(--star-primary));
-  animation: twinkle-a 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px var(--star-primary));
+  animation:
+    orbit 14s linear infinite,
+    twinkle-a 4.2s ease-in-out infinite;
 }
 .binary .star-b {
   fill: var(--star-companion);
-  filter: drop-shadow(0 0 2px var(--star-companion));
-  animation: twinkle-b 5.7s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px var(--star-companion));
+  animation:
+    orbit 14s linear infinite,
+    twinkle-b 5.7s ease-in-out infinite;
+}
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes twinkle-a {
   0%,

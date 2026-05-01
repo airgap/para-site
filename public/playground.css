@@ -90,29 +90,38 @@ body {
   color: var(--pg-accent);
 }
 
-/* Binary star mark — same as the landing's .binary, scoped to the
-   playground namespace so it can't collide with site-wide selectors. */
+/* Binary star mark — same shape as the landing's .binary, namespaced to
+   .pg- so it can't collide with site-wide rules. Both stars share an
+   `orbit` keyframe so they keep the same angular velocity (always 180°
+   apart); each also has its own `pg-twinkle-*` opacity animation so they
+   shimmer asynchronously. */
 .pg-binary {
   display: inline-block;
-  width: 36px;
-  height: 14px;
+  width: 32px;
+  height: 32px;
 }
-.pg-binary .orbit {
-  fill: none;
-  stroke: var(--pg-text-faint);
-  stroke-width: 0.6;
-  stroke-dasharray: 1.5 1.5;
-  opacity: 0.7;
+.pg-binary circle {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
 }
 .pg-binary .star-a {
   fill: var(--pg-star-primary);
-  filter: drop-shadow(0 0 2px var(--pg-star-primary));
-  animation: pg-twinkle-a 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px var(--pg-star-primary));
+  animation:
+    pg-orbit 14s linear infinite,
+    pg-twinkle-a 4.2s ease-in-out infinite;
 }
 .pg-binary .star-b {
   fill: var(--pg-star-companion);
-  filter: drop-shadow(0 0 2px var(--pg-star-companion));
-  animation: pg-twinkle-b 5.7s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px var(--pg-star-companion));
+  animation:
+    pg-orbit 14s linear infinite,
+    pg-twinkle-b 5.7s ease-in-out infinite;
+}
+@keyframes pg-orbit {
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes pg-twinkle-a {
   0%,
