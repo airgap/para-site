@@ -42,6 +42,17 @@ export default defineConfig({
         "A portable JavaScript dialect with reactive signals, edge-triggered handlers, ranges, pipelines, and purity. Compile with bun build, run anywhere V8/JSC runs.",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/airgap/parabun" }],
       customCss: ["./src/styles/parabun.css"],
+      // Pin the theme to light. Starlight's bootstrap reads system dark-mode
+      // pref + localStorage and sets [data-theme] before paint; this inline
+      // script wins by storing "light" in the same key, so the bootstrap
+      // sees a chosen pref instead of falling back to system. Runs at the
+      // top of <head> so there's no FOUC if a dark visitor arrives.
+      head: [
+        {
+          tag: "script",
+          content: 'try { localStorage.setItem("starlight-theme", "light"); } catch {}',
+        },
+      ],
       sidebar: [
         { label: "Guides", items: guides },
         { label: "Examples", items: examples },
