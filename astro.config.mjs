@@ -77,10 +77,11 @@ export default defineConfig({
             pjsx: "parabun-jsx",
           },
         },
-        // GitHub default light + dark — high token contrast on both the
-        // warm-paper light bg and the near-black dark bg, complements the
-        // vermillion brand accent without competing with it.
-        themes: ["github-light-default", "github-dark-default"],
+        // Tokyo Night for the night-sky default — slate background with
+        // periwinkle keywords + warm strings, sits naturally inside the
+        // cosmic page. min-light for the atlas alternate — pared-down,
+        // parchment-friendly token contrast.
+        themes: ["min-light", "tokyo-night"],
       },
     }),
   ],

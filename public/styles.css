@@ -1,44 +1,50 @@
-/* Manuscript theme — vermillion + ink on warm paper (light) or warm-white
-   on near-black (dark). Theme is resolved by the inline head script in
-   index.html which sets [data-theme] on <html> from
-   localStorage["starlight-theme"] (shared with the docs toggle) or
-   prefers-color-scheme. */
+/* ─── Stellar Atlas: dark (Night Sky, default) + light (Atlas) ─────────
+   ParaScript and Parabun are a binary star system. The site reflects
+   that — dark mode is "observation": deep midnight bg with the binary
+   pair as the accent system. Light mode is "atlas": parchment paper,
+   ink markings, the same binary expressed as deep blue + vermillion.
+   Theme resolution shared via localStorage["starlight-theme"]. */
 :root,
-:root[data-theme="light"] {
-  --bg: #f7f4ec;
-  --bg-elev: #ffffff;
-  --bg-code: #ece5d4;
-  --rule: #d4cdba;
-  --rule-strong: #b8af9a;
-  --text: #11100e;
-  --text-dim: #5e574a;
-  --text-faint: #94897a;
-  --accent: #c8311c;
-  --accent-dim: #9a2615;
-  --accent-soft: #f4d4cf;
-  --add: #4d7c4f;
-  --rem: #c8311c;
-  --shadow-strong: rgba(17, 16, 14, 0.1);
+:root[data-theme="dark"] {
+  --bg: #050811;
+  --bg-elev: #0c1020;
+  --bg-code: #0d1224;
+  --rule: #1a2240;
+  --rule-strong: #2a3458;
+  --text: #e8e6dd;
+  --text-dim: #8a8b94;
+  --text-faint: #4a4d5a;
+  /* Binary stars — primary = ParaScript (blue-white), companion = Parabun (amber). */
+  --star-primary: #6db4ff;
+  --star-companion: #ffa855;
+  --accent: var(--star-primary);
+  --accent-dim: #9fcdff;
+  --accent-soft: #1a2a44;
+  --add: #6dd49a;
+  --rem: #ff7a7a;
+  --shadow-strong: rgba(0, 0, 0, 0.6);
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
-  --sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --sans: "Spectral", Georgia, "Times New Roman", serif;
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
-:root[data-theme="dark"] {
-  --bg: #0d0e10;
-  --bg-elev: #15161a;
-  --bg-code: #1a1b1f;
-  --rule: #25272e;
-  --rule-strong: #353841;
-  --text: #f0ebe0;
-  --text-dim: #b5ad9d;
-  --text-faint: #767064;
-  --accent: #ff6b5a;
-  --accent-dim: #ff8b7d;
-  --accent-soft: #3a1e1a;
-  --add: #7fc18a;
-  --rem: #ff6b5a;
-  --shadow-strong: rgba(0, 0, 0, 0.5);
+:root[data-theme="light"] {
+  --bg: #f3efe3;
+  --bg-elev: #f8f5ec;
+  --bg-code: #ebe5d4;
+  --rule: #d4cdba;
+  --rule-strong: #b8af9a;
+  --text: #1a1812;
+  --text-dim: #5e574a;
+  --text-faint: #94897a;
+  --star-primary: #1a4880;
+  --star-companion: #b94a1f;
+  --accent: var(--star-companion);
+  --accent-dim: #8a3614;
+  --accent-soft: #f4d4cf;
+  --add: #4d7c4f;
+  --rem: #b94a1f;
+  --shadow-strong: rgba(26, 24, 18, 0.1);
 }
 
 * {
@@ -70,6 +76,102 @@ html {
 body {
   margin: 0;
   padding: 0;
+  position: relative;
+}
+
+/* ─── Atmospheric backgrounds ─────────────────────────────────────────
+   Dark: a quiet starfield. Real star coordinates (Tycho-2 style) feel
+   wrong on a website, so these are hand-placed for visual balance —
+   uneven, asymmetric, low opacity.
+   Light: subtle dot-grid like astronomical chart paper.
+   ─────────────────────────────────────────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+:root[data-theme="dark"] body::before,
+:root:not([data-theme="light"]) body::before {
+  background-image:
+    radial-gradient(1px 1px at 8% 18%, rgba(255, 255, 255, 0.7) 50%, transparent 100%),
+    radial-gradient(1px 1px at 23% 76%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 41% 31%, rgba(255, 255, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(1px 1px at 56% 64%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+    radial-gradient(1px 1px at 67% 12%, rgba(255, 255, 255, 0.55) 50%, transparent 100%),
+    radial-gradient(1px 1px at 79% 87%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 88% 38%, rgba(109, 180, 255, 0.65) 50%, transparent 100%),
+    radial-gradient(1px 1px at 14% 52%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
+    radial-gradient(1px 1px at 92% 71%, rgba(255, 168, 85, 0.55) 50%, transparent 100%),
+    radial-gradient(1px 1px at 35% 7%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+  background-size: 100vw 100vh;
+}
+
+:root[data-theme="light"] body::before {
+  background-image: radial-gradient(circle at 1px 1px, rgba(26, 24, 18, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Lift content above the atmosphere layer. */
+.page,
+header {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Binary star brand mark ──────────────────────────────────────────
+   Two circles with an orbital ellipse between them. Independent twinkle
+   on each star at slightly different rates, so they shimmer naturally
+   like a real eclipsing binary's photometric variability. */
+.binary {
+  display: inline-block;
+  width: 36px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-right: 8px;
+}
+.binary .orbit {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 0.6;
+  stroke-dasharray: 1.5 1.5;
+  opacity: 0.7;
+}
+.binary .star-a {
+  fill: var(--star-primary);
+  filter: drop-shadow(0 0 2px var(--star-primary));
+  animation: twinkle-a 4.2s ease-in-out infinite;
+}
+.binary .star-b {
+  fill: var(--star-companion);
+  filter: drop-shadow(0 0 2px var(--star-companion));
+  animation: twinkle-b 5.7s ease-in-out infinite;
+}
+@keyframes twinkle-a {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.78;
+  }
+}
+@keyframes twinkle-b {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .binary .star-a,
+  .binary .star-b {
+    animation: none;
+  }
 }
 
 .page {
@@ -104,6 +206,8 @@ h2[id] {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--serif);
   font-size: 24px;
   font-weight: 700;
@@ -112,16 +216,6 @@ h2[id] {
   font-variation-settings:
     "opsz" 144,
     "SOFT" 30;
-}
-
-.brand .marker {
-  color: var(--accent);
-  font-weight: 700;
-  font-style: italic;
-  margin-right: 4px;
-  font-variation-settings:
-    "opsz" 144,
-    "SOFT" 50;
 }
 
 .nav {

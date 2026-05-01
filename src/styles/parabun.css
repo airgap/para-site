@@ -1,35 +1,78 @@
-/* ─── ParaScript: Manuscript theme ──────────────────────────────────────
-   Editorial typography meets technical precision. Vermillion + ink on
-   warm paper (light) or warm-white on near-black (dark). The display
-   serif is Fraunces — variable optical-sizing + softness, set tight and
-   confident at headline weight. Body is Plus Jakarta Sans for clarity
-   without the now-default-AI-aesthetic feel of Inter. JetBrains Mono
-   stays for code (ligatures + readability).
+/* ─── ParaScript: Stellar Atlas ─────────────────────────────────────────
+   ParaScript and Parabun are a binary star system — each shines on its
+   own (the language ships standalone, the runtime ships standalone), but
+   they orbit a shared center and combine into something brighter than
+   either alone. The site's two modes lean into different sides of that
+   metaphor:
 
-   Vermillion is a classic editorial accent (Penguin spines, NYT section
-   heads) — confident enough to carry the brand without skewing soft.
-   Saturated red against off-white is one of typography's most reliable
-   high-contrast pairings.
+     Dark (default) — Night Sky observation. Deep midnight bg, blue-white
+     primary star (ParaScript), amber companion (Parabun). Subtle starfield
+     under the content.
+
+     Light (alternate) — Atlas. Parchment paper, ink markings, vermillion
+     accents. The cosmos rendered as a hand-drawn celestial chart.
+
+   Typography: Fraunces (display) + Spectral (body) — both from Production
+   Type, designed to pair. Spectral is screen-optimized for long-form
+   reading; Fraunces has variable opsz + SOFT axes that we tune per
+   element. JetBrains Mono unchanged.
    ───────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap");
 
-/* ─── Light: warm paper + vermillion ────────────────────────────────── */
+/* ─── Dark: Night Sky (default) ─────────────────────────────────────── */
 :root,
+:root[data-theme="dark"] {
+  --pb-bg: #050811;
+  --pb-bg-elev: #0c1020;
+  --pb-bg-code: #0d1224;
+  --pb-bg-inline-code: #131830;
+  --pb-rule: #1a2240;
+  --pb-rule-strong: #2a3458;
+  --pb-text: #e8e6dd;
+  --pb-text-dim: #8a8b94;
+  --pb-text-faint: #4a4d5a;
+
+  /* Binary star colors — used both as accents and in the brand mark.
+     Primary = ParaScript (this site's headline), Companion = Parabun. */
+  --pb-star-primary: #6db4ff;
+  --pb-star-companion: #ffa855;
+
+  --pb-accent: var(--pb-star-primary);
+  --pb-accent-strong: #9fcdff;
+  --pb-accent-soft: #1a2a44;
+
+  --sl-color-text-invert: var(--pb-bg);
+}
+
+/* ─── Light: Atlas (alternate) ──────────────────────────────────────── */
 :root[data-theme="light"] {
-  --pb-bg: #f7f4ec;
-  --pb-bg-elev: #ffffff;
-  --pb-bg-code: #ece5d4;
+  --pb-bg: #f3efe3;
+  --pb-bg-elev: #f8f5ec;
+  --pb-bg-code: #ebe5d4;
   --pb-bg-inline-code: #ebe2cc;
   --pb-rule: #d4cdba;
   --pb-rule-strong: #b8af9a;
-  --pb-text: #11100e;
+  --pb-text: #1a1812;
   --pb-text-dim: #5e574a;
   --pb-text-faint: #94897a;
-  --pb-accent: #c8311c;
-  --pb-accent-strong: #9a2615;
+
+  /* In Atlas mode the binary stars are rendered as ink markings —
+     deeper, less luminous, but still distinct as the two halves. */
+  --pb-star-primary: #1a4880;
+  --pb-star-companion: #b94a1f;
+
+  --pb-accent: var(--pb-star-companion);
+  --pb-accent-strong: #8a3614;
   --pb-accent-soft: #f4d4cf;
 
+  --sl-color-text-invert: #ffffff;
+}
+
+/* ─── Starlight bindings (theme-agnostic, derive from pb-* above) ──── */
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
   --sl-color-bg: var(--pb-bg);
   --sl-color-bg-nav: var(--pb-bg);
   --sl-color-bg-sidebar: var(--pb-bg);
@@ -38,7 +81,6 @@
 
   --sl-color-text: var(--pb-text);
   --sl-color-text-accent: var(--pb-accent);
-  --sl-color-text-invert: #ffffff;
   --sl-color-white: var(--pb-text);
   --sl-color-black: var(--pb-text);
 
@@ -58,7 +100,7 @@
   --sl-color-gray-6: var(--pb-bg-elev);
   --sl-color-gray-7: var(--pb-bg);
 
-  --sl-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --sl-font: "Spectral", Georgia, "Times New Roman", serif;
   --sl-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
 
   --sl-content-width: 50rem;
@@ -66,25 +108,54 @@
   --sl-line-height-headings: 1.12;
 }
 
-/* ─── Dark: ink + warm-white ────────────────────────────────────────── */
-:root[data-theme="dark"] {
-  --pb-bg: #0d0e10;
-  --pb-bg-elev: #15161a;
-  --pb-bg-code: #1a1b1f;
-  --pb-bg-inline-code: #21222a;
-  --pb-rule: #25272e;
-  --pb-rule-strong: #353841;
-  --pb-text: #f0ebe0;
-  --pb-text-dim: #b5ad9d;
-  --pb-text-faint: #767064;
-  --pb-accent: #ff6b5a;
-  --pb-accent-strong: #ff8b7d;
-  --pb-accent-soft: #3a1e1a;
+/* ─── Atmospheric backgrounds ───────────────────────────────────────── */
 
-  --sl-color-text-invert: var(--pb-bg);
+/* Dark: a quiet starfield rendered with radial-gradient pinpricks. The
+   coordinates are deliberately uneven — real star fields are not on a
+   grid. Opacity stays under 0.5 so the dots don't compete with prose. */
+:root[data-theme="dark"] body::before,
+:root:not([data-theme="light"]) body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 8% 18%, rgba(255, 255, 255, 0.7) 50%, transparent 100%),
+    radial-gradient(1px 1px at 23% 76%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 41% 31%, rgba(255, 255, 255, 0.6) 50%, transparent 100%),
+    radial-gradient(1px 1px at 56% 64%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+    radial-gradient(1px 1px at 67% 12%, rgba(255, 255, 255, 0.55) 50%, transparent 100%),
+    radial-gradient(1px 1px at 79% 87%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(2px 2px at 88% 38%, rgba(255, 255, 255, 0.65) 50%, transparent 100%),
+    radial-gradient(1px 1px at 14% 52%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
+    radial-gradient(1px 1px at 92% 71%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+    radial-gradient(1px 1px at 35% 7%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+  background-size: 100vw 100vh;
 }
 
-/* ─── Headings: Fraunces — confident, tight, characterful ──────────── */
+/* Light: a sparse dot grid like astronomical chart paper. Even spacing,
+   very faint, only visible on close inspection. */
+:root[data-theme="light"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(26, 24, 18, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Lift content above the atmosphere layer. */
+.sl-container,
+header.header,
+.sidebar-pane,
+main {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Headings: Fraunces ────────────────────────────────────────────── */
 .sl-markdown-content h1,
 .sl-markdown-content h2,
 .sl-markdown-content h3,
@@ -103,9 +174,6 @@ h1.content-panel,
   font-size: clamp(2.4rem, 1.85rem + 2.2vw, 3.5rem);
   font-weight: 600;
   margin-block-end: 0.35em;
-  font-variation-settings:
-    "opsz" 144,
-    "SOFT" 30;
 }
 .sl-markdown-content h2 {
   font-size: clamp(1.6rem, 1.4rem + 0.8vw, 2.05rem);
@@ -124,10 +192,10 @@ h1.content-panel,
     "SOFT" 50;
 }
 .sl-markdown-content h4 {
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "Spectral", serif;
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--pb-text-faint);
   margin-block-start: 1.6em;
@@ -135,13 +203,15 @@ h1.content-panel,
 
 .sl-markdown-content {
   font-size: 1rem;
+  font-family: "Spectral", Georgia, serif;
 }
 .sl-markdown-content p,
 .sl-markdown-content li {
   color: var(--pb-text);
 }
 
-/* Lede — looser, italicized serif, color-shifted to dim. */
+/* Lede — Fraunces italic, optical size 36, soft. The first paragraph
+   feels like a sub-headline in a journal article. */
 .sl-markdown-content > h1 + p {
   font-family: "Fraunces", Georgia, serif;
   font-weight: 400;
@@ -156,7 +226,6 @@ h1.content-panel,
     "SOFT" 50;
 }
 
-/* Links — bare accent, soft underline that intensifies on hover. */
 .sl-markdown-content a {
   color: var(--pb-accent);
   text-decoration: none;
@@ -204,15 +273,15 @@ h1.content-panel,
 .sidebar-pane summary span,
 .sidebar-pane h2,
 .sidebar-content > ul > li > span {
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "Spectral", serif;
   font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--pb-text-faint);
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* Site title — Fraunces, bold weight, tight tracking. */
+/* Site title — Fraunces with the binary star mark inline. */
 .site-title,
 header a.site-title,
 [data-has-hero] header a.site-title {
@@ -228,11 +297,13 @@ header a.site-title,
 
 header.header {
   border-block-end: 1px solid var(--pb-rule);
-  background: var(--pb-bg);
+  background: color-mix(in srgb, var(--pb-bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .sidebar-pane {
   border-inline-end: 1px solid var(--pb-rule);
-  background: var(--pb-bg);
+  background: color-mix(in srgb, var(--pb-bg) 92%, transparent);
 }
 
 /* ─── Tables, blockquotes ───────────────────────────────────────────── */
@@ -256,17 +327,23 @@ header.header {
   text-align: start;
 }
 .sl-markdown-content th {
-  font-family: "Plus Jakarta Sans", sans-serif;
-  font-weight: 700;
+  font-family: "Spectral", serif;
+  font-weight: 600;
   font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--pb-text-dim);
   border-block-end-color: var(--pb-rule-strong);
 }
 
 .sl-markdown-content hr {
   border: 0;
-  border-block-start: 1px solid var(--pb-rule);
+  border-block-start: 1px dashed var(--pb-rule-strong);
   margin-block: 2.5rem;
+}
+
+/* ─── Selection — uses primary star color, mode-aware ──────────────── */
+::selection {
+  background: var(--pb-accent-soft);
+  color: var(--pb-text);
 }

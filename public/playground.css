@@ -1,43 +1,46 @@
-/* Playground — light editorial palette, matches the docs site.
-   Forest accent for chrome, cream-paper background for the editor area,
-   serif for the title bar to echo the docs typography. */
+/* Playground — Stellar Atlas, dark-first. Same palette + typography as
+   the docs and landing. Theme resolved by inline head script in
+   playground.astro using the same starlight-theme localStorage key. */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap");
 
-/* Theme set by inline head script in playground.astro using the same
-   starlight-theme localStorage key as the docs. Same vermillion-on-paper
-   / coral-on-ink palette as the rest of the site. */
+/* Dark = Night Sky (default). */
 :root,
-:root[data-theme="light"] {
-  --pg-bg: #f7f4ec;
-  --pg-bg-elev: #ffffff;
-  --pg-bg-code: #ece5d4;
-  --pg-rule: #d4cdba;
-  --pg-rule-strong: #b8af9a;
-  --pg-text: #11100e;
-  --pg-text-dim: #5e574a;
-  --pg-text-faint: #94897a;
-  --pg-accent: #c8311c;
-  --pg-accent-soft: #f4d4cf;
-  --pg-err: #9a2615;
-  --pg-active-bg: rgba(200, 49, 28, 0.06);
-  --pg-selection-bg: rgba(200, 49, 28, 0.18);
+:root[data-theme="dark"] {
+  --pg-bg: #050811;
+  --pg-bg-elev: #0c1020;
+  --pg-bg-code: #0d1224;
+  --pg-rule: #1a2240;
+  --pg-rule-strong: #2a3458;
+  --pg-text: #e8e6dd;
+  --pg-text-dim: #8a8b94;
+  --pg-text-faint: #4a4d5a;
+  --pg-star-primary: #6db4ff;
+  --pg-star-companion: #ffa855;
+  --pg-accent: var(--pg-star-primary);
+  --pg-accent-soft: #1a2a44;
+  --pg-err: #ff7a7a;
+  --pg-active-bg: rgba(109, 180, 255, 0.06);
+  --pg-selection-bg: rgba(109, 180, 255, 0.2);
 }
 
-:root[data-theme="dark"] {
-  --pg-bg: #0d0e10;
-  --pg-bg-elev: #15161a;
-  --pg-bg-code: #1a1b1f;
-  --pg-rule: #25272e;
-  --pg-rule-strong: #353841;
-  --pg-text: #f0ebe0;
-  --pg-text-dim: #b5ad9d;
-  --pg-text-faint: #767064;
-  --pg-accent: #ff6b5a;
-  --pg-accent-soft: #3a1e1a;
-  --pg-err: #ff8b7d;
-  --pg-active-bg: rgba(255, 107, 90, 0.07);
-  --pg-selection-bg: rgba(255, 107, 90, 0.22);
+/* Light = Atlas (alternate). */
+:root[data-theme="light"] {
+  --pg-bg: #f3efe3;
+  --pg-bg-elev: #f8f5ec;
+  --pg-bg-code: #ebe5d4;
+  --pg-rule: #d4cdba;
+  --pg-rule-strong: #b8af9a;
+  --pg-text: #1a1812;
+  --pg-text-dim: #5e574a;
+  --pg-text-faint: #94897a;
+  --pg-star-primary: #1a4880;
+  --pg-star-companion: #b94a1f;
+  --pg-accent: var(--pg-star-companion);
+  --pg-accent-soft: #f4d4cf;
+  --pg-err: #8a3614;
+  --pg-active-bg: rgba(185, 74, 31, 0.06);
+  --pg-selection-bg: rgba(185, 74, 31, 0.18);
 }
 
 * {
@@ -50,13 +53,7 @@ body {
   height: 100%;
   background: var(--pg-bg);
   color: var(--pg-text);
-  font-family:
-    "Plus Jakarta Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    system-ui,
-    sans-serif;
+  font-family: "Spectral", Georgia, "Times New Roman", serif;
   font-size: 14px;
 }
 
@@ -76,6 +73,9 @@ body {
 }
 
 .pg-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--pg-text);
   font-family: "Fraunces", Georgia, serif;
   font-weight: 700;
@@ -88,6 +88,55 @@ body {
 }
 .pg-brand:hover {
   color: var(--pg-accent);
+}
+
+/* Binary star mark — same as the landing's .binary, scoped to the
+   playground namespace so it can't collide with site-wide selectors. */
+.pg-binary {
+  display: inline-block;
+  width: 36px;
+  height: 14px;
+}
+.pg-binary .orbit {
+  fill: none;
+  stroke: var(--pg-text-faint);
+  stroke-width: 0.6;
+  stroke-dasharray: 1.5 1.5;
+  opacity: 0.7;
+}
+.pg-binary .star-a {
+  fill: var(--pg-star-primary);
+  filter: drop-shadow(0 0 2px var(--pg-star-primary));
+  animation: pg-twinkle-a 4.2s ease-in-out infinite;
+}
+.pg-binary .star-b {
+  fill: var(--pg-star-companion);
+  filter: drop-shadow(0 0 2px var(--pg-star-companion));
+  animation: pg-twinkle-b 5.7s ease-in-out infinite;
+}
+@keyframes pg-twinkle-a {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.78;
+  }
+}
+@keyframes pg-twinkle-b {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-binary .star-a,
+  .pg-binary .star-b {
+    animation: none;
+  }
 }
 
 .pg-sep {
@@ -132,7 +181,7 @@ body {
   border: 1px solid var(--pg-rule);
   padding: 4px 8px;
   border-radius: 3px;
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "Spectral", serif;
   font-size: 12px;
   text-transform: none;
   letter-spacing: 0;

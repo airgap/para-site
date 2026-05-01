@@ -22,15 +22,16 @@
       content="Try ParaScript in the browser. Live transpile to plain JavaScript — pipelines, ranges, signals, defer, error chains."
     />
     <script is:inline>
-      // Resolve theme before paint. Same key as the docs (starlight-theme),
-      // so toggling there propagates here. Falls back to system pref.
+      // Dark-first (Stellar Atlas night-sky default). Respects an
+      // explicit toggle from /docs/ (shared starlight-theme localStorage
+      // key) and prefers-color-scheme: light when no toggle has been set.
       try {
         const stored = localStorage.getItem("starlight-theme");
         const t = stored === "light" || stored === "dark"
           ? stored
-          : matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
+          : matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
         document.documentElement.dataset.theme = t;
       } catch {}
     </script>
@@ -38,7 +39,14 @@
   </head>
   <body>
     <header class="pg-bar">
-      <a class="pg-brand" href="/">ParaScript</a>
+      <a class="pg-brand" href="/">
+        <svg class="pg-binary" viewBox="0 0 36 14" aria-hidden="true">
+          <ellipse class="orbit" cx="18" cy="7" rx="15" ry="3.5" />
+          <circle class="star-a" cx="6" cy="7" r="3" />
+          <circle class="star-b" cx="30" cy="7" r="2" />
+        </svg>
+        ParaScript
+      </a>
       <span class="pg-sep">/</span>
       <span class="pg-title">Playground</span>
       <div class="pg-spacer"></div>
@@ -82,48 +90,50 @@
       import { closeBrackets } from "@codemirror/autocomplete";
       import { transpile } from "@parascript/transpile";
 
-      // Custom syntax themes — high-contrast, palette-matched. defaultHighlightStyle
-      // is calibrated for white-on-white and washes out badly on the warm-paper
-      // light bg + ink dark bg. These pull from the same vermillion accent + ink
-      // text that the rest of the site uses.
+      // Stellar Atlas highlight — keywords paint in the Parabun companion
+      // (amber), functions / types paint in the ParaScript primary
+      // (blue-white). The two halves of the binary system showing up
+      // together in code is the brand metaphor at the syntax level.
+      // Strings get the warmer mid-spectrum (between the two stars);
+      // comments are dim text-faint, italicized.
       const lightHighlight = HighlightStyle.define([
-        { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#c8311c", fontWeight: "600" },
+        { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#b94a1f", fontWeight: "600" },
         { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#1a4880" },
-        { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "#11100e" },
-        { tag: [t.variableName, t.propertyName], color: "#11100e" },
+        { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "#1a1812" },
+        { tag: [t.variableName, t.propertyName], color: "#1a1812" },
         { tag: [t.string, t.special(t.string), t.regexp], color: "#7a3a1a" },
-        { tag: [t.number, t.bool, t.null, t.atom], color: "#9a2615" },
+        { tag: [t.number, t.bool, t.null, t.atom], color: "#8a3614" },
         { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#94897a", fontStyle: "italic" },
         { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#5e574a" },
         { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#5e574a" },
         { tag: [t.typeName, t.className, t.namespace], color: "#1a4880", fontWeight: "500" },
-        { tag: [t.tagName], color: "#c8311c" },
+        { tag: [t.tagName], color: "#b94a1f" },
         { tag: [t.attributeName], color: "#1a4880" },
-        { tag: [t.heading], color: "#c8311c", fontWeight: "700" },
+        { tag: [t.heading], color: "#b94a1f", fontWeight: "700" },
         { tag: [t.emphasis], fontStyle: "italic" },
         { tag: [t.strong], fontWeight: "700" },
-        { tag: [t.link, t.url], color: "#c8311c", textDecoration: "underline" },
-        { tag: [t.invalid], color: "#c8311c", textDecoration: "underline wavy" },
+        { tag: [t.link, t.url], color: "#b94a1f", textDecoration: "underline" },
+        { tag: [t.invalid], color: "#b94a1f", textDecoration: "underline wavy" },
       ]);
 
       const darkHighlight = HighlightStyle.define([
-        { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#ff6b5a", fontWeight: "600" },
-        { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#7eb6ff" },
-        { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "#f0ebe0" },
-        { tag: [t.variableName, t.propertyName], color: "#f0ebe0" },
-        { tag: [t.string, t.special(t.string), t.regexp], color: "#e8a87c" },
-        { tag: [t.number, t.bool, t.null, t.atom], color: "#ff8b7d" },
-        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#767064", fontStyle: "italic" },
-        { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#b5ad9d" },
-        { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#b5ad9d" },
-        { tag: [t.typeName, t.className, t.namespace], color: "#7eb6ff", fontWeight: "500" },
-        { tag: [t.tagName], color: "#ff6b5a" },
-        { tag: [t.attributeName], color: "#7eb6ff" },
-        { tag: [t.heading], color: "#ff6b5a", fontWeight: "700" },
+        { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#ffa855", fontWeight: "600" },
+        { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#6db4ff" },
+        { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "#e8e6dd" },
+        { tag: [t.variableName, t.propertyName], color: "#e8e6dd" },
+        { tag: [t.string, t.special(t.string), t.regexp], color: "#e8c468" },
+        { tag: [t.number, t.bool, t.null, t.atom], color: "#ffc78a" },
+        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#5a5d6a", fontStyle: "italic" },
+        { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#8a8b94" },
+        { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#8a8b94" },
+        { tag: [t.typeName, t.className, t.namespace], color: "#6db4ff", fontWeight: "500" },
+        { tag: [t.tagName], color: "#ffa855" },
+        { tag: [t.attributeName], color: "#6db4ff" },
+        { tag: [t.heading], color: "#ffa855", fontWeight: "700" },
         { tag: [t.emphasis], fontStyle: "italic" },
         { tag: [t.strong], fontWeight: "700" },
-        { tag: [t.link, t.url], color: "#ff6b5a", textDecoration: "underline" },
-        { tag: [t.invalid], color: "#ff6b5a", textDecoration: "underline wavy" },
+        { tag: [t.link, t.url], color: "#6db4ff", textDecoration: "underline" },
+        { tag: [t.invalid], color: "#ff7a7a", textDecoration: "underline wavy" },
       ]);
 
       function pickHighlight() {
