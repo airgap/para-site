@@ -28,7 +28,7 @@ const examples = [
   { label: "Backend (Node)", link: `${docsRoot}/examples/backend/` },
   { label: "Edge (Workers)", link: `${docsRoot}/examples/edge/` },
 ];
-const modules = ["signals", "arena", "parallel", "pipeline", "simd", "arrow", "csv"].map(slug => ({
+const modules = ["signals", "arena", "parallel", "pipeline", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
   label: `para:${slug}`,
   link: `${docsRoot}/${slug}/`,
 }));
