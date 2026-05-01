@@ -67,8 +67,12 @@ body {
   align-items: center;
   gap: 0.6rem;
   padding: 0.65rem 1.2rem;
-  background: var(--pg-bg);
-  border-bottom: 1px solid var(--pg-rule);
+  margin: 14px 14px 0 14px;
+  background: color-mix(in srgb, var(--pg-bg) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
   flex: 0 0 auto;
 }
 

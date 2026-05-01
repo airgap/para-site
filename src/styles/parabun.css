@@ -325,22 +325,27 @@ header a.site-title,
     "SOFT" 30 !important;
 }
 
-/* Header — partially translucent (55% alpha) so the nebulae read
-   through, but enough opacity to keep content scrolling under it
-   from competing with nav text. backdrop-filter would look better
-   but re-rasterizes the nebulae every scroll frame. */
+/* Floating-pill nav: header and sidebar both inset 14px from viewport
+   edges with 14px corners and backdrop-filter blur. Smaller surfaces
+   (vs full-width nav) keep the blur cost bounded; nebulae underneath
+   sit on a GPU compositor layer so re-rasterization is cheaper than
+   it would be on a fresh paint surface. */
 header.header {
-  border-block-end: 1px solid var(--pb-rule);
+  margin: 14px 14px 0 14px;
+  border: 1px solid var(--pb-rule);
+  border-radius: 14px;
   background: color-mix(in srgb, var(--pb-bg) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
 }
 
-/* Sidebar — fully transparent. No content scrolls under it (the
-   article is in a separate column), so we can let the nebulae +
-   starfield show all the way through with just a right-edge hairline
-   for column separation. */
 .sidebar-pane {
-  border-inline-end: 1px solid var(--pb-rule);
-  background: transparent;
+  margin: 14px 0 14px 14px;
+  border: 1px solid var(--pb-rule);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pb-bg) 45%, transparent);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
 }
 
 /* ─── Tables, blockquotes ───────────────────────────────────────────── */
