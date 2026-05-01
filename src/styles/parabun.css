@@ -1,32 +1,35 @@
-/* ─── ParaScript editorial theme ────────────────────────────────────────
-   Light-first, typography-forward, generous whitespace. Distinct from
-   Parabun's dark-amber so the language brand reads separately from the
-   runtime. Newsreader (serif) for headings, Inter for body, JetBrains
-   Mono for code. Forest-green accent — high contrast on cream, doesn't
-   compete with code-block syntax colors.
+/* ─── ParaScript: Manuscript theme ──────────────────────────────────────
+   Editorial typography meets technical precision. Vermillion + ink on
+   warm paper (light) or warm-white on near-black (dark). The display
+   serif is Fraunces — variable optical-sizing + softness, set tight and
+   confident at headline weight. Body is Plus Jakarta Sans for clarity
+   without the now-default-AI-aesthetic feel of Inter. JetBrains Mono
+   stays for code (ligatures + readability).
 
-   Light is canonical; a dark variant is provided for users who toggle.
+   Vermillion is a classic editorial accent (Penguin spines, NYT section
+   heads) — confident enough to carry the brand without skewing soft.
+   Saturated red against off-white is one of typography's most reliable
+   high-contrast pairings.
    ───────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500;6..72,600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 
-/* ─── Light palette (default) ───────────────────────────────────────── */
+/* ─── Light: warm paper + vermillion ────────────────────────────────── */
 :root,
 :root[data-theme="light"] {
-  --pb-bg: #fbfaf6;
+  --pb-bg: #f7f4ec;
   --pb-bg-elev: #ffffff;
-  --pb-bg-code: #f4f1e8;
-  --pb-bg-inline-code: #efece2;
-  --pb-rule: #e3ddd0;
-  --pb-rule-strong: #cfc7b3;
-  --pb-text: #1a1916;
-  --pb-text-dim: #58524a;
-  --pb-text-faint: #8a8378;
-  --pb-accent: #1d4d3d;
-  --pb-accent-strong: #143329;
-  --pb-accent-soft: #cfe1d8;
+  --pb-bg-code: #ece5d4;
+  --pb-bg-inline-code: #ebe2cc;
+  --pb-rule: #d4cdba;
+  --pb-rule-strong: #b8af9a;
+  --pb-text: #11100e;
+  --pb-text-dim: #5e574a;
+  --pb-text-faint: #94897a;
+  --pb-accent: #c8311c;
+  --pb-accent-strong: #9a2615;
+  --pb-accent-soft: #f4d4cf;
 
-  /* Starlight overrides — light. */
   --sl-color-bg: var(--pb-bg);
   --sl-color-bg-nav: var(--pb-bg);
   --sl-color-bg-sidebar: var(--pb-bg);
@@ -55,80 +58,81 @@
   --sl-color-gray-6: var(--pb-bg-elev);
   --sl-color-gray-7: var(--pb-bg);
 
-  --sl-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --sl-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --sl-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
 
-  /* Editorial sizing — slightly larger reading column, looser leading. */
   --sl-content-width: 50rem;
   --sl-line-height: 1.65;
-  --sl-line-height-headings: 1.18;
+  --sl-line-height-headings: 1.12;
 }
 
-/* ─── Dark palette ──────────────────────────────────────────────────── */
+/* ─── Dark: ink + warm-white ────────────────────────────────────────── */
 :root[data-theme="dark"] {
-  --pb-bg: #14130f;
-  --pb-bg-elev: #1c1a16;
-  --pb-bg-code: #1f1d18;
-  --pb-bg-inline-code: #25221c;
-  --pb-rule: #2c2922;
-  --pb-rule-strong: #3a362c;
-  --pb-text: #ece7da;
-  --pb-text-dim: #a39e8d;
-  --pb-text-faint: #757163;
-  --pb-accent: #8fbfa6;
-  --pb-accent-strong: #b8d8c5;
-  --pb-accent-soft: #2d3f37;
+  --pb-bg: #0d0e10;
+  --pb-bg-elev: #15161a;
+  --pb-bg-code: #1a1b1f;
+  --pb-bg-inline-code: #21222a;
+  --pb-rule: #25272e;
+  --pb-rule-strong: #353841;
+  --pb-text: #f0ebe0;
+  --pb-text-dim: #b5ad9d;
+  --pb-text-faint: #767064;
+  --pb-accent: #ff6b5a;
+  --pb-accent-strong: #ff8b7d;
+  --pb-accent-soft: #3a1e1a;
 
   --sl-color-text-invert: var(--pb-bg);
 }
 
-/* ─── Typography ────────────────────────────────────────────────────── */
-
-/* Headings: Newsreader serif. Editorial weight + tight tracking + slight
-   optical bias (Newsreader is a variable-optical font; the opsz is set
-   automatically by font-size when available). */
+/* ─── Headings: Fraunces — confident, tight, characterful ──────────── */
 .sl-markdown-content h1,
 .sl-markdown-content h2,
 .sl-markdown-content h3,
-.sl-markdown-content h4,
 h1.content-panel,
 .hero h1 {
-  font-family: "Newsreader", Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.012em;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.018em;
   color: var(--pb-text);
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30;
 }
 
 .sl-markdown-content h1 {
-  font-size: clamp(2.1rem, 1.7rem + 1.6vw, 2.875rem);
-  font-weight: 400;
-  margin-block-end: 0.4em;
+  font-size: clamp(2.4rem, 1.85rem + 2.2vw, 3.5rem);
+  font-weight: 600;
+  margin-block-end: 0.35em;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30;
 }
 .sl-markdown-content h2 {
-  font-size: clamp(1.55rem, 1.35rem + 0.8vw, 1.95rem);
+  font-size: clamp(1.6rem, 1.4rem + 0.8vw, 2.05rem);
   font-weight: 500;
   margin-block-start: 2.4em;
-  margin-block-end: 0.6em;
-  padding-block-end: 0.35em;
+  margin-block-end: 0.55em;
+  padding-block-end: 0.4em;
   border-block-end: 1px solid var(--pb-rule);
 }
 .sl-markdown-content h3 {
-  font-size: 1.25rem;
-  font-weight: 500;
+  font-size: 1.32rem;
+  font-weight: 600;
   margin-block-start: 1.8em;
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 50;
 }
 .sl-markdown-content h4 {
-  font-size: 1.05rem;
-  font-weight: 600;
-  font-family: "Inter", sans-serif;
-  letter-spacing: 0;
-  text-transform: uppercase;
+  font-family: "Plus Jakarta Sans", sans-serif;
   font-size: 0.78rem;
-  color: var(--pb-text-dim);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pb-text-faint);
   margin-block-start: 1.6em;
 }
 
-/* Body — Inter at a comfortable reading size. */
 .sl-markdown-content {
   font-size: 1rem;
 }
@@ -137,19 +141,22 @@ h1.content-panel,
   color: var(--pb-text);
 }
 
-/* Lede — first paragraph after the auto-rendered title (the frontmatter
-   description). Editorial sites pull this larger and looser. */
+/* Lede — looser, italicized serif, color-shifted to dim. */
 .sl-markdown-content > h1 + p {
-  font-family: "Newsreader", Georgia, serif;
-  font-weight: 300;
-  font-size: 1.275rem;
-  line-height: 1.5;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.32rem;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
   color: var(--pb-text-dim);
   margin-block-end: 1.8em;
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 50;
 }
 
-/* Links — underline on hover, accent color, no decoration by default
-   (editorial restraint). */
+/* Links — bare accent, soft underline that intensifies on hover. */
 .sl-markdown-content a {
   color: var(--pb-accent);
   text-decoration: none;
@@ -164,16 +171,14 @@ h1.content-panel,
 
 .sl-markdown-content code:not(pre code) {
   font-family: var(--sl-font-mono);
-  font-size: 0.88em;
+  font-size: 0.86em;
   background: var(--pb-bg-inline-code);
-  padding: 0.12em 0.36em;
+  padding: 0.1em 0.4em;
   border-radius: 3px;
   border: 1px solid var(--pb-rule);
   color: var(--pb-text);
 }
 
-/* Code blocks — let the (light) Shiki theme paint, keep the chrome
-   minimal. */
 .expressive-code {
   margin-block: 1.5rem !important;
 }
@@ -191,35 +196,36 @@ h1.content-panel,
   background: var(--pb-bg-elev);
 }
 
-/* Active sidebar link uses accent. */
 [aria-current="page"] {
   color: var(--pb-accent) !important;
-  font-weight: 500;
-}
-
-/* Sidebar group titles — small caps, dim. Editorial restraint. */
-.sidebar-pane summary span,
-.sidebar-pane h2,
-.sidebar-content > ul > li > span {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--pb-text-faint);
   font-weight: 600;
 }
 
-/* Site title — keep it serif to match the headline treatment. */
+.sidebar-pane summary span,
+.sidebar-pane h2,
+.sidebar-content > ul > li > span {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pb-text-faint);
+  font-weight: 700;
+}
+
+/* Site title — Fraunces, bold weight, tight tracking. */
 .site-title,
 header a.site-title,
 [data-has-hero] header a.site-title {
-  font-family: "Newsreader", Georgia, serif !important;
-  font-weight: 500 !important;
-  font-size: 1.15rem !important;
-  letter-spacing: -0.005em;
+  font-family: "Fraunces", Georgia, serif !important;
+  font-weight: 700 !important;
+  font-size: 1.2rem !important;
+  letter-spacing: -0.012em;
   color: var(--pb-text) !important;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30 !important;
 }
 
-/* Top nav border — single hairline, no shadow. */
 header.header {
   border-block-end: 1px solid var(--pb-rule);
   background: var(--pb-bg);
@@ -229,17 +235,15 @@ header.header {
   background: var(--pb-bg);
 }
 
-/* Theme toggle stays — users can flip to dark. */
-
-/* ─── Tables, blockquotes — small editorial polish ─────────────────── */
+/* ─── Tables, blockquotes ───────────────────────────────────────────── */
 .sl-markdown-content blockquote {
   border-inline-start: 3px solid var(--pb-accent);
   background: transparent;
   padding-inline-start: 1.1rem;
   color: var(--pb-text-dim);
   font-style: italic;
-  font-family: "Newsreader", Georgia, serif;
-  font-size: 1.05rem;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.08rem;
 }
 
 .sl-markdown-content table {
@@ -252,15 +256,15 @@ header.header {
   text-align: start;
 }
 .sl-markdown-content th {
-  font-weight: 600;
-  font-size: 0.82rem;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--pb-text-dim);
   border-block-end-color: var(--pb-rule-strong);
 }
 
-/* Horizontal rule — wider margin, faint. */
 .sl-markdown-content hr {
   border: 0;
   border-block-start: 1px solid var(--pb-rule);

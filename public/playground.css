@@ -2,42 +2,42 @@
    Forest accent for chrome, cream-paper background for the editor area,
    serif for the title bar to echo the docs typography. */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 
-/* Theme is set by the inline head script in playground.astro — uses the
-   same starlight-theme localStorage key as the docs, so toggling the
-   docs theme propagates here. Falls back to prefers-color-scheme. */
+/* Theme set by inline head script in playground.astro using the same
+   starlight-theme localStorage key as the docs. Same vermillion-on-paper
+   / coral-on-ink palette as the rest of the site. */
 :root,
 :root[data-theme="light"] {
-  --pg-bg: #fbfaf6;
+  --pg-bg: #f7f4ec;
   --pg-bg-elev: #ffffff;
-  --pg-bg-code: #f4f1e8;
-  --pg-rule: #e3ddd0;
-  --pg-rule-strong: #cfc7b3;
-  --pg-text: #1a1916;
-  --pg-text-dim: #58524a;
-  --pg-text-faint: #8a8378;
-  --pg-accent: #1d4d3d;
-  --pg-accent-soft: #cfe1d8;
-  --pg-err: #8a2222;
-  --pg-active-bg: rgba(29, 77, 61, 0.05);
-  --pg-selection-bg: rgba(29, 77, 61, 0.18);
+  --pg-bg-code: #ece5d4;
+  --pg-rule: #d4cdba;
+  --pg-rule-strong: #b8af9a;
+  --pg-text: #11100e;
+  --pg-text-dim: #5e574a;
+  --pg-text-faint: #94897a;
+  --pg-accent: #c8311c;
+  --pg-accent-soft: #f4d4cf;
+  --pg-err: #9a2615;
+  --pg-active-bg: rgba(200, 49, 28, 0.06);
+  --pg-selection-bg: rgba(200, 49, 28, 0.18);
 }
 
 :root[data-theme="dark"] {
-  --pg-bg: #14130f;
-  --pg-bg-elev: #1c1a16;
-  --pg-bg-code: #1f1d18;
-  --pg-rule: #2c2922;
-  --pg-rule-strong: #3a362c;
-  --pg-text: #ece7da;
-  --pg-text-dim: #a39e8d;
-  --pg-text-faint: #757163;
-  --pg-accent: #8fbfa6;
-  --pg-accent-soft: #2d3f37;
-  --pg-err: #d27a7a;
-  --pg-active-bg: rgba(143, 191, 166, 0.07);
-  --pg-selection-bg: rgba(143, 191, 166, 0.22);
+  --pg-bg: #0d0e10;
+  --pg-bg-elev: #15161a;
+  --pg-bg-code: #1a1b1f;
+  --pg-rule: #25272e;
+  --pg-rule-strong: #353841;
+  --pg-text: #f0ebe0;
+  --pg-text-dim: #b5ad9d;
+  --pg-text-faint: #767064;
+  --pg-accent: #ff6b5a;
+  --pg-accent-soft: #3a1e1a;
+  --pg-err: #ff8b7d;
+  --pg-active-bg: rgba(255, 107, 90, 0.07);
+  --pg-selection-bg: rgba(255, 107, 90, 0.22);
 }
 
 * {
@@ -51,7 +51,7 @@ body {
   background: var(--pg-bg);
   color: var(--pg-text);
   font-family:
-    "Inter",
+    "Plus Jakarta Sans",
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -77,27 +77,38 @@ body {
 
 .pg-brand {
   color: var(--pg-text);
-  font-family: "Newsreader", Georgia, serif;
-  font-weight: 500;
-  font-size: 1.15rem;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 700;
+  font-size: 1.2rem;
   text-decoration: none;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.018em;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30;
 }
 .pg-brand:hover {
   color: var(--pg-accent);
 }
 
 .pg-sep {
-  color: var(--pg-text-faint);
-  font-family: "Newsreader", Georgia, serif;
-  font-weight: 300;
+  color: var(--pg-accent);
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 700;
+  font-style: italic;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 50;
 }
 
 .pg-title {
   color: var(--pg-text-dim);
-  font-family: "Newsreader", Georgia, serif;
+  font-family: "Fraunces", Georgia, serif;
   font-weight: 400;
-  font-size: 1.05rem;
+  font-style: italic;
+  font-size: 1.1rem;
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 50;
 }
 
 .pg-spacer {
@@ -121,7 +132,7 @@ body {
   border: 1px solid var(--pg-rule);
   padding: 4px 8px;
   border-radius: 3px;
-  font-family: "Inter", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   font-size: 12px;
   text-transform: none;
   letter-spacing: 0;

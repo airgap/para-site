@@ -69,17 +69,66 @@
     </main>
     <script>
       import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
-      import { EditorState } from "@codemirror/state";
+      import { Compartment, EditorState } from "@codemirror/state";
       import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
       import { javascript } from "@codemirror/lang-javascript";
       import {
+        HighlightStyle,
         bracketMatching,
-        defaultHighlightStyle,
         indentOnInput,
         syntaxHighlighting,
       } from "@codemirror/language";
+      import { tags as t } from "@lezer/highlight";
       import { closeBrackets } from "@codemirror/autocomplete";
       import { transpile } from "@parascript/transpile";
+
+      // Custom syntax themes — high-contrast, palette-matched. defaultHighlightStyle
+      // is calibrated for white-on-white and washes out badly on the warm-paper
+      // light bg + ink dark bg. These pull from the same vermillion accent + ink
+      // text that the rest of the site uses.
+      const lightHighlight = HighlightStyle.define([
+        { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#c8311c", fontWeight: "600" },
+        { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#1a4880" },
+        { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "#11100e" },
+        { tag: [t.variableName, t.propertyName], color: "#11100e" },
+        { tag: [t.string, t.special(t.string), t.regexp], color: "#7a3a1a" },
+        { tag: [t.number, t.bool, t.null, t.atom], color: "#9a2615" },
+        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#94897a", fontStyle: "italic" },
+        { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#5e574a" },
+        { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#5e574a" },
+        { tag: [t.typeName, t.className, t.namespace], color: "#1a4880", fontWeight: "500" },
+        { tag: [t.tagName], color: "#c8311c" },
+        { tag: [t.attributeName], color: "#1a4880" },
+        { tag: [t.heading], color: "#c8311c", fontWeight: "700" },
+        { tag: [t.emphasis], fontStyle: "italic" },
+        { tag: [t.strong], fontWeight: "700" },
+        { tag: [t.link, t.url], color: "#c8311c", textDecoration: "underline" },
+        { tag: [t.invalid], color: "#c8311c", textDecoration: "underline wavy" },
+      ]);
+
+      const darkHighlight = HighlightStyle.define([
+        { tag: [t.keyword, t.modifier, t.controlKeyword, t.operatorKeyword], color: "#ff6b5a", fontWeight: "600" },
+        { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#7eb6ff" },
+        { tag: [t.definition(t.variableName), t.definition(t.propertyName)], color: "#f0ebe0" },
+        { tag: [t.variableName, t.propertyName], color: "#f0ebe0" },
+        { tag: [t.string, t.special(t.string), t.regexp], color: "#e8a87c" },
+        { tag: [t.number, t.bool, t.null, t.atom], color: "#ff8b7d" },
+        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#767064", fontStyle: "italic" },
+        { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#b5ad9d" },
+        { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#b5ad9d" },
+        { tag: [t.typeName, t.className, t.namespace], color: "#7eb6ff", fontWeight: "500" },
+        { tag: [t.tagName], color: "#ff6b5a" },
+        { tag: [t.attributeName], color: "#7eb6ff" },
+        { tag: [t.heading], color: "#ff6b5a", fontWeight: "700" },
+        { tag: [t.emphasis], fontStyle: "italic" },
+        { tag: [t.strong], fontWeight: "700" },
+        { tag: [t.link, t.url], color: "#ff6b5a", textDecoration: "underline" },
+        { tag: [t.invalid], color: "#ff6b5a", textDecoration: "underline wavy" },
+      ]);
+
+      function pickHighlight() {
+        return document.documentElement.dataset.theme === "dark" ? darkHighlight : lightHighlight;
+      }
 
       // Curated samples — every one round-trips through the standalone
       // transpiler in <50 ms, exercises a single ParaScript feature.
@@ -177,12 +226,18 @@ pure function distance(a, b) {
         status.dataset.kind = kind;
       }
 
+      // Compartments let us swap the highlight style at runtime when the
+      // theme toggles — Compartment.reconfigure dispatches a precise effect
+      // rather than rebuilding the entire EditorState.
+      const outputHighlight = new Compartment();
+      const inputHighlight = new Compartment();
+
       // Output editor — plain JS, read-only.
       const outputState = EditorState.create({
         doc: "",
         extensions: [
           lineNumbers(),
-          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          outputHighlight.of(syntaxHighlighting(pickHighlight(), { fallback: true })),
           javascript(),
           EditorView.editable.of(false),
           EditorView.theme({
@@ -231,7 +286,7 @@ pure function distance(a, b) {
           lineNumbers(),
           highlightActiveLine(),
           history(),
-          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          inputHighlight.of(syntaxHighlighting(pickHighlight(), { fallback: true })),
           bracketMatching(),
           closeBrackets(),
           indentOnInput(),
@@ -257,6 +312,22 @@ pure function distance(a, b) {
           changes: { from: 0, to: inputView.state.doc.length, insert: next },
         });
         inputView.focus();
+      });
+
+      // Live theme swap — when the docs page toggles theme and the user
+      // navigates back here (or the theme is changed via devtools), the
+      // [data-theme] attribute on <html> changes. MutationObserver fires
+      // a Compartment.reconfigure on each editor so syntax colors update
+      // without rebuilding state.
+      const themeObserver = new MutationObserver(() => {
+        const next = pickHighlight();
+        const ext = syntaxHighlighting(next, { fallback: true });
+        inputView.dispatch({ effects: inputHighlight.reconfigure(ext) });
+        outputView.dispatch({ effects: outputHighlight.reconfigure(ext) });
+      });
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
       });
 
       // First-paint transpile so the output pane is populated immediately.

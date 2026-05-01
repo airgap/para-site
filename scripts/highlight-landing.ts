@@ -74,7 +74,7 @@ const highlighter = await createHighlighter({
   ],
   // Dual-theme: shiki emits per-span CSS variables for both themes; the
   // landing CSS picks `--shiki-light` or `--shiki-dark` from `[data-theme]`.
-  themes: ["vitesse-light", "vitesse-dark"],
+  themes: ["github-light-default", "github-dark-default"],
   langAlias: {
     parabun: "parabun-ts",
     pts: "parabun-ts",
@@ -94,7 +94,7 @@ const rewritten = original.replace(
     const targetLang = lang === "ts" ? "typescript" : lang;
     const html = highlighter.codeToHtml(code, {
       lang: targetLang,
-      themes: { light: "vitesse-light", dark: "vitesse-dark" },
+      themes: { light: "github-light-default", dark: "github-dark-default" },
       // No default color → both themes emit only as CSS variables on each
       // span. CSS rules under [data-theme="…"] pick the right one. Avoids
       // hard-coding either theme's hex into the markup, which would lock
