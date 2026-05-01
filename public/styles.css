@@ -115,7 +115,11 @@ body::before {
     radial-gradient(1px 1px at 49% 88%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
     radial-gradient(1px 1px at 73% 53%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
   background-size: 100vw 100vh;
-  background-attachment: fixed;
+  /* Promote to its own compositor layer so scrolling doesn't repaint it.
+     position:fixed already pins it to the viewport — no need for the much
+     more expensive background-attachment:fixed. */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 :root[data-theme="light"] body::before {
@@ -140,7 +144,8 @@ body::before {
     radial-gradient(ellipse 70vw 55vh at 78% 18%, rgba(109, 180, 255, 0.12), transparent 65%),
     radial-gradient(ellipse 55vw 45vh at 12% 75%, rgba(255, 168, 85, 0.07), transparent 65%),
     radial-gradient(ellipse 45vw 50vh at 55% 105%, rgba(180, 110, 220, 0.05), transparent 60%);
-  background-attachment: fixed;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 /* Lift content above the atmosphere layer. */
@@ -177,17 +182,17 @@ header {
 }
 .binary .star-a {
   fill: var(--star-primary);
-  /* Two-stage glow: tight bright halo + diffuse outer corona. */
-  filter: drop-shadow(0 0 2px var(--star-primary))
-    drop-shadow(0 0 8px color-mix(in srgb, var(--star-primary) 60%, transparent));
+  /* Single drop-shadow — two stacked drop-shadow filters look richer
+     but each one re-runs every animation frame on the rotating star
+     and spikes the main thread. One wider shadow is the perf compromise. */
+  filter: drop-shadow(0 0 4px var(--star-primary));
   animation:
     orbit 14s linear infinite,
     twinkle-a 4.2s ease-in-out infinite;
 }
 .binary .star-b {
   fill: var(--star-companion);
-  filter: drop-shadow(0 0 2px var(--star-companion))
-    drop-shadow(0 0 8px color-mix(in srgb, var(--star-companion) 60%, transparent));
+  filter: drop-shadow(0 0 4px var(--star-companion));
   animation:
     orbit 14s linear infinite,
     twinkle-b 5.7s ease-in-out infinite;
@@ -241,9 +246,10 @@ header {
   z-index: 10;
   padding: 14px 0;
   margin-top: -14px;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: saturate(180%) blur(8px);
-  -webkit-backdrop-filter: saturate(180%) blur(8px);
+  /* Solid (98% alpha) — backdrop-filter blur was re-rasterizing the
+     nebulae underneath every scroll frame. The 2% transparency keeps
+     the page feeling layered without forcing a per-frame repaint. */
+  background: color-mix(in srgb, var(--bg) 98%, transparent);
   border-bottom: 1px solid var(--rule);
 }
 
