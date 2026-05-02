@@ -35,16 +35,18 @@
     };
   }
 
-  // Three nebulae, one per product, positioned around the splash
-  // periphery so they don't crowd the center where the figure-8 lives.
-  // Alphas ≥ 0.12 to stay above 8-bit gradient quantization bands.
+  // Three nebulae, one per product. Sized large with a long, gentle
+  // alpha tail so they bleed into each other instead of showing
+  // visible "junction" lines where two nebulae meet. Positions push
+  // each color toward its own corner; the overlap is the tinted
+  // ambient in between.
   const nebulae = [
-    // Lib (blue) — top-left, behind where the eye would land first
-    { x: 0.18, y: 0.25, rx: 0.6, ry: 0.5, color: [109, 180, 255], alpha: 0.16 },
-    // Lang (yellow) — bottom-center, beneath the cards
-    { x: 0.5, y: 0.95, rx: 0.55, ry: 0.5, color: [255, 213, 74], alpha: 0.12 },
-    // Runtime (red) — top-right, balancing Lib
-    { x: 0.82, y: 0.22, rx: 0.6, ry: 0.5, color: [255, 92, 74], alpha: 0.15 },
+    // Lib (blue) — top-left
+    { x: 0.05, y: 0.15, rx: 0.95, ry: 0.85, color: [109, 180, 255], alpha: 0.18 },
+    // Lang (yellow) — bottom-center
+    { x: 0.5, y: 1.05, rx: 0.85, ry: 0.8, color: [255, 213, 74], alpha: 0.13 },
+    // Runtime (red) — top-right
+    { x: 0.95, y: 0.12, rx: 0.95, ry: 0.85, color: [255, 92, 74], alpha: 0.17 },
   ];
 
   // Stars. Three brightness tiers; color mostly warm-white with a
@@ -112,13 +114,18 @@
       ctx.scale(rx / r, ry / r);
       const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
       const [cr, cg, cb] = n.color;
-      // Multi-stop falloff so the alpha derivative tapers smoothly —
-      // two-stop linear gradients produce a Mach band where the
-      // derivative snaps to zero. Five stops fixes it.
+      // Approximate gaussian falloff with eight color stops so the
+      // alpha derivative tapers continuously to zero — too few stops
+      // (or a sharp last-mile) produce a visible Mach band right at
+      // the radius. The 0.78-1.0 stretch is dedicated to the long
+      // tail where alpha is < 1% so the edge fades into the bg.
       grad.addColorStop(0, `rgba(${cr},${cg},${cb},${n.alpha})`);
-      grad.addColorStop(0.18, `rgba(${cr},${cg},${cb},${n.alpha * 0.6})`);
-      grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${n.alpha * 0.25})`);
-      grad.addColorStop(0.7, `rgba(${cr},${cg},${cb},${n.alpha * 0.06})`);
+      grad.addColorStop(0.12, `rgba(${cr},${cg},${cb},${n.alpha * 0.78})`);
+      grad.addColorStop(0.26, `rgba(${cr},${cg},${cb},${n.alpha * 0.5})`);
+      grad.addColorStop(0.42, `rgba(${cr},${cg},${cb},${n.alpha * 0.28})`);
+      grad.addColorStop(0.58, `rgba(${cr},${cg},${cb},${n.alpha * 0.13})`);
+      grad.addColorStop(0.74, `rgba(${cr},${cg},${cb},${n.alpha * 0.05})`);
+      grad.addColorStop(0.88, `rgba(${cr},${cg},${cb},${n.alpha * 0.012})`);
       grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
       ctx.fillStyle = grad;
       ctx.fillRect(-r, -r, r * 2, r * 2);
