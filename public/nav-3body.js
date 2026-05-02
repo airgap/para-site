@@ -1,20 +1,34 @@
-// Nav-badge 3-body simulation. Each landing page (and the docs
+// Nav-badge 3-body simulation, 3D. Each landing page (and the docs
 // SiteTitle) embeds <canvas class="nav-3body" data-current="lib"|
 // "lang"|"runtime"> in place of the old binary-star SVG. The "current"
 // star is heavier (mass 4) and renders larger; the other two bodies
 // orbit around it with the trinity colors.
 //
-// Unlike the figure-8 splash sim (equal-mass, periodic), this one runs
-// asymmetric gravity → the lighter bodies trace messier paths that
-// drift over time. Velocity Verlet keeps it well-behaved at small
-// dt; we never let bodies escape the canvas because the heavy mass
-// dominates the binding energy.
+// Three real spatial dimensions: gravity acts on (x, y, z) and bodies
+// have non-zero z extent in their initial conditions so the orbit
+// doesn't degenerate into a plane. Render uses a tilted-orthographic
+// camera (rotate around x-axis by CAM_TILT, then drop the depth
+// coordinate) so out-of-plane motion appears as up/down dip in the
+// projected y. Body radius and trail width scale with depth so the
+// nearer body reads as closer.
+//
+// Boundary handling: when a body wanders past R_MAX from the centroid
+// of the OTHER two AND is still moving outward, the radial component
+// of its 3D velocity flips. Elastic, KE-preserving, keeps the system
+// bound without relying on heavy softening.
 (() => {
   const STARS = {
     lib: "#6db4ff",
     lang: "#ffd54a",
     runtime: "#ff5c4a",
   };
+
+  // Camera tilt around the x-axis. 0 = pure top-down (no z parallax,
+  // looks 2D). π/2 = pure side-on (no y motion visible). 25° picks up
+  // out-of-plane motion clearly without distorting the orbit shape.
+  const CAM_TILT = (Math.PI / 180) * 25;
+  const COS_T = Math.cos(CAM_TILT);
+  const SIN_T = Math.sin(CAM_TILT);
 
   function paint(canvas) {
     const ctx = canvas.getContext("2d");
@@ -36,105 +50,116 @@
     const COLORS = order.map(k => STARS[k]);
     const M = [4, 1, 1];
 
-    // Initial conditions chosen so the binding energy keeps everything
-    // inside ~|r|<1.4 over thousands of frames. Heavy at origin, two
-    // lighter bodies counter-rotating at slightly different radii so
-    // their orbital periods differ and the visual never repeats.
+    // 3D ICs. Heavy at origin, light bodies at distinct radii with
+    // small but non-zero z components so the orbit threads through 3D
+    // space rather than collapsing onto the xy plane.
     const bodies = [
-      { x: 0.0, y: 0.0, vx: 0.0, vy: 0.0 },
-      { x: -0.85, y: 0.0, vx: 0.0, vy: 1.95 },
-      { x: 0.6, y: 0.35, vx: -0.4, vy: -2.25 },
+      { x: 0.0, y: 0.0, z: 0.0, vx: 0.0, vy: 0.0, vz: 0.0 },
+      { x: -0.85, y: 0.0, z: 0.15, vx: 0.0, vy: 1.85, vz: 0.35 },
+      { x: 0.6, y: 0.35, z: -0.2, vx: -0.4, vy: -2.15, vz: -0.25 },
     ];
 
-    // Recenter periodically so net momentum drift doesn't push the
-    // system off-screen. (If it weren't for floating-point error,
-    // momentum would stay zero forever.)
     function recenter() {
       const totalM = M[0] + M[1] + M[2];
       let cx = 0,
         cy = 0,
+        cz = 0,
         vx = 0,
-        vy = 0;
+        vy = 0,
+        vz = 0;
       for (let i = 0; i < 3; i++) {
         cx += bodies[i].x * M[i];
         cy += bodies[i].y * M[i];
+        cz += bodies[i].z * M[i];
         vx += bodies[i].vx * M[i];
         vy += bodies[i].vy * M[i];
+        vz += bodies[i].vz * M[i];
       }
       cx /= totalM;
       cy /= totalM;
+      cz /= totalM;
       vx /= totalM;
       vy /= totalM;
+      vz /= totalM;
       for (let i = 0; i < 3; i++) {
         bodies[i].x -= cx;
         bodies[i].y -= cy;
+        bodies[i].z -= cz;
         bodies[i].vx -= vx;
         bodies[i].vy -= vy;
+        bodies[i].vz -= vz;
       }
     }
 
     function accel(at) {
       const ax = [0, 0, 0];
       const ay = [0, 0, 0];
+      const az = [0, 0, 0];
       for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
           if (i === j) continue;
           const dx = at[j].x - at[i].x;
           const dy = at[j].y - at[i].y;
-          // Softening epsilon — close approaches between the light
-          // bodies otherwise blow up at this dt. 0.04 is small enough
-          // that the orbit shape is dominated by real gravity.
-          const r2 = dx * dx + dy * dy + 0.04;
+          const dz = at[j].z - at[i].z;
+          // Softening — close approaches in 3D would otherwise blow
+          // up at this dt. ε² = 0.04 is small enough that the orbit
+          // shape is dominated by real gravity.
+          const r2 = dx * dx + dy * dy + dz * dz + 0.04;
           const r = Math.sqrt(r2);
           const inv3 = M[j] / (r2 * r);
           ax[i] += dx * inv3;
           ay[i] += dy * inv3;
+          az[i] += dz * inv3;
         }
       }
-      return [ax, ay];
+      return [ax, ay, az];
     }
 
     function step(dt) {
-      const [ax, ay] = accel(bodies);
+      const [ax, ay, az] = accel(bodies);
       for (let i = 0; i < 3; i++) {
         bodies[i].x += bodies[i].vx * dt + 0.5 * ax[i] * dt * dt;
         bodies[i].y += bodies[i].vy * dt + 0.5 * ay[i] * dt * dt;
+        bodies[i].z += bodies[i].vz * dt + 0.5 * az[i] * dt * dt;
       }
-      const [ax2, ay2] = accel(bodies);
+      const [ax2, ay2, az2] = accel(bodies);
       for (let i = 0; i < 3; i++) {
         bodies[i].vx += 0.5 * (ax[i] + ax2[i]) * dt;
         bodies[i].vy += 0.5 * (ay[i] + ay2[i]) * dt;
+        bodies[i].vz += 0.5 * (az[i] + az2[i]) * dt;
       }
-      // Bound the system: if a body wanders past R_MAX from the
-      // centroid of the other two AND is still moving outward, flip
-      // the radial component of its velocity. Elastic reflection
-      // preserves the body's KE while sending it back toward the
-      // group. The "moving outward" guard prevents stuck oscillation
-      // at the boundary if a body re-enters with low radial speed.
+      // 3D elastic reflection at the boundary: same scheme as before
+      // but with z folded into the radial check + reflection.
       const R_MAX = 1.25;
       for (let i = 0; i < 3; i++) {
-        let cx = 0;
-        let cy = 0;
-        let mTot = 0;
+        let cx = 0,
+          cy = 0,
+          cz = 0,
+          mTot = 0;
         for (let j = 0; j < 3; j++) {
           if (i === j) continue;
           cx += bodies[j].x * M[j];
           cy += bodies[j].y * M[j];
+          cz += bodies[j].z * M[j];
           mTot += M[j];
         }
         cx /= mTot;
         cy /= mTot;
+        cz /= mTot;
         const dx = bodies[i].x - cx;
         const dy = bodies[i].y - cy;
-        const r2 = dx * dx + dy * dy;
+        const dz = bodies[i].z - cz;
+        const r2 = dx * dx + dy * dy + dz * dz;
         if (r2 < R_MAX * R_MAX) continue;
         const r = Math.sqrt(r2);
         const nx = dx / r;
         const ny = dy / r;
-        const vRad = bodies[i].vx * nx + bodies[i].vy * ny;
-        if (vRad <= 0) continue; // already returning
+        const nz = dz / r;
+        const vRad = bodies[i].vx * nx + bodies[i].vy * ny + bodies[i].vz * nz;
+        if (vRad <= 0) continue;
         bodies[i].vx -= 2 * vRad * nx;
         bodies[i].vy -= 2 * vRad * ny;
+        bodies[i].vz -= 2 * vRad * nz;
       }
     }
 
@@ -142,9 +167,17 @@
     const trails = bodies.map(() => []);
     const DT = 0.006;
     const SUB = 4;
-    // Sim coords roughly [-1.4, +1.4] → fit into canvas with a small
-    // margin. With the same scale per axis the "shape" is preserved.
     const HALF = 1.45;
+
+    // Project sim coords (x, y, z) to screen. Camera tilt is around
+    // the x-axis: y_world rotates into y_screen + z_depth. Returns
+    // {sx, sy, depth} where depth is the camera-relative z (higher =
+    // closer to camera) used for size scaling and z-sorting.
+    function project(p) {
+      const yp = p.y * COS_T - p.z * SIN_T;
+      const depth = p.y * SIN_T + p.z * COS_T;
+      return { sx: p.x, sy: yp, depth };
+    }
 
     function render() {
       const w = canvas.clientWidth;
@@ -155,38 +188,45 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Trails first (so heads sit on top).
+      // Trails (projected). Drawn first so heads sit on top. Width
+      // scales lightly with depth so closer segments feel weightier.
       for (let i = 0; i < 3; i++) {
         const t = trails[i];
         const color = COLORS[i];
         for (let k = 1; k < t.length; k++) {
-          const a = t[k - 1];
-          const b = t[k];
+          const a = project(t[k - 1]);
+          const b = project(t[k]);
           const f = k / t.length;
+          const depthScale = 1 + 0.35 * b.depth;
           ctx.strokeStyle = withAlpha(color, f * 0.6);
-          ctx.lineWidth = 0.5 + f * (i === 0 ? 1.2 : 0.7);
+          ctx.lineWidth = (0.5 + f * (i === 0 ? 1.2 : 0.7)) * depthScale;
           ctx.beginPath();
-          ctx.moveTo(cx + a.x * s, cy + a.y * s);
-          ctx.lineTo(cx + b.x * s, cy + b.y * s);
+          ctx.moveTo(cx + a.sx * s, cy + a.sy * s);
+          ctx.lineTo(cx + b.sx * s, cy + b.sy * s);
           ctx.stroke();
         }
       }
 
-      // Heads. Heavy body bigger, both visually and via halo radius.
-      for (let i = 0; i < 3; i++) {
-        const b = bodies[i];
-        const px = cx + b.x * s;
-        const py = cy + b.y * s;
-        const radius = i === 0 ? 3.4 : 1.8;
-        const haloR = i === 0 ? 8 : 4;
+      // Heads — z-sort so the nearer body draws on top of the farther
+      // one. Body size scales with depth so the parallax feels real.
+      const heads = bodies.map((b, i) => ({ b, i, p: project(b) }));
+      heads.sort((a, b) => a.p.depth - b.p.depth); // far → near
+      for (const h of heads) {
+        const px = cx + h.p.sx * s;
+        const py = cy + h.p.sy * s;
+        const depthScale = 1 + 0.35 * h.p.depth;
+        const baseR = h.i === 0 ? 3.4 : 1.8;
+        const baseHalo = h.i === 0 ? 8 : 4;
+        const radius = baseR * depthScale;
+        const haloR = baseHalo * depthScale;
         const halo = ctx.createRadialGradient(px, py, 0, px, py, haloR);
-        halo.addColorStop(0, withAlpha(COLORS[i], 0.7));
-        halo.addColorStop(1, withAlpha(COLORS[i], 0));
+        halo.addColorStop(0, withAlpha(COLORS[h.i], 0.7));
+        halo.addColorStop(1, withAlpha(COLORS[h.i], 0));
         ctx.fillStyle = halo;
         ctx.beginPath();
         ctx.arc(px, py, haloR, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = COLORS[i];
+        ctx.fillStyle = COLORS[h.i];
         ctx.beginPath();
         ctx.arc(px, py, radius, 0, Math.PI * 2);
         ctx.fill();
@@ -208,7 +248,7 @@
         for (let s = 0; s < SUB; s++) step(DT);
         for (let i = 0; i < 3; i++) {
           const t = trails[i];
-          t.push({ x: bodies[i].x, y: bodies[i].y });
+          t.push({ x: bodies[i].x, y: bodies[i].y, z: bodies[i].z });
           if (t.length > TRAIL_LEN) t.shift();
         }
         if ((++frame & 31) === 0) recenter();
@@ -217,7 +257,7 @@
       requestAnimationFrame(tick);
     }
     addEventListener("resize", fit);
-    for (let i = 0; i < 3; i++) trails[i].push({ x: bodies[i].x, y: bodies[i].y });
+    for (let i = 0; i < 3; i++) trails[i].push({ x: bodies[i].x, y: bodies[i].y, z: bodies[i].z });
     render();
     requestAnimationFrame(tick);
   }
