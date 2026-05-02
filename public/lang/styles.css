@@ -14,10 +14,17 @@
   --text: #e8e6dd;
   --text-dim: #8a8b94;
   --text-faint: #4a4d5a;
-  /* Binary stars — primary = Para (blue-white), companion = ParaBun (amber). */
-  --star-primary: #6db4ff;
-  --star-companion: #ffa855;
-  --accent: var(--star-primary);
+  /* Stellar-spectrum trinity. Each section landing picks its own
+     accent below via body.page-libs / .page-lang / .page-runtime so
+     /libs reads as blue, /lang as yellow, /runtime as red — matching
+     the umbrella splash cards. The default (when no body class is
+     set, e.g. on /docs/) is blue, since the libraries are the
+     broadest-audience product. */
+  --star-lib: #6db4ff;
+  --star-lang: #ffd54a;
+  --star-runtime: #ff5c4a;
+  /* Default accent (no section class) = blue. */
+  --accent: var(--star-lib);
   --accent-dim: #9fcdff;
   --accent-soft: #1a2a44;
   --add: #6dd49a;
@@ -37,14 +44,38 @@
   --text: #1a1812;
   --text-dim: #5e574a;
   --text-faint: #94897a;
-  --star-primary: #1a4880;
-  --star-companion: #b94a1f;
-  --accent: var(--star-companion);
-  --accent-dim: #8a3614;
-  --accent-soft: #f4d4cf;
+  --star-lib: #1a4880;
+  --star-lang: #a07a18;
+  --star-runtime: #b94a1f;
+  --accent: var(--star-lib);
+  --accent-dim: #6db4ff;
+  --accent-soft: #d8e4f4;
   --add: #4d7c4f;
   --rem: #b94a1f;
   --shadow-strong: rgba(26, 24, 18, 0.1);
+}
+
+/* Per-section accent overrides — body class is set on each landing
+   page (/libs/index.html → page-libs, /lang/ → page-lang). */
+body.page-libs {
+  --accent: var(--star-lib);
+  --accent-dim: #9fcdff;
+  --accent-soft: #1a2a44;
+}
+body.page-lang {
+  --accent: var(--star-lang);
+  --accent-dim: #ffe88a;
+  --accent-soft: #2a230a;
+}
+:root[data-theme="light"] body.page-libs {
+  --accent: var(--star-lib);
+  --accent-dim: #6db4ff;
+  --accent-soft: #d8e4f4;
+}
+:root[data-theme="light"] body.page-lang {
+  --accent: var(--star-lang);
+  --accent-dim: #d4a830;
+  --accent-soft: #f4ecd0;
 }
 
 * {
@@ -245,18 +276,18 @@ header {
   transform-origin: 50% 50%;
 }
 .binary .star-a {
-  fill: var(--star-primary);
+  fill: var(--star-lib);
   /* Single drop-shadow — two stacked drop-shadow filters look richer
      but each one re-runs every animation frame on the rotating star
      and spikes the main thread. One wider shadow is the perf compromise. */
-  filter: drop-shadow(0 0 4px var(--star-primary));
+  filter: drop-shadow(0 0 4px var(--star-lib));
   animation:
     orbit 14s linear infinite,
     twinkle-a 4.2s ease-in-out infinite;
 }
 .binary .star-b {
-  fill: var(--star-companion);
-  filter: drop-shadow(0 0 4px var(--star-companion));
+  fill: var(--star-runtime);
+  filter: drop-shadow(0 0 4px var(--star-runtime));
   animation:
     orbit 14s linear infinite,
     twinkle-b 5.7s ease-in-out infinite;

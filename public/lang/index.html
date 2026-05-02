@@ -32,7 +32,7 @@
       } catch {}
     </script>
   </head>
-  <body>
+  <body class="page-lang">
     <main class="page">
       <header>
         <span class="brand">
@@ -133,9 +133,9 @@
 
       <h2 id="compile">Compilation</h2>
       <p>
-        Para files (<code>.pts</code>) are parsed by <a href="/runtime/">ParaBun</a>'s transpiler.
-        (Mainline Bun doesn't recognize the syntax — the parser additions are part of the ParaBun fork.) The output is
-        standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
+        Para files (<code>.pts</code>) are parsed by <a href="/runtime/">ParaBun</a>'s transpiler. (Mainline Bun doesn't
+        recognize the syntax — the parser additions are part of the ParaBun fork.) The output is standard JavaScript
+        with a handful of imports from <code>para:*</code> module specifiers.
       </p>
       <p>
         On ParaBun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,

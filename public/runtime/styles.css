@@ -16,11 +16,14 @@
   --text: #f0e8d6;
   --text-dim: #aaa087;
   --text-faint: #5e5446;
-  --star-primary: #6db4ff;
-  --star-companion: #ffa855;
-  --accent: var(--star-companion);
-  --accent-dim: #ffc78a;
-  --accent-soft: #3a2a14;
+  /* Stellar-spectrum trinity. /runtime is the red star — matches
+     the umbrella's Runtime card. */
+  --star-lib: #6db4ff;
+  --star-lang: #ffd54a;
+  --star-runtime: #ff5c4a;
+  --accent: var(--star-runtime);
+  --accent-dim: #ff8a78;
+  --accent-soft: #3a1410;
   --add: #6dd49a;
   --rem: #ff7a7a;
   --shadow-strong: rgba(0, 0, 0, 0.6);
@@ -38,9 +41,10 @@
   --text: #1a1812;
   --text-dim: #5e574a;
   --text-faint: #94897a;
-  --star-primary: #1a4880;
-  --star-companion: #b94a1f;
-  --accent: var(--star-companion);
+  --star-lib: #1a4880;
+  --star-lang: #a07a18;
+  --star-runtime: #b94a1f;
+  --accent: var(--star-runtime);
   --accent-dim: #8a3614;
   --accent-soft: #f4d4cf;
   --add: #4d7c4f;
@@ -222,17 +226,17 @@ header {
   transform-origin: 50% 50%;
 }
 .binary .star-a {
-  fill: var(--star-primary);
+  fill: var(--star-lib);
   /* Single shadow — stacked drop-shadows recompute every animation
      frame on the rotating star and spike scroll latency. */
-  filter: drop-shadow(0 0 4px var(--star-primary));
+  filter: drop-shadow(0 0 4px var(--star-lib));
   animation:
     orbit 14s linear infinite,
     twinkle-a 4.2s ease-in-out infinite;
 }
 .binary .star-b {
-  fill: var(--star-companion);
-  filter: drop-shadow(0 0 4px var(--star-companion));
+  fill: var(--star-runtime);
+  filter: drop-shadow(0 0 4px var(--star-runtime));
   animation:
     orbit 14s linear infinite,
     twinkle-b 5.7s ease-in-out infinite;
