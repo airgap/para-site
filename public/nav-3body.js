@@ -50,14 +50,41 @@
     const COLORS = order.map(k => STARS[k]);
     const M = [4, 1, 1];
 
-    // 3D ICs. Heavy at origin, light bodies at distinct radii with
-    // small but non-zero z components so the orbit threads through 3D
-    // space rather than collapsing onto the xy plane.
-    const bodies = [
-      { x: 0.0, y: 0.0, z: 0.0, vx: 0.0, vy: 0.0, vz: 0.0 },
-      { x: -0.85, y: 0.0, z: 0.15, vx: 0.0, vy: 1.85, vz: 0.35 },
-      { x: 0.6, y: 0.35, z: -0.2, vx: -0.4, vy: -2.15, vz: -0.25 },
-    ];
+    // 3D ICs. Heavy at origin (zero velocity — it's the anchor), two
+    // light bodies on randomized 3D shells around it with roughly
+    // tangential velocities so each session starts with a different
+    // orbit. Each light body picks a random unit direction (uniform
+    // on the sphere via inverse-CDF on z) and a random radius in
+    // [0.7, 1.0]. Velocity direction is the cross product of the
+    // position vector with a random fixed-up axis — guarantees a
+    // non-radial component (otherwise we'd have a pure radial fall).
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+    function randomLight() {
+      const r = rand(0.7, 1.0);
+      const cosTheta = rand(-1, 1);
+      const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+      const phi = rand(0, Math.PI * 2);
+      const x = r * sinTheta * Math.cos(phi);
+      const y = r * sinTheta * Math.sin(phi);
+      const z = r * cosTheta * 0.4; // squash z slightly so the orbit reads in-plane-ish
+      // Tangential velocity: cross(pos, axis) where axis is jittered
+      // each time so the two lights aren't co-planar.
+      const ax = rand(-1, 1);
+      const ay = rand(-1, 1);
+      const az = rand(-1, 1);
+      let vx = y * az - z * ay;
+      let vy = z * ax - x * az;
+      let vz = x * ay - y * ax;
+      const vMag = Math.sqrt(vx * vx + vy * vy + vz * vz);
+      const vTarget = rand(1.7, 2.2);
+      vx = (vx / vMag) * vTarget;
+      vy = (vy / vMag) * vTarget;
+      vz = (vz / vMag) * vTarget;
+      return { x, y, z, vx, vy, vz };
+    }
+    const bodies = [{ x: 0.0, y: 0.0, z: 0.0, vx: 0.0, vy: 0.0, vz: 0.0 }, randomLight(), randomLight()];
 
     function recenter() {
       const totalM = M[0] + M[1] + M[2];
@@ -129,8 +156,13 @@
         bodies[i].vz += 0.5 * (az[i] + az2[i]) * dt;
       }
       // 3D elastic reflection at the boundary: same scheme as before
-      // but with z folded into the radial check + reflection.
-      const R_MAX = 1.25;
+      // but with z folded into the radial check + reflection. R_MAX
+      // is the maximum distance from the centroid of the OTHER two
+      // bodies before the radial component flips. 3.75 = 3× the
+      // canvas half-extent — bodies can swing well beyond the visible
+      // badge area before bouncing, which lets the chaotic dynamics
+      // breathe between reflections.
+      const R_MAX = 3.75;
       for (let i = 0; i < 3; i++) {
         let cx = 0,
           cy = 0,
