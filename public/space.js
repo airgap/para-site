@@ -1,0 +1,165 @@
+// Full-viewport starfield + three nebulae for the umbrella splash —
+// one nebula per product (blue / yellow / red, matching the trinity).
+// Replaces the body::before CSS gradient pile with a single canvas
+// that's prettier (proper random distribution, gaussian falloff
+// without 8-bit Mach bands) and DPR-aware.
+//
+// Static — no scroll parallax — because the umbrella is a single-
+// screen splash. Only resize triggers a redraw.
+(() => {
+  const SEED = 4242; // distinct from runtime's 1337
+  const STAR_COUNT = 260;
+
+  const canvas = document.createElement("canvas");
+  canvas.id = "__space";
+  canvas.setAttribute("aria-hidden", "true");
+  canvas.style.cssText = `
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: -10;
+  `;
+  function mount() {
+    if (document.body) document.body.insertBefore(canvas, document.body.firstChild);
+  }
+  if (document.body) mount();
+  else document.addEventListener("DOMContentLoaded", mount);
+
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  // Three nebulae, one per product, positioned around the splash
+  // periphery so they don't crowd the center where the figure-8 lives.
+  // Alphas ≥ 0.12 to stay above 8-bit gradient quantization bands.
+  const nebulae = [
+    // Lib (blue) — top-left, behind where the eye would land first
+    { x: 0.18, y: 0.25, rx: 0.6, ry: 0.5, color: [109, 180, 255], alpha: 0.16 },
+    // Lang (yellow) — bottom-center, beneath the cards
+    { x: 0.5, y: 0.95, rx: 0.55, ry: 0.5, color: [255, 213, 74], alpha: 0.12 },
+    // Runtime (red) — top-right, balancing Lib
+    { x: 0.82, y: 0.22, rx: 0.6, ry: 0.5, color: [255, 92, 74], alpha: 0.15 },
+  ];
+
+  // Stars. Three brightness tiers; color mostly warm-white with a
+  // sprinkle of trinity-tinted (blue / yellow / red) accents.
+  const rng = makeRng(SEED);
+  const stars = [];
+  for (let i = 0; i < STAR_COUNT; i++) {
+    const r = rng();
+    let radius, alpha, halo;
+    if (r > 0.985) {
+      radius = 1.8 + rng() * 1.2;
+      alpha = 0.85 + rng() * 0.15;
+      halo = true;
+    } else if (r > 0.94) {
+      radius = 1.1 + rng() * 0.6;
+      alpha = 0.7 + rng() * 0.2;
+      halo = true;
+    } else {
+      radius = 0.5 + rng() * 0.6;
+      alpha = 0.35 + rng() * 0.4;
+      halo = false;
+    }
+    const ct = rng();
+    let color;
+    if (ct > 0.96)
+      color = [109, 180, 255]; // blue accent
+    else if (ct > 0.93)
+      color = [255, 213, 74]; // yellow accent
+    else if (ct > 0.91)
+      color = [255, 92, 74]; // red accent
+    else color = [255, 250, 240]; // warm white default
+    stars.push({ x: rng(), y: rng(), radius, alpha, halo, color });
+  }
+
+  let dpr = 1;
+  let cssWidth = 0;
+  let cssHeight = 0;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cssWidth = window.innerWidth;
+    cssHeight = window.innerHeight;
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    render();
+  }
+
+  function render() {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    // Nebulae first. Sized by vmin so their shape stays round (the
+    // ellipse rx/ry ratio governs aspect) regardless of viewport.
+    const vmin = Math.min(cssWidth, cssHeight);
+    for (const n of nebulae) {
+      const cx = n.x * cssWidth;
+      const cy = n.y * cssHeight;
+      const rx = n.rx * vmin;
+      const ry = n.ry * vmin;
+      const r = Math.max(rx, ry);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(rx / r, ry / r);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      const [cr, cg, cb] = n.color;
+      // Multi-stop falloff so the alpha derivative tapers smoothly —
+      // two-stop linear gradients produce a Mach band where the
+      // derivative snaps to zero. Five stops fixes it.
+      grad.addColorStop(0, `rgba(${cr},${cg},${cb},${n.alpha})`);
+      grad.addColorStop(0.18, `rgba(${cr},${cg},${cb},${n.alpha * 0.6})`);
+      grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${n.alpha * 0.25})`);
+      grad.addColorStop(0.7, `rgba(${cr},${cg},${cb},${n.alpha * 0.06})`);
+      grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(-r, -r, r * 2, r * 2);
+      ctx.restore();
+    }
+
+    // Stars on top.
+    for (const s of stars) {
+      const x = s.x * cssWidth;
+      const y = s.y * cssHeight;
+      const [cr, cg, cb] = s.color;
+      if (s.halo) {
+        // 2× halo extent matches the static SVG-style glow without
+        // bloating the visible star size.
+        const haloR = s.radius * 2;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
+        grad.addColorStop(0, `rgba(${cr},${cg},${cb},${s.alpha})`);
+        grad.addColorStop(0.25, `rgba(${cr},${cg},${cb},${s.alpha * 0.35})`);
+        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, haloR, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},${s.alpha})`;
+        ctx.beginPath();
+        ctx.arc(x, y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 80);
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", resize);
+  } else {
+    resize();
+  }
+})();

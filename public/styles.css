@@ -61,36 +61,10 @@ body {
   );
 }
 
-/* Starfield behind everything. Same shape as the subsites so the
-   visual lineage is consistent. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -2;
-  background-image:
-    radial-gradient(ellipse 60vw 50vh at 18% 18%, rgba(109, 180, 255, 0.1), transparent 65%),
-    radial-gradient(ellipse 55vw 45vh at 50% 78%, rgba(255, 213, 74, 0.06), transparent 65%),
-    radial-gradient(ellipse 55vw 45vh at 82% 22%, rgba(255, 92, 74, 0.08), transparent 65%),
-    radial-gradient(2px 2px at 12% 24%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 38% 4%, rgba(255, 255, 255, 0.75) 25%, rgba(255, 255, 255, 0.14) 55%, transparent 100%),
-    radial-gradient(2px 2px at 65% 60%, rgba(180, 210, 255, 0.85) 25%, rgba(109, 180, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 85% 32%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(1px 1px at 28% 68%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 44% 88%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 58% 12%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 72% 38%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 86% 70%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 6% 88%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 92% 14%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 22% 48%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 50% 76%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 78% 92%, rgba(255, 92, 74, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 16% 6%, rgba(109, 180, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 50% 4%, rgba(255, 213, 74, 0.5) 50%, transparent 100%);
-  background-size: 100vw 100vh;
-}
+/* Starfield + three product nebulae are drawn into a fixed-position
+   canvas by /space.js. Canvas distribution + multi-stop radial
+   gradients avoid the hardcoded-tile + 8-bit-banding artifacts the
+   previous CSS pile had. */
 
 /* Per-card nebulae — same hover-swoop pattern as script.dev's binary
    splash, just three of them. */
