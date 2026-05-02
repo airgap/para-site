@@ -13,12 +13,14 @@
   --text: #e8e6dd;
   --text-dim: #8a8b94;
   --text-faint: #4a4d5a;
-  /* Three star colors: one per product. Lib gets blue-white (the
-     foundation, hottest), Lang gets pale yellow (G-class, sun-like),
-     Runtime gets amber (cooler / ParaBun's existing identity). */
+  /* Three star colors picked off the stellar-temperature spectrum:
+     blue (B-class, ~10000K), yellow (G-class like our sun, ~5800K),
+     red (M-class red dwarf or red giant, ~3500K). The Trisolaris
+     three-suns motif from Liu Cixin's three-body novel uses the same
+     red/yellow/blue palette. */
   --star-lib: #6db4ff;
-  --star-lang: #ffe28a;
-  --star-runtime: #ffa855;
+  --star-lang: #ffd54a;
+  --star-runtime: #ff5c4a;
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
   --sans: "Spectral", Georgia, "Times New Roman", serif;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
@@ -44,9 +46,8 @@ html {
   background-color: var(--bg);
 }
 
-/* Three-zone tint instead of script.dev's two-zone gradient — left
-   blue (Lib), center pale (Lang), right amber (Runtime). Subtle
-   enough not to fight the starfield. */
+/* Three-zone tint — left blue (Lib), center yellow (Lang), right red
+   (Runtime). Subtle enough not to fight the starfield. */
 body {
   position: relative;
   overflow-x: hidden;
@@ -54,9 +55,9 @@ body {
     to right,
     rgba(109, 180, 255, 0.07) 0%,
     transparent 22%,
-    rgba(255, 226, 138, 0.05) 50%,
+    rgba(255, 213, 74, 0.05) 50%,
     transparent 78%,
-    rgba(255, 168, 85, 0.07) 100%
+    rgba(255, 92, 74, 0.07) 100%
   );
 }
 
@@ -70,8 +71,8 @@ body::before {
   z-index: -2;
   background-image:
     radial-gradient(ellipse 60vw 50vh at 18% 18%, rgba(109, 180, 255, 0.1), transparent 65%),
-    radial-gradient(ellipse 55vw 45vh at 50% 78%, rgba(255, 226, 138, 0.06), transparent 65%),
-    radial-gradient(ellipse 55vw 45vh at 82% 22%, rgba(255, 168, 85, 0.08), transparent 65%),
+    radial-gradient(ellipse 55vw 45vh at 50% 78%, rgba(255, 213, 74, 0.06), transparent 65%),
+    radial-gradient(ellipse 55vw 45vh at 82% 22%, rgba(255, 92, 74, 0.08), transparent 65%),
     radial-gradient(2px 2px at 12% 24%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
     radial-gradient(2px 2px at 38% 4%, rgba(255, 255, 255, 0.75) 25%, rgba(255, 255, 255, 0.14) 55%, transparent 100%),
     radial-gradient(2px 2px at 65% 60%, rgba(180, 210, 255, 0.85) 25%, rgba(109, 180, 255, 0.18) 55%, transparent 100%),
@@ -85,9 +86,9 @@ body::before {
     radial-gradient(1px 1px at 92% 14%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
     radial-gradient(1px 1px at 22% 48%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
     radial-gradient(1px 1px at 50% 76%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 78% 92%, rgba(255, 168, 85, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 78% 92%, rgba(255, 92, 74, 0.5) 50%, transparent 100%),
     radial-gradient(1px 1px at 16% 6%, rgba(109, 180, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 50% 4%, rgba(255, 226, 138, 0.5) 50%, transparent 100%);
+    radial-gradient(1px 1px at 50% 4%, rgba(255, 213, 74, 0.5) 50%, transparent 100%);
   background-size: 100vw 100vh;
 }
 
@@ -153,49 +154,17 @@ body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
   opacity: 1;
 }
 
-/* ─── Three-body orbit ────────────────────────────────────────────────
-   Three stars at Lagrange-triangle positions (120° apart) rotating
-   together around the barycenter. The .orbit <g> rotates uniformly;
-   each star is a simple <circle> at its initial Lagrange position. */
+/* ─── Three-body simulation ───────────────────────────────────────────
+   Canvas-rendered figure-8 orbit (Chenciner-Montgomery 1993 — the
+   only known stable periodic equal-mass 3-body solution where all
+   three bodies trace the same closed curve, a horizontal figure-8).
+   Initial conditions are tight enough that velocity Verlet
+   integration keeps the path stable for hours. See /threebody.js. */
 .three-body {
-  width: clamp(220px, 28vw, 360px);
+  width: clamp(240px, 30vw, 380px);
   aspect-ratio: 1;
   display: block;
   margin: 0 auto;
-  filter: drop-shadow(0 0 16px rgba(109, 180, 255, 0.06));
-}
-
-.three-body .orbit {
-  transform-origin: 50px 50px;
-  animation: barycenter-rotate 32s linear infinite;
-}
-
-@keyframes barycenter-rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .three-body .orbit {
-    animation: none;
-  }
-}
-
-.three-body .star-lib {
-  fill: var(--star-lib);
-  filter: drop-shadow(0 0 4px var(--star-lib));
-}
-.three-body .star-lang {
-  fill: var(--star-lang);
-  filter: drop-shadow(0 0 4px var(--star-lang));
-}
-.three-body .star-runtime {
-  fill: var(--star-runtime);
-  filter: drop-shadow(0 0 4px var(--star-runtime));
 }
 
 /* ─── Layout ──────────────────────────────────────────────────────── */
