@@ -386,6 +386,23 @@ header.header {
   -webkit-backdrop-filter: blur(10px) saturate(150%);
 }
 
+/* The mobile "On this page" TOC bar is position:fixed against
+   --sl-nav-height with inset-inline:0, but the floating header above
+   has a 14px margin all around. Without this override the TOC bar
+   floats behind the header and runs edge-to-edge instead of being
+   inset to match. Push it down by 14px (nav height + the gap below
+   the header) and inset it 14px on each side. */
+mobile-starlight-toc nav {
+  top: calc(var(--sl-nav-height) + 14px);
+  inset-inline: 14px;
+  border: 1px solid var(--pb-rule);
+  border-top: 1px solid var(--pb-rule);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pb-bg) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+
 /* ─── Tables, blockquotes ───────────────────────────────────────────── */
 .sl-markdown-content blockquote {
   border-inline-start: 3px solid var(--pb-accent);
