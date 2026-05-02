@@ -58,14 +58,15 @@
 /* Per-section palette overrides — body class is set on each landing
    page (/libs/index.html → page-libs, /lang/ → page-lang). Each
    tints the entire palette toward the section's trinity color, not
-   just the accent. */
-body.page-libs {
+   just the accent. Lifted to :root:has(body.X) so var resolution at
+   the html element (which paints the page background) sees them. */
+:root:has(body.page-libs) {
   --accent: var(--star-lib);
   --accent-dim: #9fcdff;
   --accent-soft: #1a2a44;
   /* Defaults are already blue-tinted (cool dark + neutral text). */
 }
-body.page-lang {
+:root:has(body.page-lang) {
   --bg: #0a0905;
   --bg-elev: #100e08;
   --bg-code: #14110a;
