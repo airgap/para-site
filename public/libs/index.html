@@ -6,7 +6,7 @@
     <title>Para Lib — TypeScript libraries (signals, parallel, simd, …)</title>
     <meta
       name="description"
-      content="Para Lib is nine cross-runtime TypeScript libraries: signals, parallel, pipeline, arena, simd, csv, arrow, rtp, mcp. Pure JS / Wasm; runs on Node, Bun, Deno, browsers, Cloudflare Workers — anywhere V8 or JSC runs."
+      content="Para Lib is eight cross-runtime TypeScript libraries: signals, parallel, arena, simd, csv, arrow, rtp, mcp. Pure JS / Wasm; runs on Node, Bun, Deno, browsers, Cloudflare Workers — anywhere V8 or JSC runs."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -53,10 +53,9 @@
 
       <h1>Para Lib</h1>
       <p class="lede">
-        Nine TypeScript libraries — <code>signals</code>, <code>parallel</code>, <code>pipeline</code>,
-        <code>arena</code>, <code>simd</code>, <code>csv</code>, <code>arrow</code>, <code>rtp</code>,
-        <code>mcp</code> — published as individual <code>@para/*</code> npm packages. Pure JS / Wasm. Install only what
-        you use.
+        Eight TypeScript libraries — <code>signals</code>, <code>parallel</code>, <code>arena</code>, <code>simd</code>,
+        <code>csv</code>, <code>arrow</code>, <code>rtp</code>, <code>mcp</code> — published as individual
+        <code>@para/*</code> npm packages. Pure JS / Wasm. Install only what you use.
       </p>
       <p class="lede">
         Runs on Node, Bun, Deno, browsers, Cloudflare Workers — anywhere V8 or JSC runs. No native dependencies. The
@@ -66,7 +65,7 @@
 
       <h2 id="install">Install</h2>
       <p>Each module is its own npm package. Install only the ones your code uses:</p>
-      <div class="install"><span class="prompt">$</span>npm install @para/signals @para/parallel @para/pipeline</div>
+      <div class="install"><span class="prompt">$</span>npm install @para/signals @para/parallel @para/simd</div>
       <p>
         Full per-bundler alias setup (Vite / esbuild / webpack) and the rest of the runtime + build instructions live in
         the <a href="/docs/install-libs/">install guide</a>.
@@ -108,20 +107,6 @@
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> scores</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> pmap</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">score</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> rows</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> concurrency</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 8</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
-<span class="line"></span></code></pre>
-
-      <h3>Pipeline — fused streaming combinators</h3>
-      <p>
-        Adjacent <code>map</code>s over <code>Float32Array</code> / <code>Float64Array</code> sources fuse into a single
-        SIMD pass via <code>@para/simd</code> instead of allocating an intermediate per stage.
-      </p>
-      <pre
-        data-lang="ts"
-      ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">map</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> sum</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@para/pipeline</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
-<span class="line"></span>
-<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> arr</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> Float32Array</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">1_000_000</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
-<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> total</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> sum</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">map</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">x</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> x</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> *</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 2</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">map</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">x</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> x</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> +</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">arr</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
-<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// One SIMD pass through @para/simd, not three.</span></span>
 <span class="line"></span></code></pre>
 
       <h3>SIMD — vector primitives over typed arrays</h3>

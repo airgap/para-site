@@ -28,7 +28,11 @@ const examples = [
   { label: "Backend (Node)", link: `${docsRoot}/examples/backend/` },
   { label: "Edge (Workers)", link: `${docsRoot}/examples/edge/` },
 ];
-const libModules = ["signals", "arena", "parallel", "pipeline", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
+// pipeline is the runtime backing the |> operator (Para Lang internal),
+// not pitched as a user-facing library — its function-call API is ugly
+// without the |> sugar. Page still exists at /docs/pipeline/ for the
+// language-internals doc, just not in the libs sidebar group.
+const libModules = ["signals", "arena", "parallel", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
   label: `para:${slug}`,
   link: `${docsRoot}/${slug}/`,
 }));

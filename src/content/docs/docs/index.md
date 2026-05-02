@@ -1,11 +1,11 @@
 ---
 title: Para docs
-description: Para is a set of TypeScript libraries (signals, parallel, pipeline, arena, simd, csv, arrow, rtp, mcp) plus an optional .pts syntax that compiles to JS calls into them.
+description: Para is a set of TypeScript libraries (signals, parallel, arena, simd, csv, arrow, rtp, mcp) plus an optional .pts syntax that compiles to JS calls into them.
 ---
 
 Para is two things:
 
-- **The libraries** — nine `@para/*` npm packages: `signals`, `parallel`, `pipeline`, `arena`, `simd`, `csv`, `arrow`, `rtp`, `mcp`. Pure JS / Wasm. Install only the ones your code uses; each works on any JS runtime.
+- **The libraries** — eight `@para/*` npm packages: `signals`, `parallel`, `arena`, `simd`, `csv`, `arrow`, `rtp`, `mcp`. Pure JS / Wasm. Install only the ones your code uses; each works on any JS runtime.
 - **The optional `.pts` syntax** — sugar over the libraries (`signal x = 0`, `effect { … }`, `~>`, `->`, `|>`, `..!`, `..&`, ranges, `pure`, `memo`, `defer`, `arena`). Compiles to standard JavaScript at parse time, which then imports from the libraries.
 
 You can use the libraries from plain TypeScript or JavaScript without ever touching `.pts`. The syntax is there if you want fewer parens around reactive code.
@@ -16,7 +16,6 @@ You can use the libraries from plain TypeScript or JavaScript without ever touch
 - **Modules** — API reference for each library:
   - [`@para/signals`](/docs/signals/) — reactive cells, derived values, effects
   - [`@para/parallel`](/docs/parallel/) — `pmap` / `preduce` over a Worker pool
-  - [`@para/pipeline`](/docs/pipeline/) — `|>` combinators with SIMD fusion
   - [`@para/arena`](/docs/arena/) — typed-array `Pool` + scope helper
   - [`@para/simd`](/docs/simd/) — Wasm v128 kernels
   - [`@para/csv`](/docs/csv/) — RFC 4180 streaming parser

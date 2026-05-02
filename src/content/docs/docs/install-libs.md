@@ -26,7 +26,6 @@ Install only the modules your code uses. Each module is its own npm package:
 ```bash
 npm install @para/signals     # reactive primitives
 npm install @para/parallel    # Worker-pool pmap / preduce
-npm install @para/pipeline    # |> combinators + SIMD fusion
 npm install @para/arena       # Pool helper + no-op scope()
 npm install @para/simd        # Wasm v128 kernels
 npm install @para/csv         # RFC 4180 streaming parser
@@ -34,6 +33,10 @@ npm install @para/arrow       # in-memory tables + IPC + Parquet
 npm install @para/rtp         # RFC 3550 packet framing
 npm install @para/mcp         # Model Context Protocol client
 ```
+
+`@para/pipeline` is the runtime backing the Para Lang `|>` operator. It's
+pulled in transitively by `@para/transpile` when you use `.pts` files; you
+don't need to install or import from it directly.
 
 All `@para/*` packages are pure JS / Wasm with no native dependencies and target ES2022.
 
