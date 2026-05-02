@@ -59,11 +59,12 @@
       halo = false;
       parallax = 0.04 + rng() * 0.08;
     }
-    // Mostly warm-white stars with occasional amber accent (companion-led
-    // brand). No blue tint — that's para.script.dev's primary star.
+    // Mostly warm-white stars with an occasional red accent (this is
+    // the runtime tier of the trinity — Lib blue / Lang yellow /
+    // Runtime red — see /styles.css for the umbrella palette).
     const ct = rng();
     let color;
-    if (ct > 0.92) color = [255, 168, 85];
+    if (ct > 0.92) color = [255, 92, 74];
     else color = [255, 250, 240];
     stars.push({
       x: rng(),
@@ -77,14 +78,13 @@
   }
 
   // Nebulae — slowest layer (deep background).
-  // Three amber-spectrum nebulae — main amber, peachy, deep warm —
-  // since this is parabun's site (companion-led, no blue/magenta).
-  // Alphas >= 0.12 so 8-bit gradient quantization stays under the eye's
-  // band-detection threshold.
+  // Three red-spectrum nebulae — main red, peachy, deep warm — to
+  // match the runtime star. Alphas >= 0.12 so 8-bit gradient
+  // quantization stays under the eye's band-detection threshold.
   const nebulae = [
-    { x: 0.78, y: 0.18, rx: 0.7, ry: 0.55, color: [255, 168, 85], alpha: 0.13, parallax: 0.02 },
-    { x: 0.12, y: 0.75, rx: 0.55, ry: 0.45, color: [255, 200, 130], alpha: 0.12, parallax: 0.02 },
-    { x: 0.55, y: 1.1, rx: 0.45, ry: 0.5, color: [220, 130, 60], alpha: 0.12, parallax: 0.015 },
+    { x: 0.78, y: 0.18, rx: 0.7, ry: 0.55, color: [255, 92, 74], alpha: 0.13, parallax: 0.02 },
+    { x: 0.12, y: 0.75, rx: 0.55, ry: 0.45, color: [255, 150, 130], alpha: 0.12, parallax: 0.02 },
+    { x: 0.55, y: 1.1, rx: 0.45, ry: 0.5, color: [200, 80, 60], alpha: 0.12, parallax: 0.015 },
   ];
 
   let dpr = 1;
