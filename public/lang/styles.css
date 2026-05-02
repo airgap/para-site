@@ -1293,7 +1293,7 @@ table.bench tr.winner.pulse td {
 }
 
 /* ─── Mobile (≤640px) ─────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 880px) {
   .page,
   .docs-body .page.docs-layout {
     padding: 32px 18px 96px;
