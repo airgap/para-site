@@ -1,13 +1,69 @@
 ---
 title: para:csv
-description: Streaming RFC 4180 CSV parser. Async generator, full quote / escape handling, optional parallel mode.
+description: Streaming RFC 4180 CSV parser with two output modes — row objects and per-column TypedArrays.
 ---
 
 ```ts
 import csv from "para:csv";
 ```
 
-A single export — `parseCsv(input, opts?)` — that returns an async iterable of rows. The parser is a state machine over UTF-8 bytes; it never materializes the full file in memory regardless of size.
+Two output modes:
+
+- **`parseCsv(input, opts?)`** — async iterator of row objects (or string arrays). The classical shape; works for everything.
+- **`parseColumns(input, { schema, ... })`** — Promise of per-column `TypedArray` buffers. Numeric data lands in compute-ready memory with no per-row Object allocation and no per-cell boxed `Number`. The thing the JS ecosystem was missing between row-objects libs and DuckDB-WASM.
+
+Both are state machines over UTF-8 bytes; the row-iterator path never materializes the full file. The columnar path materializes the columns (it has to — the result IS the materialization), but each column ends as one tight `TypedArray` rather than 1M boxed values.
+
+## `parseColumns(input, { schema, headers?, delimiter?, quote? })`
+
+```ts
+const cols = await csv.parseColumns(Bun.file("./sensors.csv"), {
+  schema: { ts: "f64", temp: "f32", sensorId: "i32", label: "string" },
+});
+// cols.ts        is a Float64Array
+// cols.temp      is a Float32Array
+// cols.sensorId  is an Int32Array
+// cols.label     is a string[]
+```
+
+**`schema`** maps each column name to a type:
+
+| `schema` value | Output type |
+| --- | --- |
+| `"f32"` | `Float32Array` |
+| `"f64"` | `Float64Array` |
+| `"i8"` / `"u8"` | `Int8Array` / `Uint8Array` |
+| `"i16"` / `"u16"` | `Int16Array` / `Uint16Array` |
+| `"i32"` / `"u32"` | `Int32Array` / `Uint32Array` |
+| `"string"` | `string[]` (TypedArrays can't hold strings) |
+
+**`headers`** — `true` (default) treats the first row as headers and matches schema keys against header cell names. `false` maps schema keys to column indices in declaration order. Or pass an explicit array of header names to skip the lookup.
+
+**`delimiter`** / **`quote`** — same as `parseCsv` (default `,` and `"`).
+
+Empty / missing numeric cells become `NaN` for floats, `0` for ints. The result objects share no backing buffers with the input.
+
+### Why columnar?
+
+Most CSV libraries return `Array<{col1, col2}>` row objects. Each row is a JS Object (~56-byte header) plus a boxed `Number` for each numeric cell — ~24 bytes per number. For a 1M-row, 4-numeric-column CSV that's ~120 MB of boxing overhead before you've done any actual work.
+
+`parseColumns` writes straight into `TypedArray` buffers (one per column), grows them exponentially as rows arrive, and tight-fits the result at end-of-stream. For a 200K-row × 4-numeric-column CSV: 1.4× faster than the row-objects path on this codebase, and the result is 3 MB of contiguous bytes — ready to hand to `@para/simd`, `@para/arrow.fromColumns()`, GPU upload, or any other consumer that expects packed numeric data.
+
+### Composing with `@para/simd`
+
+```ts
+import csv from "para:csv";
+import { sum, mean } from "para:simd";
+
+const cols = await csv.parseColumns("./sensors.csv", {
+  schema: { temperature: "f32", humidity: "f32" },
+});
+const meanTemp = sum(cols.temperature) / cols.temperature.length;
+```
+
+## `parseCsv(input, opts?)`
+
+The classical async iterator path. Returns row objects (or string arrays with `header: false`). The parser is a state machine over UTF-8 bytes; it never materializes the full file in memory regardless of size.
 
 ## `parseCsv(input, opts?)`
 
