@@ -160,9 +160,13 @@ body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
    three bodies trace the same closed curve, a horizontal figure-8).
    Initial conditions are tight enough that velocity Verlet
    integration keeps the path stable for hours. See /threebody.js. */
+/* Canvas aspect matches the figure-8's natural bounding box (2.2
+   horizontal × 0.8 vertical = ~2.75 : 1) so the orbit fills the box
+   without big empty bands above and below. The JS scales
+   independently per axis to honor whatever ratio the CSS picks. */
 .three-body {
-  width: clamp(240px, 30vw, 380px);
-  aspect-ratio: 1;
+  width: clamp(280px, 50vw, 540px);
+  aspect-ratio: 2.75 / 1;
   display: block;
   margin: 0 auto;
 }

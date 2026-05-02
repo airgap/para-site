@@ -92,15 +92,22 @@
   const DT = 0.0032;
   const SUB_STEPS = 6;
 
-  // Map sim coordinates [-1.4, +1.4] to canvas pixels.
-  const SCALE_PAD = 1.45;
+  // Figure-8 bounding box in sim units. Trajectory reaches roughly
+  // ±1.05 horizontal × ±0.36 vertical; PAD adds a small margin so
+  // the heads don't graze the canvas edge.
+  const HALF_W = 1.15;
+  const HALF_H = 0.42;
 
   function render() {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     const cx = w / 2;
     const cy = h / 2;
-    const s = Math.min(w, h) / (2 * SCALE_PAD);
+    // Pick the larger uniform scale that still fits the figure-8 in
+    // both dimensions. With aspect-ratio: 2.75 the two axes typically
+    // come out close to each other; this keeps the orbit aspect-
+    // correct under any canvas size.
+    const s = Math.min(w / (2 * HALF_W), h / (2 * HALF_H));
 
     ctx.clearRect(0, 0, w, h);
 
