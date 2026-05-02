@@ -55,14 +55,25 @@
   --shadow-strong: rgba(26, 24, 18, 0.1);
 }
 
-/* Per-section accent overrides — body class is set on each landing
-   page (/libs/index.html → page-libs, /lang/ → page-lang). */
+/* Per-section palette overrides — body class is set on each landing
+   page (/libs/index.html → page-libs, /lang/ → page-lang). Each
+   tints the entire palette toward the section's trinity color, not
+   just the accent. */
 body.page-libs {
   --accent: var(--star-lib);
   --accent-dim: #9fcdff;
   --accent-soft: #1a2a44;
+  /* Defaults are already blue-tinted (cool dark + neutral text). */
 }
 body.page-lang {
+  --bg: #0a0905;
+  --bg-elev: #100e08;
+  --bg-code: #14110a;
+  --rule: #2a2614;
+  --rule-strong: #3d3722;
+  --text: #f0ecd8;
+  --text-dim: #a89e80;
+  --text-faint: #5c5538;
   --accent: var(--star-lang);
   --accent-dim: #ffe88a;
   --accent-soft: #2a230a;

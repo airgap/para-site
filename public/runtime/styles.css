@@ -4,14 +4,14 @@
    matches the runtime star instead of the cooler blue used on /libs. */
 :root,
 :root[data-theme="dark"] {
-  --bg: #0d0a07;
-  --bg-elev: #14100a;
-  --bg-code: #161109;
-  --rule: #2a2418;
-  --rule-strong: #3d3424;
-  --text: #f0e8d6;
-  --text-dim: #aaa087;
-  --text-faint: #5e5446;
+  --bg: #0e0506;
+  --bg-elev: #170809;
+  --bg-code: #1a090b;
+  --rule: #2e181c;
+  --rule-strong: #422530;
+  --text: #efdcd8;
+  --text-dim: #a4837f;
+  --text-faint: #553f3c;
   /* Stellar-spectrum trinity. /runtime is the red star — matches
      the umbrella's Runtime card. */
   --star-lib: #6db4ff;
