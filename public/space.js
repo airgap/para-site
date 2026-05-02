@@ -58,15 +58,15 @@
     let radius, alpha, halo;
     if (r > 0.985) {
       radius = 1.8 + rng() * 1.2;
-      alpha = 0.85 + rng() * 0.15;
+      alpha = 0.5 + rng() * 0.1;
       halo = true;
     } else if (r > 0.94) {
       radius = 1.1 + rng() * 0.6;
-      alpha = 0.7 + rng() * 0.2;
+      alpha = 0.4 + rng() * 0.15;
       halo = true;
     } else {
       radius = 0.5 + rng() * 0.6;
-      alpha = 0.35 + rng() * 0.4;
+      alpha = 0.2 + rng() * 0.25;
       halo = false;
     }
     const ct = rng();
