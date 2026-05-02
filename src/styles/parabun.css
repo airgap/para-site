@@ -408,7 +408,12 @@ header.header {
    has a 14px margin all around. Without this override the TOC bar
    floats behind the header and runs edge-to-edge instead of being
    inset to match. Push it down by 14px (nav height + the gap below
-   the header) and inset it 14px on each side. */
+   the header) and inset it 14px on each side.
+
+   The component is hidden at lg (64rem+) by Starlight, but stays
+   visible alongside the sidebar between 50rem and 64rem — so the
+   desktop range needs its left edge moved past the sidebar to
+   prevent overlap. Mirrors Starlight's own @50rem rule. */
 mobile-starlight-toc nav {
   top: calc(var(--sl-nav-height) + 14px);
   inset-inline: 14px;
@@ -418,6 +423,12 @@ mobile-starlight-toc nav {
   background: color-mix(in srgb, var(--pb-bg) 55%, transparent);
   backdrop-filter: blur(10px) saturate(150%);
   -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+@media (min-width: 50rem) {
+  mobile-starlight-toc nav {
+    inset-inline-start: var(--sl-content-inline-start, 14px);
+    inset-inline-end: 14px;
+  }
 }
 
 /* ─── Tables, blockquotes ───────────────────────────────────────────── */
