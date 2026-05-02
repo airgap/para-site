@@ -349,6 +349,18 @@ h2[id] {
   outline: none;
 }
 
+/* Desktop: details wrapper transparent, summary hidden, nav inline. */
+.nav-dropdown {
+  display: contents;
+}
+.nav-toggle {
+  display: none;
+  list-style: none;
+}
+.nav-toggle::-webkit-details-marker {
+  display: none;
+}
+
 .nav {
   font-family: var(--mono);
   font-size: 13px;
@@ -1131,13 +1143,16 @@ table.bench tr.winner.pulse td {
     padding: 32px 18px 96px;
   }
 
-  /* Stack the brand above the nav — 7 nav items don't fit beside the brand
-     on a phone. Drop sticky too: a wrapped header would eat too much vertical
-     space when pinned. */
+  /* Mobile header: brand on the left, hamburger on the right. The
+     <details class="nav-dropdown"> wrapper holds both the summary
+     (hamburger) and the nav links; on desktop the wrapper is
+     display:contents and the nav stays inline. Here it becomes a
+     real block so the dropdown panel positions against it. */
   header {
     position: static;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
     padding: 0;
     margin-top: 0;
@@ -1147,10 +1162,68 @@ table.bench tr.winner.pulse td {
     -webkit-backdrop-filter: none;
     border-bottom: none;
   }
-  .nav {
-    flex-wrap: wrap;
-    gap: 14px;
-    font-size: 12px;
+  .nav-dropdown {
+    display: block;
+    position: relative;
+  }
+  .nav-toggle {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    padding: 8px 7px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .nav-toggle::-webkit-details-marker,
+  .nav-toggle::marker {
+    display: none;
+  }
+  .nav-toggle-bar {
+    display: block;
+    height: 2px;
+    background: var(--text-dim);
+    border-radius: 1px;
+    transition:
+      transform 200ms ease,
+      opacity 160ms ease;
+  }
+  .nav-dropdown[open] .nav-toggle-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  .nav-dropdown[open] .nav-toggle-bar:nth-child(2) {
+    opacity: 0;
+  }
+  .nav-dropdown[open] .nav-toggle-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+  .nav-dropdown .nav {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 180px;
+    padding: 10px 14px;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--bg) 75%, transparent);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    font-size: 14px;
+    z-index: 50;
+  }
+  .nav-dropdown .nav a {
+    padding: 8px 4px;
   }
 
   /* With sticky off, anchored headings can land right at the top edge. */
