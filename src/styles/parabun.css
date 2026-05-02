@@ -338,8 +338,15 @@ h1.content-panel,
   background: var(--pb-bg-elev);
 }
 
-[aria-current="page"] {
+/* Active sidebar item: accent-colored text + bold. Starlight's
+   default also paints `background-color: var(--sl-color-text-accent)`
+   on top — same value as our text color override here, so the pill
+   fill covered the text completely. Cancel the bg fill so only the
+   text-color highlight remains. */
+.sidebar-pane [aria-current="page"],
+.sidebar-content [aria-current="page"] {
   color: var(--pb-accent) !important;
+  background-color: transparent !important;
   font-weight: 600;
 }
 
