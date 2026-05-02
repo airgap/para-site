@@ -219,10 +219,15 @@ body::after {
   }
 }
 
-/* Lift content above the atmosphere layer. */
+/* Lift content above the atmosphere layer. .sidebar-pane is
+   intentionally NOT in this list — Starlight gives it
+   `position: fixed` for the desktop side-by-side layout, and
+   overriding it to `position: relative` drops the sidebar into the
+   normal block flow so the main content stacks below it instead of
+   beside it. The sidebar's own backdrop-filter rule below already
+   gives it z-index above the body::before atmosphere. */
 .sl-container,
 header.header,
-.sidebar-pane,
 main {
   position: relative;
   z-index: 1;
