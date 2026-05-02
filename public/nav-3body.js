@@ -105,6 +105,37 @@
         bodies[i].vx += 0.5 * (ax[i] + ax2[i]) * dt;
         bodies[i].vy += 0.5 * (ay[i] + ay2[i]) * dt;
       }
+      // Bound the system: if a body wanders past R_MAX from the
+      // centroid of the other two AND is still moving outward, flip
+      // the radial component of its velocity. Elastic reflection
+      // preserves the body's KE while sending it back toward the
+      // group. The "moving outward" guard prevents stuck oscillation
+      // at the boundary if a body re-enters with low radial speed.
+      const R_MAX = 1.25;
+      for (let i = 0; i < 3; i++) {
+        let cx = 0;
+        let cy = 0;
+        let mTot = 0;
+        for (let j = 0; j < 3; j++) {
+          if (i === j) continue;
+          cx += bodies[j].x * M[j];
+          cy += bodies[j].y * M[j];
+          mTot += M[j];
+        }
+        cx /= mTot;
+        cy /= mTot;
+        const dx = bodies[i].x - cx;
+        const dy = bodies[i].y - cy;
+        const r2 = dx * dx + dy * dy;
+        if (r2 < R_MAX * R_MAX) continue;
+        const r = Math.sqrt(r2);
+        const nx = dx / r;
+        const ny = dy / r;
+        const vRad = bodies[i].vx * nx + bodies[i].vy * ny;
+        if (vRad <= 0) continue; // already returning
+        bodies[i].vx -= 2 * vRad * nx;
+        bodies[i].vy -= 2 * vRad * ny;
+      }
     }
 
     const TRAIL_LEN = 28;
