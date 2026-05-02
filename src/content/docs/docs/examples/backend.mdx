@@ -192,7 +192,7 @@ server.listen(8080, () => console.log("listening on :8080"));
   },
   "dependencies": {
     "ws": "^8",
-    "parabun-browser-shims": "*"
+    "@para/signals": "*", "@para/parallel": "*"
   },
   "devDependencies": { "@types/ws": "*" }
 }
@@ -211,7 +211,7 @@ server.listen(8080, () => console.log("listening on :8080"));
   },
   "dependencies": {
     "ws": "^8",
-    "parabun-browser-shims": "*"
+    "@para/signals": "*", "@para/parallel": "*"
   }
 }
 ```
@@ -219,7 +219,7 @@ server.listen(8080, () => console.log("listening on :8080"));
 </TabItem>
 </Tabs>
 
-The `parabun build --target node` invocation handles `para:*` resolution by way of an esbuild-style plugin if you have one configured, or you can replace the imports in source with the explicit `parabun-browser-shims/<module>` path. Both work.
+The `parabun build --target node` invocation handles `para:*` resolution by way of an esbuild-style plugin if you have one configured, or you can replace the imports in source with the explicit `@para/<module>` path. Both work.
 
 ## Build and run
 

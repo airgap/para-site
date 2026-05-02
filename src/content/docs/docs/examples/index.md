@@ -14,10 +14,11 @@ Three worked projects. Each is a complete project: file layout, source, build co
 All three projects use the same setup:
 
 ```bash
-npm install parabun-browser-shims
+# Install the @para/* packages your code uses, e.g.:
+npm install @para/signals @para/parallel @para/pipeline
 ```
 
-…plus a one-line bundler alias mapping `para:*` to `parabun-browser-shims/*` (see the [install guide](/docs/install/) for the per-bundler snippets), and `parabun build` to transpile `.pts` files.
+…plus a one-line bundler alias mapping `para:*` to `@para/*` (see the [install guide](/docs/install/) for the per-bundler snippets), and `parabun build` to transpile `.pts` files.
 
 ## Build targets
 

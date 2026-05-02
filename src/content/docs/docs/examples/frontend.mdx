@@ -203,7 +203,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^para:(.*)$/, replacement: "parabun-browser-shims/$1" }],
+    alias: [{ find: /^para:(.*)$/, replacement: "@para/$1" }],
   },
 });
 ```
@@ -216,7 +216,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^para:(.*)$/, replacement: "parabun-browser-shims/$1" }],
+    alias: [{ find: /^para:(.*)$/, replacement: "@para/$1" }],
   },
 });
 ```
@@ -237,7 +237,7 @@ export default defineConfig({
     "build": "parabun build src/main.pts --outfile dist/main.js && vite build",
     "dev": "parabun build src/main.pts --watch --outfile dist/main.js & vite"
   },
-  "dependencies": { "parabun-browser-shims": "*" },
+  "dependencies": { "@para/signals": "*", "@para/parallel": "*" },
   "devDependencies": { "vite": "^5", "bun-types": "*" }
 }
 ```
@@ -253,7 +253,7 @@ export default defineConfig({
     "build": "parabun build src/main.pjs --outfile dist/main.js && vite build",
     "dev": "parabun build src/main.pjs --watch --outfile dist/main.js & vite"
   },
-  "dependencies": { "parabun-browser-shims": "*" }
+  "dependencies": { "@para/signals": "*", "@para/parallel": "*" }
 }
 ```
 

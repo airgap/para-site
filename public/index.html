@@ -90,9 +90,8 @@
             on. So <code>effect()</code> from <code>para:signals</code> works against any of them.
           </p>
           <p>
-            Distributed today as
-            <a href="https://www.npmjs.com/package/parabun-browser-shims"><code>parabun-browser-shims</code></a> (one
-            package); individual <code>@para/*</code> packages planned. <a href="/docs/">Module docs →</a>
+            Each module is its own <code>@para/*</code> npm package — install only the ones you use.
+            <a href="/docs/install/">Install guide →</a> · <a href="/docs/">Module docs →</a>
           </p>
         </div>
 
@@ -195,7 +194,7 @@
       </p>
       <p>
         On ParaBun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,
-        Cloudflare Workers, …) alias them to <code>parabun-browser-shims</code> in your bundler.
+        Cloudflare Workers, …) alias them to the matching <code>@para/*</code> npm packages in your bundler.
       </p>
       <pre
         data-lang="ts"
@@ -204,12 +203,12 @@
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">export</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> default</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> defineConfig</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  resolve</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
-<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">    alias</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> find</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> /</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">^</span><span style="--shiki-light:#22863A;--shiki-dark:#B4F9F8">para:</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">(</span><span style="--shiki-light:#22863A;--shiki-dark:#BB9AF7">.</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">*</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">$</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">/</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> replacement</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun-browser-shims/$1</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">    alias</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> find</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> /</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">^</span><span style="--shiki-light:#22863A;--shiki-dark:#B4F9F8">para:</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">(</span><span style="--shiki-light:#22863A;--shiki-dark:#BB9AF7">.</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">*</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">$</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">/</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> replacement</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@para/$1</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
       <p>The same one-line alias works for esbuild, webpack, and rollup. See the install guide for the variants.</p>
 
-      <div class="install"><span class="prompt">$</span>npm install parabun-browser-shims</div>
+      <div class="install"><span class="prompt">$</span>npm install @para/signals @para/parallel @para/pipeline</div>
       <div class="install"><span class="prompt">$</span>parabun build src/main.pts --outdir dist/</div>
 
       <p class="caveat">

@@ -248,7 +248,7 @@ export class RateLimiter {
     "build": "parabun build src/index.pts --target browser --outfile dist/index.js",
     "deploy": "parabun run build && wrangler deploy"
   },
-  "dependencies": { "parabun-browser-shims": "*" },
+  "dependencies": { "@para/signals": "*", "@para/parallel": "*" },
   "devDependencies": { "@cloudflare/workers-types": "*", "wrangler": "^4" }
 }
 ```
@@ -264,7 +264,7 @@ export class RateLimiter {
     "build": "parabun build src/index.pjs --target browser --outfile dist/index.js",
     "deploy": "parabun run build && wrangler deploy"
   },
-  "dependencies": { "parabun-browser-shims": "*" },
+  "dependencies": { "@para/signals": "*", "@para/parallel": "*" },
   "devDependencies": { "wrangler": "^4" }
 }
 ```
