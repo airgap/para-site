@@ -1,21 +1,31 @@
 ---
 title: Para docs
-description: Reference for Para — a TypeScript dialect with reactive signals, integer ranges, a pipeline operator, edge-triggered handlers, error-chain operators, and compile-time purity.
+description: Para is a set of TypeScript libraries (signals, parallel, pipeline, arena, simd, csv, arrow, rtp, mcp) plus an optional .pts syntax that compiles to JS calls into them.
 ---
 
-Para is a TypeScript dialect. Files end in `.pts`. The added syntax — signals and effects, `when` blocks, `~>` and `->` reactive bindings, `|>`, integer ranges, `..!` / `..&` / `..=`, `pure`, `memo`, `defer`, `arena` — desugars to standard JavaScript at parse time.
+Para is two things:
 
-The desugared output imports from `@para/*` npm packages — one per module (`@para/signals`, `@para/parallel`, etc.). Install only the ones your code uses. There's no other Para runtime layer; the output is plain JS otherwise.
+- **The libraries** — nine `@para/*` npm packages: `signals`, `parallel`, `pipeline`, `arena`, `simd`, `csv`, `arrow`, `rtp`, `mcp`. Pure JS / Wasm. Install only the ones your code uses; each works on any JS runtime.
+- **The optional `.pts` syntax** — sugar over the libraries (`signal x = 0`, `effect { … }`, `~>`, `->`, `|>`, `..!`, `..&`, ranges, `pure`, `memo`, `defer`, `arena`). Compiles to standard JavaScript at parse time, which then imports from the libraries.
+
+You can use the libraries from plain TypeScript or JavaScript without ever touching `.pts`. The syntax is there if you want fewer parens around reactive code.
 
 ## Sections
 
-- **[Install](/docs/install/)** — set up the build pipeline. The compile step uses `parabun build` today; the runtime side is the matching `@para/*` packages, aliased to the `para:*` specifier in your bundler.
-- **[Language reference](/docs/language/)** — every extension, with the desugaring it emits.
+- **[Install](/docs/install/)** — install the `@para/*` packages and (if using `.pts` files) the parabun build step that compiles them.
+- **Modules** — API reference for each library:
+  - [`@para/signals`](/docs/signals/) — reactive cells, derived values, effects
+  - [`@para/parallel`](/docs/parallel/) — `pmap` / `preduce` over a Worker pool
+  - [`@para/pipeline`](/docs/pipeline/) — `|>` combinators with SIMD fusion
+  - [`@para/arena`](/docs/arena/) — typed-array `Pool` + scope helper
+  - [`@para/simd`](/docs/simd/) — Wasm v128 kernels
+  - [`@para/csv`](/docs/csv/) — RFC 4180 streaming parser
+  - [`@para/arrow`](/docs/arrow/) — in-memory tables + IPC + Parquet
+  - [`@para/rtp`](/docs/rtp/) — RFC 3550 packet framing + jitter buffer
+  - [`@para/mcp`](/docs/mcp/) — Model Context Protocol client
+- **[Language reference](/docs/language/)** — every `.pts` extension, with the JavaScript it desugars to.
 - **Examples** — three worked projects: [frontend](/docs/examples/frontend/) (DOM, Vite), [backend](/docs/examples/backend/) (Node WebSocket server), [edge](/docs/examples/edge/) (Cloudflare Workers).
-- **Modules** — API reference for each `para:*` import the language compiles into: [`signals`](/docs/signals/), [`arena`](/docs/arena/), [`parallel`](/docs/parallel/), [`pipeline`](/docs/pipeline/), [`simd`](/docs/simd/), [`arrow`](/docs/arrow/), [`csv`](/docs/csv/).
 
 ## Related projects
 
-[ParaBun](https://parabun.script.dev) is a fork of Bun that ships Para natively, plus a stack of native runtime modules (GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, GPIO/I²C/SPI). Use ParaBun if you want hardware acceleration in TypeScript on a Linux SBC, NUC, or similar.
-
-The standalone path documented here works on any host with a JavaScript engine — browsers, Lambda, Cloudflare Workers, Deno, Node 18+.
+[ParaBun](https://parabun.script.dev) is a fork of Bun that bundles Para and adds native modules for GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, and GPIO / I²C / SPI on Linux. The libraries documented here run anywhere a JS engine runs; ParaBun is the runtime to reach for when you also need hardware.
