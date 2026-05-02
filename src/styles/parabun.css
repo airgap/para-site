@@ -81,8 +81,13 @@
 
   --sl-color-text: var(--pb-text);
   --sl-color-text-accent: var(--pb-accent);
+  /* --sl-color-white = the foreground / "text on dark" color
+     --sl-color-black = the background / "dark surface" color
+     Both were mapped to --pb-text (light), which made elements that
+     use bg: var(--sl-color-black) (e.g. the mobile-TOC toggle)
+     render with a white background. */
   --sl-color-white: var(--pb-text);
-  --sl-color-black: var(--pb-text);
+  --sl-color-black: var(--pb-bg);
 
   --sl-color-accent: var(--pb-accent);
   --sl-color-accent-low: var(--pb-accent-soft);
