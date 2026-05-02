@@ -61,11 +61,46 @@ const cols = await csv.parseColumns("./sensors.csv", {
 const meanTemp = sum(cols.temperature) / cols.temperature.length;
 ```
 
+## `parseBatches(input, { schema, batchSize?, ... })`
+
+Async iterator over fixed-size columnar chunks. Lets a caller process arbitrarily large CSVs in O(N) time and O(`batchSize`) memory without materializing the full column buffers. Default `batchSize` is 8192 rows.
+
+```ts
+for await (const batch of csv.parseBatches(Bun.file("./big.csv"), {
+  schema: { temp: "f32", ts: "f64" },
+  batchSize: 8192,
+})) {
+  // batch.temp is a Float32Array of up to 8192 rows
+  // batch.ts is a Float64Array of up to 8192 rows
+  // process batch — feed to @para/simd, append to an Arrow stream, etc.
+}
+```
+
+The final batch is tight-fit to the actual remaining row count; full-size batches share their backing buffers with the typed-array result.
+
+## `reduceColumns(input, { schema, reducers, ... })`
+
+Single-pass reduction over CSV columns — never materializes the data at all. Streaming aggregates per column with O(1) memory per column regardless of input size.
+
+```ts
+const stats = await csv.reduceColumns(Bun.file("./big.csv"), {
+  schema: { temp: "f32", humidity: "f32", sensor: "string" },
+  reducers: {
+    temp: ["count", "sum", "min", "max", "mean", "stddev"],
+    humidity: ["mean"],
+    sensor: ["count"],
+  },
+});
+// stats.temp = { count, sum, min, max, mean, stddev }
+// stats.humidity = { mean }
+// stats.sensor = { count }
+```
+
+Available reducers: `count`, `sum`, `min`, `max`, `mean`, `variance`, `stddev`. Numeric reductions skip `NaN` cells. `variance` and `stddev` use Welford's online algorithm — numerically stable even at billions of rows. String columns can only meaningfully be `count`-reduced.
+
 ## `parseCsv(input, opts?)`
 
 The classical async iterator path. Returns row objects (or string arrays with `header: false`). The parser is a state machine over UTF-8 bytes; it never materializes the full file in memory regardless of size.
-
-## `parseCsv(input, opts?)`
 
 `input` can be:
 
