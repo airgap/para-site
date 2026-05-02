@@ -3,14 +3,22 @@
 // are sub-sections of the same Para ecosystem (each with its own
 // landing under / / libs / lang / runtime), so the docs header doesn't
 // need to disambiguate between products — they all live here.
+//
+// The 3-body canvas + nav-3body.js is shared with the section
+// landings; the docs default to lib (the broadest-audience product)
+// for the heavy body since /docs/ pages don't carry a section.
 ---
 
 <a href="/" class="site-title sl-flex">
+  <canvas class="nav-3body" data-current="lib" aria-hidden="true"></canvas>
   <span class="brand-active">Para</span>
 </a>
+<script src="/nav-3body.js" defer></script>
 
 <style>
   .site-title {
+    display: inline-flex;
+    align-items: center;
     font-family: "Fraunces", Georgia, serif;
     font-weight: 700;
     font-size: 1.2rem;
@@ -24,5 +32,11 @@
   .brand-active {
     color: var(--pb-text);
     font-weight: 700;
+  }
+  .nav-3body {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
   }
 </style>

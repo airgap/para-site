@@ -217,6 +217,14 @@ header {
      flex gap instead of clipping at the SVG box. */
   overflow: visible;
 }
+/* Canvas-rendered 3-body sim — see /nav-3body.js. */
+.nav-3body {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  vertical-align: -10px;
+  margin-right: 10px;
+}
 .binary circle {
   transform-box: view-box;
   transform-origin: 50% 50%;

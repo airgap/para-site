@@ -334,6 +334,15 @@ header {
      SVG box. SVG defaults to overflow:hidden which crops the glow. */
   overflow: visible;
 }
+/* Canvas-rendered 3-body sim that's now used in the nav badge. Same
+   footprint as .binary above; see /nav-3body.js for the integrator. */
+.nav-3body {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  vertical-align: -10px;
+  margin-right: 10px;
+}
 .binary circle {
   transform-box: view-box;
   transform-origin: 50% 50%;
