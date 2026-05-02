@@ -3,7 +3,7 @@ title: Install
 description: Build .pts files with parabun build, alias para:* in your bundler to @para/* npm packages, ship to any JavaScript runtime.
 ---
 
-Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [ParaBun](https://parabun.script.dev) fork of Bun — mainline Bun does not recognize the syntax. To use Para on a host that isn't ParaBun itself, you need three things:
+Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [ParaBun](/runtime) fork of Bun — mainline Bun does not recognize the syntax. To use Para on a host that isn't ParaBun itself, you need three things:
 
 1. **The ParaBun transpiler** to compile `.pts` → `.js`. The output is plain JavaScript and runs anywhere; ParaBun is only needed at build time.
 2. **A bundler alias** that maps `para:*` import specifiers to the `@para/*` npm packages. One regex line of bundler config.

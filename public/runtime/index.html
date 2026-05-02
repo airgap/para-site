@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ParaBun</title>
+    <meta
+      name="description"
+      content="A fork of Bun with extra runtime modules: a worker pool, GPU kernels, SIMD primitives, V4L2 / ALSA capture, GGUF LLM inference, and statically-linked image / audio / CSV codecs."
+    />
+    <!-- JetBrains Mono — shipped as a webfont so ligatures render even
+         when the visitor doesn't have the font installed locally. Google
+         Fonts serves the full ligature set (calt on by default); the
+         @font-face-embedded stylesheet caches aggressively. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      // Dark-first (Stellar Atlas night-sky default). Honors an explicit
+      // toggle from /docs/ (shared starlight-theme localStorage key) and
+      // prefers-color-scheme: light when no toggle has been set.
+      try {
+        const stored = localStorage.getItem("starlight-theme");
+        const t =
+          stored === "light" || stored === "dark"
+            ? stored
+            : matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+        document.documentElement.dataset.theme = t;
+      } catch {}
+      try {
+        const pref = localStorage.getItem("parabun-ligatures");
+        if (pref !== "off") document.documentElement.classList.add("ligatures");
+      } catch {}
+      try {
+        const lang = localStorage.getItem("parabun-lang") || "ts";
+        document.documentElement.dataset.lang = lang;
+      } catch {
+        document.documentElement.dataset.lang = "ts";
+      }
+    </script>
+    <script src="/runtime/space.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <span class="brand">
+          <svg class="binary" viewBox="0 0 32 32" aria-hidden="true">
+            <circle class="star-a" cx="5" cy="16" r="4" />
+            <circle class="star-b" cx="21" cy="16" r="6" />
+          </svg>
+          <a href="/" class="brand-link">Para</a>
+        </span>
+        <nav class="nav">
+          <a href="/libs/">libs</a>
+          <a href="/lang/">lang</a>
+          <a href="/runtime/" aria-current="page">runtime</a>
+          <a href="/docs/">docs</a>
+          <a href="/runtime/configure/">configure</a>
+          <a href="https://github.com/airgap/parabun" target="_blank" rel="noopener">github</a>
+        </nav>
+      </header>
+
+      <h1>ParaBun</h1>
+      <p class="lede">
+        The Para Runtime — one of three pieces of the
+        <a href="/">Para ecosystem</a> (Lib + Lang + Runtime). A fork of <a href="https://bun.com">Bun</a> that bundles
+        Para Lib, parses Para Lang natively, and adds native modules that don't exist outside the runtime:
+        <code>parabun:gpu</code> (libcuda + Metal FFI), <code>parabun:camera</code> (V4L2),
+        <code>parabun:audio</code> (ALSA + codecs + DSP), <code>parabun:image</code> (codecs + resize / blur / sharpen),
+        <code>parabun:gpio</code> / <code>parabun:i2c</code> / <code>parabun:spi</code> (Linux peripheral I/O), and
+        <code>parabun:llm</code> (Llama 3, Qwen2, BERT, Whisper, OpenAI-compatible HTTP).
+      </p>
+      <p class="lede">
+        Native modules are linked into the binary — no <code>node-gyp</code>, no CUDA toolkit install, no per-platform
+        native addon distribution. Plain <code>.ts</code> / <code>.js</code> files behave the same as upstream Bun.
+      </p>
+      <p class="lede">
+        Linux SBCs (Raspberry Pi 5, Jetson Orin), NUCs, and other devices running a real OS. Not microcontrollers —
+        JavaScriptCore alone exceeds an MCU's flash budget.
+      </p>
+      <p class="lede">
+        Just want the libraries? <a href="/libs/">Para Lib</a> works on any JS runtime — install only what you use. Just
+        want the syntax? <a href="/lang/">Para Lang</a> compiles to JS that imports those libraries.
+      </p>
+      <div class="install">
+        <span class="prompt">$</span>curl -fsSL https://raw.githubusercontent.com/airgap/parabun/main/install.sh | bash
+      </div>
+      <p class="caveat">
+        Linux and macOS. Windows build is in progress. <code>parabun self-update</code> refreshes an existing install
+        along with the VS Code extension.
+      </p>
+
+      <div class="install">
+        <span class="prompt">$</span>curl -fsSL
+        https://raw.githubusercontent.com/airgap/parabun/main/install-extension.sh | bash
+      </div>
+      <p class="caveat">
+        Installs the VS Code extension into any of <code>code</code>, <code>cursor</code>, or <code>kiro</code> found on
+        <code>$PATH</code>. The extension provides the <code>.pts</code> / <code>.pjs</code> TextMate grammar and an LSP
+        with hover, go-to-definition, purity diagnostics, memo hints, and operator documentation.
+      </p>
+
+      <h2 id="stack">Module index</h2>
+      <p>
+        Grouped by what each module needs from the runtime. The first three groups are part of ParaBun. The fourth is
+        bundled here for convenience and also lives as cross-runtime npm packages — see
+        <a href="/libs/">Para Lib</a>.
+      </p>
+
+      <div class="tiers" aria-label="ParaBun modules by what they require from the runtime">
+        <div class="tier">
+          <span class="tier-label">GPU compute (FFI to libcuda / Metal)</span>
+          <div class="tier-row">
+            <a class="mod-pill" href="#bun-gpu">parabun:gpu</a>
+          </div>
+        </div>
+        <div class="tier">
+          <span class="tier-label">Hardware capture &amp; I/O (statically linked)</span>
+          <div class="tier-row">
+            <a class="mod-pill" href="#bun-camera">parabun:camera</a>
+            <a class="mod-pill" href="#bun-audio">parabun:audio</a>
+            <a class="mod-pill" href="#bun-image">parabun:image</a>
+            <a class="mod-pill" href="#bun-gpio">parabun:gpio</a>
+            <a class="mod-pill" href="#bun-i2c">parabun:i2c</a>
+            <a class="mod-pill" href="#bun-spi">parabun:spi</a>
+            <a class="mod-pill planned" href="#bun-video">parabun:video</a>
+          </div>
+        </div>
+        <div class="tier">
+          <span class="tier-label">AI &amp; inference (composes the above)</span>
+          <div class="tier-row">
+            <a class="mod-pill" href="#bun-llm">parabun:llm</a>
+            <a class="mod-pill" href="#bun-speech">parabun:speech</a>
+            <a class="mod-pill" href="#bun-vision">parabun:vision</a>
+            <a class="mod-pill" href="#bun-assistant">parabun:assistant</a>
+          </div>
+        </div>
+        <div class="tier">
+          <span class="tier-label">Para modules (bundled, but cross-runtime)</span>
+          <div class="tier-row">
+            <a class="mod-pill" href="/docs/signals/">para:signals</a>
+            <a class="mod-pill" href="/docs/parallel/">para:parallel</a>
+            <a class="mod-pill" href="/docs/pipeline/">para:pipeline</a>
+            <a class="mod-pill" href="/docs/arena/">para:arena</a>
+            <a class="mod-pill" href="/docs/simd/">para:simd</a>
+            <a class="mod-pill" href="/docs/csv/">para:csv</a>
+            <a class="mod-pill" href="/docs/arrow/">para:arrow</a>
+            <a class="mod-pill" href="/docs/rtp/">para:rtp</a>
+            <a class="mod-pill" href="/docs/mcp/">para:mcp</a>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="runtime-modules">Runtime modules</h2>
+
+      <div class="modules">
+        <h3 id="bun-gpu"><span class="import">parabun:gpu</span></h3>
+        <p>
+          Metal on macOS, CUDA on Linux and Windows, CPU fallback on hosts without a GPU. A matrix passed to
+          <code>gpu.hold()</code> stays resident across <code>matVec</code> calls, so only the input vector crosses the
+          host↔device boundary per call. Pure <code>Float32Array</code> → <code>Float32Array</code> functions are
+          runtime-compiled to PTX (via NVRTC) or MSL (via <code>newLibraryWithSource:</code>) when the body fits a
+          supported shape: arithmetic, ternary, <code>Math.*</code>.
+        </p>
+        <figure class="code">
+          <figcaption class="code-header"><span class="code-lang">typescript</span></figcaption>
+          <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> gpu</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:gpu</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> M</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1024</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> K</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 768</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> mat</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> gpu</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">alloc</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">M</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> *</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> K</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">f32</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">let</span><span style="--shiki-light:#24292EFF;--shiki-dark:#BB9AF7"> i</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> i</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> &#x3C;</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> mat</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">length</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> i</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">++</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> mat</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">[</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">i</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">]</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> Math</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">random</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> held</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> gpu</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">hold</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">mat</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">                          // uploaded once</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> queries</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> Float32Array</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">K</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">fill</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">0.1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> Float32Array</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">K</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">fill</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">0.2</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">]</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> q</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> of</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> queries</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> scores</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> gpu</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">matVec</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">held</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> q</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> M</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> K</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">        // no copy</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">  console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">top score:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> Math</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">max</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#D32F2F;--shiki-light-font-weight:inherit;--shiki-dark:#F7768E;--shiki-dark-font-weight:bold">...</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">scores</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">gpu</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">release</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">held</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+        </figure>
+
+        <p class="footnote">
+          Beyond <code>matVec</code> / <code>simdMap</code>, <span class="import">parabun:gpu</span> ships
+          <code>conv2D</code>, <code>scan</code>, <code>reduce</code>, <code>argMin</code> / <code>argMax</code>,
+          <code>histogram</code>, and <code>median</code> / <code>quantile</code> — CPU correctness paths today, with
+          optional CUDA / Metal hooks on the same dispatch surface for follow-up device kernels.
+        </p>
+
+        <h3 id="bun-image"><span class="import">parabun:image</span></h3>
+        <p>
+          A Sharp-class image module baked into the runtime — JPEG / PNG / WebP decode and encode (libjpeg-turbo,
+          libpng, libwebp + libsharpyuv vendored statically), bilinear and Lanczos resize, separable Gaussian blur,
+          unsharp-mask sharpen, Sobel edge-detect, 90 / 180 / 270 rotate, flip, crop, brightness / contrast / saturation
+          adjust, threshold, invert, grayscale, per-channel histogram, and Porter-Duff source-over alpha compositing. No
+          <code>npm install sharp</code>, no Node-ABI-versioned binary distribution.
+        </p>
+        <figure class="code">
+          <figcaption class="code-header"><span class="code-lang">typescript</span></figcaption>
+          <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> image</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:image</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> bytes</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> Bun</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">file</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">photo.jpg</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">bytes</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> img</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> image</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">decode</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">bytes</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> small</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> image</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">resize</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">img</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> width</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 800</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> height</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 600</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> kernel</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">lanczos</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> sharp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> image</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">sharpen</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">small</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> amount</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1.5</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> webp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> image</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">encode</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">sharp</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> format</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">webp</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> quality</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 85</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> Bun</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">photo.webp</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> webp</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+        </figure>
+
+        <h3 id="bun-audio"><span class="import">parabun:audio</span></h3>
+        <p>
+          A from-scratch audio toolkit: WAV / MP3 decode, Opus encode and decode (libopus 1.6.1), rnnoise-based
+          denoiser, FFT, RBJ Audio EQ Cookbook biquads (lowpass / highpass / bandpass / notch), resample, STFT
+          spectrogram, mel spectrogram (Whisper-mode included for STT pipelines), voice-activity detection, AGC, peak /
+          RMS / windowed envelope, mix, normalize, interleave / deinterleave, and PCM type conversion. Heavy codecs
+          (libopus, minimp3, rnnoise) ship statically.
+        </p>
+        <p>
+          OS audio I/O is wired on Linux: <code>audio.devices()</code> enumerates ALSA capture and playback devices,
+          <code>audio.capture({ device, sampleRate, channels })</code> returns a stream whose
+          <code>.frames()</code> async-iterator yields <code>Float32Array</code> PCM straight from
+          <code>snd_pcm_readi</code>, and <code>audio.play({ ... }).write(samples)</code> pushes PCM through
+          <code>snd_pcm_writei</code>. The capture stream exposes reactive <code>peakLevel</code> and
+          <code>active</code> Signals — RMS rate-limited to 10 Hz so a level meter is one <code>effect()</code> away.
+          CoreAudio + WASAPI mount on the same surface in follow-ups.
+        </p>
+        <figure class="code">
+          <figcaption class="code-header"><span class="code-lang">typescript</span></figcaption>
+          <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> audio</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:audio</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> rtp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">para:rtp</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> mic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> audio</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">capture</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sampleRate</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 48000</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> channels</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> enc</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> audio</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">OpusEncoder</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sampleRate</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 48000</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> channels</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> application</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">voip</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> den</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> audio</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">Denoiser</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> agc</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> audio</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">Gain</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> targetLevel</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0.1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> ssrc</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0x12345678</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">let</span><span style="--shiki-light:#24292EFF;--shiki-dark:#BB9AF7"> sequence</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#BB9AF7"> timestamp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> frame</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> of</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> mic</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">())</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">  den</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">process</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">frame</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">samples</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">                                       // suppress noise (in place)</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">  agc</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">process</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">frame</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">samples</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">                                       // normalize loudness</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> opus</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> enc</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">encode</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">frame</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">samples</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> packet</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> rtp</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">pack</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({ </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">payloadType</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 111</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sequence</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> sequence</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">++</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> timestamp</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> ssrc</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> payload</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> opus</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">  // send `packet` over your transport (UDP, WebRTC, …)</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">  timestamp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> +=</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> frame</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">samples</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">length</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span></code></pre>
+        </figure>
+
+        <h3 id="bun-camera"><span class="import">parabun:camera</span></h3>
+        <p>
+          V4L2 capture on Linux. <code>camera.devices()</code> reads <code>/sys/class/video4linux/</code> and runs
+          <code>VIDIOC_QUERYCAP</code> on each to filter to actual capture devices.
+          <code>camera.formats(path)</code> enumerates the supported <code>(format, width, height, fps)</code> tuples.
+          <code>camera.open(...)</code> mmaps the kernel ring buffer and starts streaming, and
+          <code>cam.frames()</code> is an async iterator of frames. AVFoundation (macOS) and Media Foundation (Windows)
+          backends are planned on the same JS surface.
+        </p>
+
+        <h3 id="bun-video"><span class="import">parabun:video</span></h3>
+        <p>
+          Scaffold only — the JS surface is in place (<code>video.probe</code>, <code>video.decode</code>,
+          <code>video.encode</code>, <code>video.decodeAll</code>, with codec / container / acceleration options) but
+          the native side hasn't been wired yet. The plan is libavcodec on desktop, V4L2 M2M on Pi 5, NVDEC/NVENC on
+          Jetson, all behind the same JS API.
+        </p>
+
+        <h3 id="bun-gpio"><span class="import">parabun:gpio</span></h3>
+        <p>
+          Linux <code>gpiochip</code> uAPI v2 over <code>/dev/gpiochip*</code> — the modern chardev interface, not
+          legacy sysfs. <code>gpio.open(chip, line, opts)</code> returns a <code>Line</code> with <code>read()</code> /
+          <code>write()</code> / async-iterable edge events. Validated end-to-end on a Raspberry Pi 5. Pairs with
+          <a href="/docs/signals/"><code>para:signals</code></a> — <code>line.value</code> is a reactive Signal that
+          updates on read and on edge events.
+        </p>
+
+        <h3 id="bun-i2c"><span class="import">parabun:i2c</span></h3>
+        <p>
+          <code>i2c-dev</code> wrapper with full SMBus quick / byte / word / block transactions plus a raw
+          <code>readWriteRaw()</code> for chips that need 16-bit register addressing or arbitrary frame layouts.
+          <code>i2c.scan(bus)</code> probes addresses, <code>i2c.open(bus, addr)</code> hands back a typed device
+          handle. Works on any Linux board with <code>/dev/i2c-*</code>.
+        </p>
+
+        <h3 id="bun-spi"><span class="import">parabun:spi</span></h3>
+        <p>
+          <code>spidev</code> wrapper with both half-duplex (<code>read</code> / <code>write</code>) and full-duplex
+          (<code>transfer</code>) plus multi-segment (<code>transferSegments</code>) for mode / speed / CS-hold changes
+          mid-burst. Per-device <code>mode</code> / <code>bitsPerWord</code> / <code>maxSpeedHz</code> /
+          <code>lsbFirst</code>
+          are sticky and apply to every transfer until changed.
+        </p>
+
+        <h3 id="bun-llm"><span class="import">parabun:llm</span></h3>
+        <p>
+          An in-tree native inference stack covering three model classes: Llama / Qwen2 chat + completion
+          (<code>LLM</code>), BERT-family sentence embedders (<code>Encoder</code>), and Whisper STT
+          (<code>WhisperModel</code>). Weights <code>mmap</code> off disk; residual stream and KV cache live on-device.
+          Per-token traffic across PCIe is a 4-byte argmax. Q4_K and Q6_K matVec kernels use a 1-warp-per-row,
+          4-warps-per-block layout; QKV and Gate+Up projections are byte-concatenated at load time and dispatched as one
+          matVec per layer.
+        </p>
+        <figure class="code">
+          <figcaption class="code-header"><span class="code-lang">typescript</span></figcaption>
+          <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:llm</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> m</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> llm</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7">LLM</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">load</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> piece</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> of</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> m</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">chat</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">([</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> role</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">system</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> content</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">You are helpful and concise.</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> role</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">user</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> content</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">What is the capital of France?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">]))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">  process</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">stdout</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">piece</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span></code></pre>
+        </figure>
+
+        <table class="bench" aria-label="LLM decode throughput, Llama-3.2-1B-Instruct Q4_K_M on RTX 4070 Ti">
+          <thead>
+            <tr>
+              <th>Llama-3.2-1B Q4_K_M · RTX 4070 Ti</th>
+              <th class="num-cell">parabun</th>
+              <th class="num-cell">ollama</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>greedy decode (device-only)</td>
+              <td class="num-cell">340 tok/s</td>
+              <td class="num-cell">~350 tok/s</td>
+            </tr>
+            <tr>
+              <td>greedy decode (logits DtoH)</td>
+              <td class="num-cell">275 tok/s</td>
+              <td class="num-cell">—</td>
+            </tr>
+            <tr>
+              <td>prompt prefill</td>
+              <td class="num-cell">295 tok/s</td>
+              <td class="num-cell">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="footnote">
+          Numbers are within run-to-run noise of ollama on this model and hardware. Chat templates for Llama-3, ChatML,
+          and Mistral-Instruct are detected from the GGUF's <code>tokenizer.chat_template</code>. Only the CUDA backend
+          is wired in this module today; Metal kernels are pending.
+        </p>
+        <p>
+          <code>llm.serve({ engine, modelId, port })</code> exposes any model (or anything else implementing
+          <code>.chat()</code> / <code>.generate()</code> / <code>.embed()</code>) over an OpenAI-compatible HTTP API.
+          Routes: <code>GET /v1/models</code>, <code>POST /v1/chat/completions</code> (sync and SSE streaming),
+          <code>POST /v1/completions</code>, <code>POST /v1/embeddings</code>. Optional bearer auth and a FIFO
+          concurrency gate (default 1). Default port is 11434, matching ollama's, so OpenAI clients that auto-discover a
+          local ollama work unchanged.
+        </p>
+        <p>
+          <code>WhisperModel</code> loads whisper.cpp <code>ggml-*.bin</code> files (F32 / F16 / Q4_0 / Q5_0 / Q5_1 /
+          Q8_0) and runs encoder-decoder STT — KV cache, chunked long-audio, beam search, language detection across all
+          99 Whisper languages. CUDA-accelerated end-to-end (encoder im2col conv + matmuls + per-head batched attention;
+          decoder per-token matVecs + LM head). On an RTX 4070 Ti, an 11&nbsp;s JFK clip transcribes in 1.6&nbsp;s with
+          <code>tiny.en</code> — about 6.9× real-time.
+        </p>
+        <p>
+          Both <code>LLM</code> and <code>WhisperModel</code> instances expose reactive
+          <span class="import">para:signals</span> Signals: <code>m.busy</code> (refcounted, flips while a
+          <code>chat</code> / <code>generate</code> / <code>embed</code> / <code>transcribe</code> call is in flight)
+          and <code>m.device</code> (<code>"cuda" | "metal" | "cpu"</code>, stable for the life of the instance). Wire a
+          busy spinner or a backend badge with a one-liner <code>effect()</code>.
+        </p>
+
+        <h3 id="bun-vision"><span class="import">parabun:vision</span></h3>
+        <p>
+          <code>vision.frames(stream, { decodeMjpg? })</code> takes a frame iterator from
+          <span class="import">parabun:camera</span> (or any source yielding the same shape) and yields packed-RGBA8
+          frames. yuyv, nv12, and rgb24 are converted inline; mjpeg requires the caller to pass
+          <code>image.decode</code> from <span class="import">parabun:image</span> (cross-builtin imports between
+          <code>bun:</code> modules aren't supported, so dependencies are passed in at the call site).
+          <code>vision.detectMotion</code> adds a downsampled-luma frame-diff estimator with temporal smoothing.
+        </p>
+        <p>
+          <code>vision.detect</code> (YOLO / SSD / RT-DETR) and <code>vision.recognize</code> (Tesseract / EasyOCR) are
+          typed but throw — both need an ONNX runtime vendored before they can do anything. The interfaces are there so
+          callers can write against them now and have them work later.
+        </p>
+
+        <h3 id="bun-speech"><span class="import">parabun:speech</span></h3>
+        <p>
+          <code>speech.listen(stream, { sampleRate })</code> takes an audio chunk iterator (<span class="import"
+            >parabun:audio</span
+          >'s capture stream, a file reader, anything yielding <code>{ samples }</code>) and yields one utterance per
+          detected speech burst. The classifier is RMS-against-an-adaptive-noise-floor, with pre-roll to catch word
+          onsets, hangover to seal on silence, and a minimum-length filter to drop clicks and breath sounds.
+        </p>
+        <p>
+          <code>speech.transcribe(utt, { engine: "whisper", model })</code> dispatches to the
+          <code>WhisperModel</code> in <span class="import">parabun:llm</span>, with a per-process model cache so the
+          weights aren't reloaded between calls. <code>speech.speak(text, { engine: "piper", model })</code> drives the
+          Piper voice synthesizer (subprocess in v1, libpiper FFI v2 tracked) and returns f32 mono PCM at the voice's
+          native sample rate, ready to hand straight to <code>audio.play().write()</code>. The
+          <code>listen</code> stream also exposes reactive <code>active</code> / <code>noiseFloor</code> /
+          <code>lastUtterance</code> signals.
+        </p>
+
+        <h3 id="bun-assistant"><span class="import">parabun:assistant</span></h3>
+        <p>
+          The 3-line case. Composes <span class="import">parabun:audio</span> (mic + speaker),
+          <span class="import">parabun:speech</span> (VAD + STT + TTS), and
+          <span class="import">parabun:llm</span> (Llama / Qwen2 inference) into a complete on-device voice loop:
+          <code>await using bot = await assistant.create({ llm, stt, tts, system });</code>, then
+          <code>await bot.run()</code>. Mic captures, VAD gates, Whisper transcribes, the LLM generates, Piper
+          synthesizes, ALSA plays — fully local, no cloud round-trip. <code>bot.turns()</code> exposes the loop as an
+          async iterator; <code>bot.ask(text)</code> skips STT for text-only turns; <code>bot.say(text)</code> pushes a
+          proactive utterance.
+        </p>
+        <p>
+          Reactive surface: <code>bot.state</code> (<code>"idle" | "listening" | "thinking" | "speaking"</code>),
+          <code>bot.history</code>, <code>bot.lastTurn</code>, and <code>bot.interrupted</code> are all
+          <span class="import">para:signals</span> Signals — wire them straight into UI without polling. Persistent
+          memory is one option away: pass <code>memory: "/path/to/memory.sqlite"</code> and the conversation transcript
+          replays into history on every <code>create</code>. Power users keep their seat — <code>bot.llm</code> exposes
+          the underlying model, so anything reachable directly via <span class="import">parabun:llm</span> /
+          <span class="import">parabun:speech</span> / <span class="import">parabun:audio</span> is reachable through
+          <code>bot</code> too.
+        </p>
+      </div>
+
+      <h2 id="example">Example: LangChain <code>VectorStore</code></h2>
+      <p>
+        <code>ParaBunVectorStore</code> extends <code>VectorStore</code> from <code>@langchain/core</code> and
+        implements the <code>addVectors</code> and <code>similaritySearchVectorWithScore</code> methods, so call sites
+        that accept any <code>VectorStore</code> work against it without changes. The shared setup below feeds both
+        snippets:
+      </p>
+
+      <figure class="code">
+        <figcaption class="code-header"><span class="code-lang">setup (shared)</span></figcaption>
+        <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">OpenAIEmbeddings</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@langchain/openai</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> emb</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> OpenAIEmbeddings</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> modelName</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">text-embedding-3-small</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> docs</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">hello world</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">good morning</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">see you later</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">]</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> vectors</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> emb</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">embedDocuments</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">docs</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> q</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> emb</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">embedQuery</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">greetings</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+      </figure>
+
+      <div class="diff">
+        <div>
+          <figure class="code">
+            <figcaption class="code-header"><span class="code-lang">before</span></figcaption>
+            <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">MemoryVectorStore</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">  from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">langchain/vectorstores/memory</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> store</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> MemoryVectorStore</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">emb</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> store</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">addVectors</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">vectors</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> docs</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> hits</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> store</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">similaritySearchVectorWithScore</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">q</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 10</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+          </figure>
+        </div>
+        <div>
+          <figure class="code">
+            <figcaption class="code-header"><span class="code-lang">after</span></figcaption>
+            <pre><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">ParaBunVectorStore</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">  from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./parabun-store.pjs</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> store</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> ParaBunVectorStore</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">emb</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> store</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">addVectors</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">vectors</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> docs</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> hits</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> store</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">similaritySearchVectorWithScore</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">q</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 10</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+          </figure>
+        </div>
+      </div>
+
+      <table class="bench" aria-label="RAG retrieval benchmark, 100k × 384 f32">
+        <thead>
+          <tr>
+            <th>100k × 384 f32, top-10</th>
+            <th class="num-cell">add_ms</th>
+            <th class="num-cell">score_ms</th>
+            <th class="num-cell">vs LangChain</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>LangChain MemoryVectorStore</td>
+            <td class="num-cell">4.0</td>
+            <td class="num-cell">48.2</td>
+            <td class="num-cell">1.00×</td>
+          </tr>
+          <tr class="winner">
+            <td>ParaBunVectorStore</td>
+            <td class="num-cell">82.7</td>
+            <td class="num-cell">15.9</td>
+            <td class="num-cell">2.83×</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="footnote">
+        <code>add_ms</code> is higher because rows are packed into a single SAB <code>Float32Array</code> and normalized
+        in place — one-time <code>O(N·D)</code> work amortized across subsequent queries. Top-K indices and scores match
+        LangChain's to four decimal places.
+      </p>
+
+      <h2 id="composition">Composition examples</h2>
+      <p>
+        Where signals and module composition pay off — wiring multiple <code>bun:*</code> modules into one program
+        without postMessage, child processes, or N-API bindings.
+      </p>
+
+      <h3 id="example-voice-tools">Voice → LLM → tool dispatch</h3>
+      <p>
+        Mic captures, Whisper transcribes, the LLM picks a tool under a JSON schema (mathematically guaranteed-valid
+        output, no parse retries), the runtime dispatches it, Piper speaks the reply. The dispatch table is plain JS
+        below; <span class="import">para:mcp</span> (now shipped — stdio + WebSocket transports) lets you swap the table
+        for a Model Context Protocol client without changing this control flow. <code>effect()</code> over
+        <code>mic.peakLevel</code> / <code>chat.busy</code> / <code>wsp.busy</code> drives a status line — no polling,
+        no observers, no event emitters.
+      </p>
+      <figure class="code lang-tabs">
+        <div class="code-header">
+          <div class="lang-toggle" role="tablist">
+            <button data-lang="ts" type="button">TypeScript</button>
+            <button data-lang="parabun" type="button">Para</button>
+          </div>
+        </div>
+        <pre
+          data-lang="ts"
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> assistant</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:assistant</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">effect</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">para:signals</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> bot</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> assistant</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">create</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  stt</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./ggml-tiny.en.bin</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  tts</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./en_US-lessac-medium.onnx</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  system</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">You are a helpful home assistant. Keep replies short.</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  tools</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">    setLight</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> room</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> on</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> brightness</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">light </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">room</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> ${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">on</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">on</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">off</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A"> @ </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">brightness</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">    playMusic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> track</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">play </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">track</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// One reactive line redraws a live status line in place.</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">effect</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> process</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">stdout</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`\r</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">state</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">run</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">   // VAD → STT → LLM (with grammar-constrained tool calls) → TTS → speaker</span></span></code></pre>
+        <pre
+          data-lang="parabun"
+          hidden
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> assistant</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:assistant</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> bot</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> assistant</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">create</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  stt</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./ggml-tiny.en.bin</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  tts</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./en_US-lessac-medium.onnx</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  system</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">You are a helpful home assistant. Keep replies short.</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  tools</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">    setLight</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> room</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> on</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> brightness</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">light </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">room</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> ${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">on</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">on</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">off</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A"> @ </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">brightness</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">    playMusic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> track</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">play </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">track</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// One reactive line redraws a live status line in place.</span></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`\r</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">state</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> -></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> process</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">stdout</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">run</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">   // VAD → STT → LLM (with grammar-constrained tool calls) → TTS → speaker</span></span></code></pre>
+      </figure>
+      <p class="footnote">
+        <span class="import">parabun:assistant</span> composes <span class="import">parabun:audio</span> +
+        <span class="import">parabun:speech</span> + <span class="import">parabun:llm</span> +
+        <span class="import">para:signals</span> internally. <code>bot.state</code> is a Signal that cycles through
+        <code>"idle" | "listening" | "thinking" | "speaking"</code>; the tools dispatch table works the same as an
+        <span class="import">para:mcp</span> client. <a href="#example-underneath">What's underneath</a> shows the same
+        loop hand-rolled — same five modules, no facade.
+      </p>
+
+      <h3 id="example-motion">Webcam motion → reactive assistant</h3>
+      <p>
+        Module composition: <span class="import">parabun:camera</span> + <span class="import">parabun:vision</span> +
+        <span class="import">parabun:assistant</span> over <span class="import">para:signals</span>.
+        <code>vision.detectMotion</code> emits frame-by-frame scores; the rising-edge handler fires once on each
+        false→true transition of the predicate — no <code>derived()</code> wrapper, no state machine, no debounce timer,
+        no <code>wasPresent</code> flag. The ParaBun tab uses a <code>when EXPR { … }</code> block; the TypeScript tab
+        uses the equivalent <code>signals.when()</code> call.
+      </p>
+      <figure class="code lang-tabs">
+        <div class="code-header">
+          <div class="lang-toggle" role="tablist">
+            <button data-lang="ts" type="button">TypeScript</button>
+            <button data-lang="parabun" type="button">Para</button>
+          </div>
+        </div>
+        <pre
+          data-lang="ts"
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> camera</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">    from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:camera</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> vision</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">    from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:vision</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> assistant</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:assistant</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> signals</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">   from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">para:signals</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> cam</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> camera</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">open</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">/dev/video0</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> format</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">yuyv</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> width</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 640</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> height</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 480</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> bot</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> assistant</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">create</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  tts</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">/models/en_US-lessac-medium.onnx</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  system</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">You are a friendly home assistant. Keep replies short.</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// motion.score / motion.detected auto-fill as frames flow.</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> motion</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> vision</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">detectMotion</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">vision</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">cam</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">())</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sensitivity</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0.04</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">run</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// Greet whenever motion appears AND the bot is idle. The predicate is</span></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// auto-tracked — every signal it reads becomes a dep, no derived() wrapper.</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">signals</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">when</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  ()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> motion</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">detected</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> &#x26;&#x26;</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">state</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ===</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">idle</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  ()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">say</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">Welcome back!</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+        <pre
+          data-lang="parabun"
+          hidden
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> camera</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">    from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:camera</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> vision</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">    from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:vision</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> assistant</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:assistant</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> cam</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> camera</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">open</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">/dev/video0</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> format</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">yuyv</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> width</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 640</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> height</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 480</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> bot</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> assistant</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">create</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  tts</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">/models/en_US-lessac-medium.onnx</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  system</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">You are a friendly home assistant. Keep replies short.</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> motion</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> vision</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">detectMotion</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">vision</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">cam</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">())</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sensitivity</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0.04</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">run</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// Edge-triggered: fires once on each false→true transition of the predicate.</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">when</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> motion</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">detected</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> &#x26;&#x26;</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> bot</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">state</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ===</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">idle</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">  bot</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">say</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">Welcome back!</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span></code></pre>
+      </figure>
+      <p class="footnote">
+        Four modules, three signals, zero glue code. Barge-in is built into
+        <span class="import">parabun:assistant</span> now (rising edge on <code>vad.active</code> drops the queued TTS
+        via <code>spk.stop()</code> and stamps <code>turn.interrupted</code>); programmatic cancel is
+        <code>bot.interrupt()</code>.
+      </p>
+
+      <h3 id="example-underneath">What's underneath</h3>
+      <p>
+        <code>parabun:assistant</code> isn't magic — it stitches the same five modules a user could call directly. The
+        version below is the loop the home-assistant facade performs for you. Useful when you want a non-default flow
+        (custom VAD threshold, separate transcribe + chat sessions, your own JSON dispatch). Routine smart-home or IoT
+        cases should still pick the <a href="#example-voice-tools">facade</a>; this one's longer.
+      </p>
+      <figure class="code lang-tabs">
+        <div class="code-header">
+          <div class="lang-toggle" role="tablist">
+            <button data-lang="ts" type="button">TypeScript</button>
+            <button data-lang="parabun" type="button">Para</button>
+          </div>
+        </div>
+        <pre
+          data-lang="ts"
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> audio</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">  from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:audio</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> speech</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:speech</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">    from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:llm</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">effect</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">para:signals</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> tools</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#6F42C1;--shiki-dark:#C0CAF5"> Record</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">&#x3C;</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7">string</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">args</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7"> any</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7"> any</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">></span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">  setLight</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> room</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> on</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> brightness</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">light </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">room</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> ${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">on</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">on</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">off</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A"> @ </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">brightness</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">  playMusic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> track</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">play </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">track</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">  reply</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">     (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> text</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> text</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> ToolSchema</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic"> /* JSON schema with oneOf for each tool */</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> mic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> audio</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">capture</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sampleRate</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 16000</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> channels</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7">       wsp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> llm</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">WhisperModel</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">load</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./ggml-tiny.en.bin</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7">       chat</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> llm</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7">LLM</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">load</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">effect</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">  process</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">stdout</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`\r</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">mic </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">mic</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">peakLevel</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">toFixed</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">3</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">  llm </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">chat</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">busy</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">🤔</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">✅</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">  whisper </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">wsp</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">busy</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">🎙️</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">✅</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> utt</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> of</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> speech</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">listen</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">mic</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sampleRate</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 16000</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> heard</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> wsp</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">transcribe</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">utt</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">samples</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">language</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">en</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> {</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> tool</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> args</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> chat</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">chatJSON</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">([{ </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">role</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">user</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> content</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF"> heard</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">schema</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> ToolSchema</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> maxTokens</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 80</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> result</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> tools</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">[</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">tool</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">](</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">args</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">  if</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">typeof</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> result</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ===</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">string</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">) {</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">    await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> speech</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">say</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">result</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">engine</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">piper</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> model</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./en_US-lessac-medium.onnx</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span></code></pre>
+        <pre
+          data-lang="parabun"
+          hidden
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> audio</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">  from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:audio</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> speech</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:speech</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> llm</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">    from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">parabun:llm</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> tools</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#6F42C1;--shiki-dark:#C0CAF5"> Record</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">&#x3C;</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7">string</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">args</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7"> any</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7"> any</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">></span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">  setLight</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> room</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> on</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> brightness</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">light </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">room</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> ${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">on</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">on</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">off</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A"> @ </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">brightness</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">  playMusic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> track</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">play </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">track</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">  reply</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">     (</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> text</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> text</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> ToolSchema</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic"> /* JSON schema with oneOf for each tool */</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">await using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> mic</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> audio</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">capture</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sampleRate</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 16000</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> channels</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7">       wsp</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> llm</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">WhisperModel</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">load</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./ggml-tiny.en.bin</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">using</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7">       chat</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> llm</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7">LLM</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">load</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./Llama-3.2-1B-Instruct-Q4_K_M.gguf</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`\r</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">mic </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">mic</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">peakLevel</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">toFixed</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">3</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">  llm </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">chat</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">busy</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">🤔</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">✅</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">  whisper </span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">wsp</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#7DCFFF">busy</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">get</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ?</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">🎙️</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> :</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">✅</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  -></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> process</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">stdout</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> utt</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> of</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> speech</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">listen</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">mic</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">frames</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> sampleRate</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 16000</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> heard</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> wsp</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">transcribe</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">utt</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">samples</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">language</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">en</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> {</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> tool</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> args</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> chat</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">chatJSON</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">([{ </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">role</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">user</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> content</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF"> heard</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">schema</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> ToolSchema</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> maxTokens</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 80</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">  const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> result</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> tools</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">[</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">tool</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">](</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">args</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">  if</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">typeof</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> result</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ===</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">string</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">) {</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">    await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> speech</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">say</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">result</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">engine</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">piper</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> model</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">./en_US-lessac-medium.onnx</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span></code></pre>
+      </figure>
+      <p class="footnote">
+        <code>chat.chatJSON({ schema })</code> drains the streamed grammar-constrained chat and parses the result in one
+        call; <code>speech.say(text)</code> wraps <code>speak()</code> + <code>audio.play()</code> +
+        <code>spk.write()</code> with a process-wide cached PlaybackStream keyed on (sampleRate, channels). Both
+        ergonomic shortcuts shipped alongside the assistant facade.
+      </p>
+
+      <h2 id="roadmap">Roadmap</h2>
+
+      <p>
+        Each module is gated by a compile-time feature flag. The
+        <a href="/runtime/configure">configurator</a> generates a <code>bun build --compile</code> invocation with only
+        the flags you select.
+      </p>
+
+      <table class="bench" aria-label="ParaBun module roadmap">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Module</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>shipped</td>
+            <td><span class="import">parabun:image</span></td>
+            <td>
+              JPEG / PNG / WebP decode + encode, resize (bilinear / Lanczos), blur / sharpen / edge-detect, rotate /
+              flip / crop, adjust / threshold / invert / grayscale, histogram, alpha composite.
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td><span class="import">parabun:audio</span></td>
+            <td>
+              WAV / MP3 / Opus codecs, RBJ biquads, FFT, resample, spectrogram, VAD, denoiser (rnnoise), AGC, mix /
+              normalize / envelope, planar ⇄ frame-major + i16 ⇄ f32 PCM helpers.
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td><span class="import">parabun:gpu</span> primitives</td>
+            <td>
+              <code>conv2D</code>, <code>scan</code>, <code>reduce</code>, <code>argMin</code> / <code>argMax</code>,
+              <code>histogram</code>, <code>median</code> / <code>quantile</code>. CPU correctness paths today; CUDA /
+              Metal hooks slot in via the existing dispatch.
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td><span class="import">parabun:camera</span></td>
+            <td>
+              V4L2 capture on Linux — <code>devices()</code>, <code>formats(path)</code>, <code>open(...)</code> with an
+              async-iterator <code>frames()</code> over kernel-mmapped buffers. AVFoundation + Media Foundation follow
+              on the same surface.
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td>OS audio I/O</td>
+            <td>
+              Live ALSA capture + playback for <span class="import">parabun:audio</span>. <code>devices()</code> /
+              <code>capture(...)</code> / <code>play(...)</code> with Float32 PCM streams, S16_LE on the wire. CoreAudio
+              + WASAPI follow.
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td>
+              <span class="import">parabun:gpio</span> / <span class="import">parabun:i2c</span> /
+              <span class="import">parabun:spi</span>
+            </td>
+            <td>
+              Linux peripheral I/O — uAPI v2 GPIO chardev (with edge events), i2c-dev SMBus, spidev half + full duplex
+              with multi-segment transfers. Validated end-to-end on Raspberry Pi 5.
+            </td>
+          </tr>
+          <tr>
+            <td>partial</td>
+            <td><span class="import">parabun:gpu</span> device kernels</td>
+            <td>
+              CUDA <code>reduce</code> (sum / min / max) + atomic-privatized <code>histogram</code> shipped. Scan, Metal
+              mirror, and the rest of the secondary primitives still on CPU until wired.
+            </td>
+          </tr>
+          <tr>
+            <td>partial</td>
+            <td><span class="import">parabun:vision</span></td>
+            <td>
+              Frame stream + frame-diff motion detection ship today (<code>vision.frames</code>,
+              <code>vision.detectMotion</code>). Detector (<code>detect</code>) and OCR (<code>recognize</code>) engines
+              stub until ONNX runtime is vendored.
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td><span class="import">parabun:speech</span></td>
+            <td>
+              VAD-gated <code>speech.listen</code> (with reactive <code>active</code> / <code>noiseFloor</code> /
+              <code>lastUtterance</code> signals), Whisper STT (<code>speech.transcribe</code>, dispatching to
+              <span class="import">parabun:llm</span>'s <code>WhisperModel</code> — encoder-decoder, KV cache, beam
+              search, language detection, CUDA-accelerated end-to-end), and Piper TTS (<code>speech.speak</code> —
+              subprocess in v1; libpiper FFI v2 tracked).
+            </td>
+          </tr>
+          <tr>
+            <td>shipped</td>
+            <td><span class="import">parabun:assistant</span></td>
+            <td>
+              Three-line voice-assistant facade composing <span class="import">parabun:audio</span> +
+              <span class="import">parabun:speech</span> + <span class="import">parabun:llm</span> +
+              <span class="import">para:mcp</span>. <code>bot.run</code> / <code>turns</code> / <code>ask</code> /
+              <code>say</code> / <code>interrupt</code> + reactive <code>state</code> / <code>history</code> /
+              <code>lastTurn</code> / <code>interrupted</code> / <code>toolsActive</code> signals + sqlite-backed
+              persistent memory + tool dispatch (inline + MCP) + VAD-driven barge-in + wake word (<code
+                >wakeWord: "hey jetson"</code
+              >) + cron-driven scheduled prompts + RAG (<code>knowledge: { dir, encoder }</code>). Vision (VLM) turns
+              deferred to follow-up.
+            </td>
+          </tr>
+          <tr>
+            <td>in progress</td>
+            <td><span class="import">parabun:video</span></td>
+            <td>
+              JS surface scaffolded; libavcodec / V4L2 M2M / NVDEC native binding lands with hardware bring-up. Decode +
+              encode + container muxing.
+            </td>
+          </tr>
+          <tr>
+            <td>planned</td>
+            <td><span class="import">parabun:image</span> AVIF</td>
+            <td>AVIF decode/encode (libavif + AOM / dav1d vendor add). Rounds out the codec coverage matrix.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="disclaimer">
+        HTTP handlers, JSON parsing, and ordinary application code use the same code paths as upstream Bun. The added
+        modules don't change behavior or performance there.
+      </div>
+
+      <footer>
+        <span>ParaBun is a fork of Bun. Not affiliated with Oven.</span>
+        <span>
+          <a href="https://github.com/airgap/parabun">source</a> ·
+          <a href="https://github.com/airgap/parabun/releases">releases</a> ·
+          <a href="https://github.com/airgap/parabun/tree/main/editors">editors</a>
+        </span>
+      </footer>
+    </main>
+    <button id="lig-fab" class="fab" type="button" aria-pressed="true" title="Toggle contextual ligatures in code">
+      ligatures ON
+    </button>
+    <script>
+      (() => {
+        const btn = document.getElementById("lig-fab");
+        if (!btn) return;
+        const root = document.documentElement;
+        const sync = on => {
+          root.classList.toggle("ligatures", on);
+          btn.setAttribute("aria-pressed", on ? "true" : "false");
+          btn.textContent = on ? "ligatures ON" : "ligatures OFF";
+        };
+        sync(root.classList.contains("ligatures"));
+        btn.addEventListener("click", () => {
+          const next = !root.classList.contains("ligatures");
+          sync(next);
+          try {
+            localStorage.setItem("parabun-ligatures", next ? "on" : "off");
+          } catch {}
+        });
+      })();
+    </script>
+    <script src="fx.js" defer></script>
+  </body>
+</html>

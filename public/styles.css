@@ -1,1286 +1,384 @@
-/* ─── Stellar Atlas: dark (Night Sky, default) + light (Atlas) ─────────
-   Para and ParaBun are a binary star system. The site reflects
-   that — dark mode is "observation": deep midnight bg with the binary
-   pair as the accent system. Light mode is "atlas": parchment paper,
-   ink markings, the same binary expressed as deep blue + vermillion.
-   Theme resolution shared via localStorage["starlight-theme"]. */
-:root,
-:root[data-theme="dark"] {
+/* ─── para.script.dev umbrella splash ────────────────────────────────
+   Three doors. Three-body system: each product is a "star" with a
+   companion nebula that swoops out from behind its card on hover.
+   The stars orbit a shared barycenter in a Lagrange triangle (120°
+   offsets, equal angular velocity — the only stable 3-body solution
+   in the equal-mass case, called L4/L5 + the third body itself).
+   ─────────────────────────────────────────────────────────────────── */
+
+:root {
   --bg: #050811;
   --bg-elev: #0c1020;
-  --bg-code: #0d1224;
   --rule: #1a2240;
-  --rule-strong: #2a3458;
   --text: #e8e6dd;
   --text-dim: #8a8b94;
   --text-faint: #4a4d5a;
-  /* Binary stars — primary = Para (blue-white), companion = ParaBun (amber). */
-  --star-primary: #6db4ff;
-  --star-companion: #ffa855;
-  --accent: var(--star-primary);
-  --accent-dim: #9fcdff;
-  --accent-soft: #1a2a44;
-  --add: #6dd49a;
-  --rem: #ff7a7a;
-  --shadow-strong: rgba(0, 0, 0, 0.6);
-  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
-  --sans: "Spectral", Georgia, "Times New Roman", serif;
+  /* Three star colors: one per product. Lib gets blue-white (the
+     foundation, hottest), Lang gets pale yellow (G-class, sun-like),
+     Runtime gets amber (cooler / ParaBun's existing identity). */
+  --star-lib: #6db4ff;
+  --star-lang: #ffe28a;
+  --star-runtime: #ffa855;
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
-}
-
-:root[data-theme="light"] {
-  --bg: #f3efe3;
-  --bg-elev: #f8f5ec;
-  --bg-code: #ebe5d4;
-  --rule: #d4cdba;
-  --rule-strong: #b8af9a;
-  --text: #1a1812;
-  --text-dim: #5e574a;
-  --text-faint: #94897a;
-  --star-primary: #1a4880;
-  --star-companion: #b94a1f;
-  --accent: var(--star-companion);
-  --accent-dim: #8a3614;
-  --accent-soft: #f4d4cf;
-  --add: #4d7c4f;
-  --rem: #b94a1f;
-  --shadow-strong: rgba(26, 24, 18, 0.1);
+  --sans: "Spectral", Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  background: var(--bg);
+html,
+body {
+  margin: 0;
+  height: 100%;
   color: var(--text);
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  font-variant-numeric: tabular-nums;
   text-rendering: optimizeLegibility;
-  /* Smooth-scroll the page for anchor jumps. The h2[id] scroll-margin-top
-   * already keeps targets clear of the sticky header. */
-  scroll-behavior: smooth;
 }
 
-/* Respect the system "reduce motion" preference — disable smooth-scroll
- * (and any future motion) for users who've opted out at the OS level. */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+html {
+  background-color: var(--bg);
 }
 
+/* Three-zone tint instead of script.dev's two-zone gradient — left
+   blue (Lib), center pale (Lang), right amber (Runtime). Subtle
+   enough not to fight the starfield. */
 body {
-  margin: 0;
-  padding: 0;
   position: relative;
+  overflow-x: hidden;
+  background-image: linear-gradient(
+    to right,
+    rgba(109, 180, 255, 0.07) 0%,
+    transparent 22%,
+    rgba(255, 226, 138, 0.05) 50%,
+    transparent 78%,
+    rgba(255, 168, 85, 0.07) 100%
+  );
 }
 
-/* ─── Atmospheric backgrounds — three parallax layers ─────────────────
-   Three pseudo-elements at different depths, drifting at different
-   rates as you scroll. Painted in tree order so html::before is the
-   deepest layer (drawn first), body::after is the shallowest.
-
-   Layer 1 (html::before, deepest): soft nebulae backdrop, slowest
-   parallax. The "galactic gas" the rest of the scene sits inside.
-   Layer 2 (body::before, middle): the dense starfield — distant + mid
-   stars with halos. Most of the visible star content lives here.
-   Layer 3 (body::after, closest): a handful of very bright foreground
-   stars with strong glows + small near-dust nebulae. Moves the most
-   on scroll, sells the depth.
-
-   Light mode swaps to a parchment dot-grid on body::before only;
-   html::before / body::after sit empty (no atmosphere in atlas mode). */
-
-html::before,
-body::before,
-body::after {
+/* Starfield behind everything. Same shape as the subsites so the
+   visual lineage is consistent. */
+body::before {
   content: "";
   position: fixed;
-  /* Extend 60vh below viewport so when the layer translates up to
-     -38vh (max parallax) there's still content covering the bottom of
-     the viewport. Without this, scrolling reveals an empty band. */
-  inset: 0 0 -60vh 0;
+  inset: 0;
   pointer-events: none;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-}
-
-/* ─── Layer 1: deep nebulae (html::before) ──────────────────────────── */
-:root[data-theme="dark"]::before,
-:root:not([data-theme="light"])::before {
-  z-index: 0;
+  z-index: -2;
   background-image:
-    radial-gradient(ellipse 80vw 65vh at 78% 18%, rgba(109, 180, 255, 0.13), transparent 65%),
-    radial-gradient(ellipse 65vw 50vh at 12% 75%, rgba(255, 168, 85, 0.08), transparent 65%),
-    radial-gradient(ellipse 55vw 60vh at 55% 110%, rgba(180, 110, 220, 0.06), transparent 60%);
-  animation: layer-deep linear;
-  animation-timeline: scroll(root);
-}
-
-/* ─── Layer 2: dense starfield (body::before) ───────────────────────── */
-:root[data-theme="dark"] body::before,
-:root:not([data-theme="light"]) body::before {
-  z-index: 0;
-  background-image:
-    /* Medium stars with halos — three-stop gradient: solid core, diffuse
-       falloff, transparent outer. */
-    radial-gradient(2px 2px at 8% 18%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 23% 76%, rgba(255, 255, 255, 0.8) 25%, rgba(255, 255, 255, 0.15) 55%, transparent 100%),
-    radial-gradient(2px 2px at 67% 12%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 23% 22%, rgba(255, 255, 255, 0.8) 25%, rgba(255, 255, 255, 0.15) 55%, transparent 100%),
-    radial-gradient(2px 2px at 49% 53%, rgba(180, 210, 255, 0.85) 25%, rgba(109, 180, 255, 0.18) 55%, transparent 100%),
+    radial-gradient(ellipse 60vw 50vh at 18% 18%, rgba(109, 180, 255, 0.1), transparent 65%),
+    radial-gradient(ellipse 55vw 45vh at 50% 78%, rgba(255, 226, 138, 0.06), transparent 65%),
+    radial-gradient(ellipse 55vw 45vh at 82% 22%, rgba(255, 168, 85, 0.08), transparent 65%),
+    radial-gradient(2px 2px at 12% 24%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
     radial-gradient(2px 2px at 38% 4%, rgba(255, 255, 255, 0.75) 25%, rgba(255, 255, 255, 0.14) 55%, transparent 100%),
-    /* Dim pinpricks — single-stop, no halo, just a dot. */
-      radial-gradient(1px 1px at 14% 52%, rgba(255, 255, 255, 0.55) 50%, transparent 100%),
-    radial-gradient(1px 1px at 35% 7%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 49% 88%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 73% 53%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 18% 38%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 31% 65%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 47% 28%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 58% 82%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 64% 38%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 76% 18%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 84% 62%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 95% 28%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 4% 84%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 28% 92%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 41% 18%, rgba(109, 180, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 87% 8%, rgba(255, 168, 85, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 12% 5%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 52% 96%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
-  /* Match the extended layer height so percent-based star positions
-     distribute across the full pseudo, not just the top viewport-sized
-     region. */
-  background-size: 100vw 160vh;
-  animation: layer-mid linear;
-  animation-timeline: scroll(root);
+    radial-gradient(2px 2px at 65% 60%, rgba(180, 210, 255, 0.85) 25%, rgba(109, 180, 255, 0.18) 55%, transparent 100%),
+    radial-gradient(2px 2px at 85% 32%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
+    radial-gradient(1px 1px at 28% 68%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 44% 88%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
+    radial-gradient(1px 1px at 58% 12%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 72% 38%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
+    radial-gradient(1px 1px at 86% 70%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+    radial-gradient(1px 1px at 6% 88%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
+    radial-gradient(1px 1px at 92% 14%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 22% 48%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
+    radial-gradient(1px 1px at 50% 76%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
+    radial-gradient(1px 1px at 78% 92%, rgba(255, 168, 85, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 16% 6%, rgba(109, 180, 255, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 50% 4%, rgba(255, 226, 138, 0.5) 50%, transparent 100%);
+  background-size: 100vw 100vh;
 }
 
-/* ─── Layer 3: foreground bright stars + near-dust (body::after) ─────── */
-:root[data-theme="dark"] body::after,
-:root:not([data-theme="light"]) body::after {
-  z-index: 0;
-  background-image:
-    /* Big bright stars with strong halos — these are the "near" stars,
-       sell the depth as you scroll past them. Lead-color first. */
-    radial-gradient(3px 3px at 88% 38%, rgba(180, 210, 255, 1) 16%, rgba(109, 180, 255, 0.45) 38%, transparent 90%),
-    radial-gradient(4px 4px at 41% 31%, rgba(255, 255, 255, 1) 14%, rgba(255, 255, 255, 0.35) 38%, transparent 90%),
-    radial-gradient(3px 3px at 14% 78%, rgba(255, 220, 180, 0.95) 16%, rgba(255, 168, 85, 0.35) 38%, transparent 90%),
-    radial-gradient(3px 3px at 71% 88%, rgba(255, 255, 255, 0.95) 16%, rgba(255, 255, 255, 0.3) 38%, transparent 90%),
-    /* Tight foreground dust — small, slightly more opaque than the deep
-       nebulae layer. */
-      radial-gradient(ellipse 35vw 28vh at 85% 8%, rgba(109, 180, 255, 0.06), transparent 70%),
-    radial-gradient(ellipse 30vw 25vh at 15% 92%, rgba(255, 168, 85, 0.05), transparent 70%);
-  animation: layer-near linear;
-  animation-timeline: scroll(root);
-}
-
-/* ─── Light mode: parchment dot-grid only on body::before ───────────── */
-:root[data-theme="light"] body::before {
-  z-index: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(26, 24, 18, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-:root[data-theme="light"]::before,
-:root[data-theme="light"] body::after {
-  display: none;
-}
-
-/* ─── Parallax keyframes — slowest deepest, fastest closest ─────────── */
-@keyframes layer-deep {
-  to {
-    transform: translate3d(0, -6vh, 0);
-  }
-}
-@keyframes layer-mid {
-  to {
-    transform: translate3d(0, -22vh, 0);
-  }
-}
-@keyframes layer-near {
-  to {
-    transform: translate3d(0, -38vh, 0);
-  }
-}
-
-/* Lift content above the atmosphere layer. */
-.page,
-header {
-  position: relative;
-  z-index: 1;
-}
-
-/* ─── Binary star brand mark ──────────────────────────────────────────
-   Two circles orbiting a shared barycenter. transform-box: view-box
-   makes transform-origin reference the SVG's viewport coords (otherwise
-   it'd be relative to each circle's bounding box, which would have it
-   spin in place). 50% 50% = (16, 16) = center of viewBox = barycenter.
-
-   Both stars share the same `orbit` animation so they keep the same
-   angular velocity — the line between them is always a diameter. The
-   primary's smaller orbital radius (5 vs companion's 11) reflects the
-   real binary-star mass relationship: heavier body orbits less.
-
-   Twinkle is a second animation on opacity, running at a different
-   period per star, so the two shimmer asynchronously like real
-   eclipsing-binary photometric variability. */
-.binary {
-  display: inline-block;
-  width: 32px;
-  height: 32px;
-  vertical-align: -10px;
-  margin-right: 10px;
-  /* drop-shadow on the spinning circles extends past the viewBox; let
-     it paint into the adjacent flex gap rather than clipping at the
-     SVG box. SVG defaults to overflow:hidden which crops the glow. */
-  overflow: visible;
-}
-.binary circle {
-  transform-box: view-box;
+/* Per-card nebulae — same hover-swoop pattern as script.dev's binary
+   splash, just three of them. */
+.nebula {
+  position: fixed;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: -1;
+  --y-scale: var(--nebula-y-scale, 1);
+  height: calc(100vh / var(--y-scale));
+  top: calc((100vh - 100vh / var(--y-scale)) / 2);
   transform-origin: 50% 50%;
+  transform: scaleY(var(--y-scale));
 }
-.binary .star-a {
-  fill: var(--star-primary);
-  /* Single drop-shadow — two stacked drop-shadow filters look richer
-     but each one re-runs every animation frame on the rotating star
-     and spikes the main thread. One wider shadow is the perf compromise. */
-  filter: drop-shadow(0 0 4px var(--star-primary));
-  animation:
-    orbit 14s linear infinite,
-    twinkle-a 4.2s ease-in-out infinite;
+
+.nebula ellipse {
+  transform-box: view-box;
+  transform: scale(0);
+  opacity: 0;
+  transition:
+    transform 900ms cubic-bezier(0.2, 0.7, 0.25, 1),
+    opacity 280ms ease;
 }
-.binary .star-b {
-  fill: var(--star-companion);
-  filter: drop-shadow(0 0 4px var(--star-companion));
-  animation:
-    orbit 14s linear infinite,
-    twinkle-b 5.7s ease-in-out infinite;
+
+.nebula ellipse:nth-of-type(1) {
+  transition-delay: 0ms;
 }
-@keyframes orbit {
+.nebula ellipse:nth-of-type(2) {
+  transition-delay: 40ms;
+}
+.nebula ellipse:nth-of-type(3) {
+  transition-delay: 80ms;
+}
+.nebula ellipse:nth-of-type(4) {
+  transition-delay: 120ms;
+}
+.nebula ellipse:nth-of-type(5) {
+  transition-delay: 160ms;
+}
+.nebula ellipse:nth-of-type(6) {
+  transition-delay: 200ms;
+}
+.nebula ellipse:nth-of-type(7) {
+  transition-delay: 240ms;
+}
+
+body:has(.brand-card.lib:hover) .nebula-lib ellipse,
+body:has(.brand-card.lib:focus-visible) .nebula-lib ellipse {
+  transform: scale(1);
+  opacity: 1;
+}
+body:has(.brand-card.lang:hover) .nebula-lang ellipse,
+body:has(.brand-card.lang:focus-visible) .nebula-lang ellipse {
+  transform: scale(1);
+  opacity: 1;
+}
+body:has(.brand-card.runtime:hover) .nebula-runtime ellipse,
+body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ─── Three-body orbit ────────────────────────────────────────────────
+   Three stars at Lagrange-triangle positions (120° apart) rotating
+   together around the barycenter. The .orbit <g> rotates uniformly;
+   each star is a simple <circle> at its initial Lagrange position. */
+.three-body {
+  width: clamp(220px, 28vw, 360px);
+  aspect-ratio: 1;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 16px rgba(109, 180, 255, 0.06));
+}
+
+.three-body .orbit {
+  transform-origin: 50px 50px;
+  animation: barycenter-rotate 32s linear infinite;
+}
+
+@keyframes barycenter-rotate {
+  from {
+    transform: rotate(0deg);
+  }
   to {
     transform: rotate(360deg);
   }
 }
-@keyframes twinkle-a {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  45% {
-    opacity: 0.78;
-  }
-}
-@keyframes twinkle-b {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  60% {
-    opacity: 0.7;
-  }
-}
+
 @media (prefers-reduced-motion: reduce) {
-  .binary .star-a,
-  .binary .star-b {
+  .three-body .orbit {
     animation: none;
   }
 }
 
-.page {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 72px 32px 128px;
+.three-body .star-lib {
+  fill: var(--star-lib);
+  filter: drop-shadow(0 0 4px var(--star-lib));
+}
+.three-body .star-lang {
+  fill: var(--star-lang);
+  filter: drop-shadow(0 0 4px var(--star-lang));
+}
+.three-body .star-runtime {
+  fill: var(--star-runtime);
+  filter: drop-shadow(0 0 4px var(--star-runtime));
 }
 
-header {
+/* ─── Layout ──────────────────────────────────────────────────────── */
+
+.splash {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 24px;
-  margin-top: 14px;
-  margin-bottom: 56px;
-  /* Floating pill: insets from the .page edges + 14px corners + glass
-     blur. backdrop-filter is back here because the surface is smaller
-     than full-viewport and the nebulae underneath are on a GPU layer,
-     so the per-frame rasterization cost stays bounded. */
-  position: sticky;
-  top: 14px;
-  z-index: 10;
-  padding: 14px;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-  border: 1px solid var(--rule);
-  border-radius: 14px;
-}
-
-/* Once anchor-linked, the heading would otherwise scroll under the sticky
- * header — pad the scroll target so it lands below the bar. */
-h2[id] {
-  scroll-margin-top: 64px;
-}
-
-.brand {
-  display: inline-flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  gap: 2.5rem;
+}
+
+.splash-header {
+  text-align: center;
+  max-width: 36rem;
+}
+
+.splash-header h1 {
   font-family: var(--serif);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.018em;
+  font-size: clamp(3.4rem, 7vw, 5rem);
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.022em;
   color: var(--text);
   font-variation-settings:
     "opsz" 144,
     "SOFT" 30;
 }
 
-/* Dual brand: "Para / ParaBun" with the active site emphasized.
-   Inactive name links to the other subdomain — doubles as the cross-
-   brand cue and a back-to-pair navigation. */
-.brand-pair {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4ch;
-}
-.brand-active {
-  color: var(--text);
-  font-weight: 700;
-}
-.brand-sep {
-  color: var(--text-faint);
-  font-weight: 300;
+.splash-header p {
+  margin: 0;
+  font-family: var(--serif);
   font-style: italic;
+  font-size: 1.18rem;
+  color: var(--text-dim);
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 50;
 }
-.brand-link {
-  color: var(--text-faint);
-  font-weight: 400;
+
+.brands {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 17rem));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 56rem;
+}
+
+@media (max-width: 760px) {
+  .brands {
+    grid-template-columns: 1fr;
+    max-width: 22rem;
+  }
+}
+
+.brand-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto auto;
+  column-gap: 0.7rem;
+  row-gap: 0.18rem;
+  align-items: baseline;
+  padding: 1.25rem 1.4rem 1.1rem;
+  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
   text-decoration: none;
-  border-bottom: none;
-  transition: color 160ms ease;
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition:
+    border-color 200ms ease,
+    transform 200ms ease;
 }
-.brand-link:hover,
-.brand-link:focus-visible {
-  color: var(--accent);
+
+.brand-card:hover,
+.brand-card:focus-visible {
+  transform: translateY(-2px);
   outline: none;
 }
-
-.nav {
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--text-dim);
-  display: flex;
-  gap: 20px;
+.brand-card.lib:hover,
+.brand-card.lib:focus-visible {
+  border-color: color-mix(in srgb, var(--star-lib) 60%, transparent);
+}
+.brand-card.lang:hover,
+.brand-card.lang:focus-visible {
+  border-color: color-mix(in srgb, var(--star-lang) 60%, transparent);
+}
+.brand-card.runtime:hover,
+.brand-card.runtime:focus-visible {
+  border-color: color-mix(in srgb, var(--star-runtime) 60%, transparent);
 }
 
-.nav a {
-  color: inherit;
+.brand-dot {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 }
-.nav a:hover {
-  color: var(--text);
+.brand-dot[data-star="lib"] {
+  background: var(--star-lib);
+  box-shadow: 0 0 10px var(--star-lib);
 }
-
-/* External-link glyph — anything pointing off-site (http/https in the nav)
- * gets a trailing ↗ so users can tell it leaves the page before clicking. */
-.nav a[href^="http"]::after {
-  content: " ↗";
-  font-size: 0.85em;
-  color: var(--text-faint);
-  margin-left: 1px;
+.brand-dot[data-star="lang"] {
+  background: var(--star-lang);
+  box-shadow: 0 0 10px var(--star-lang);
 }
-.nav a[href^="http"]:hover::after {
-  color: var(--text-dim);
-}
-
-/* Floating action button — pinned to the bottom-right of the viewport,
-   flips contextual ligatures site-wide. Stays inside a safe-area inset
-   on iOS so it doesn't collide with the home indicator. */
-.fab {
-  position: fixed;
-  right: max(16px, env(safe-area-inset-right, 16px));
-  bottom: max(16px, env(safe-area-inset-bottom, 16px));
-  z-index: 10;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--text-dim);
-  background: var(--bg-elev);
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 8px 14px;
-  cursor: pointer;
-  box-shadow: 0 2px 12px var(--shadow-strong);
-  transition:
-    color 80ms,
-    border-color 80ms,
-    background 80ms;
-}
-.fab:hover {
-  color: var(--text);
-  border-color: var(--text-dim);
-  background: var(--bg-code);
-}
-.fab[aria-pressed="true"] {
-  color: var(--accent);
-  border-color: var(--accent-dim);
+.brand-dot[data-star="runtime"] {
+  background: var(--star-runtime);
+  box-shadow: 0 0 10px var(--star-runtime);
 }
 
-/* Ligature toggle: default off (no font-variant-ligatures hint), `on` when
-   html.ligatures is present. JetBrains Mono (loaded as a webfont) ships
-   with contextual ligatures for `=>`, `|>`, `!=`, `..=`, etc.; the toggle
-   is a no-op if the user blocks the font. */
-code,
-pre,
-.install,
-.prompt,
-.brand {
-  font-variant-ligatures: none;
-  font-feature-settings: "calt" 0;
-}
-html.ligatures code,
-html.ligatures pre,
-html.ligatures .install,
-html.ligatures .prompt,
-html.ligatures .brand {
-  font-variant-ligatures: contextual;
-  font-feature-settings: "calt" 1;
-}
-
-h1 {
-  font-family: var(--serif);
-  font-size: clamp(2.6rem, 1.9rem + 2.8vw, 4.2rem);
-  line-height: 1.04;
-  letter-spacing: -0.022em;
-  font-weight: 600;
-  margin: 0 0 24px;
-  color: var(--text);
-  font-variation-settings:
-    "opsz" 144,
-    "SOFT" 30;
-}
-
-h1 em {
-  font-style: italic;
-  font-weight: 400;
-  color: var(--accent);
-  font-variation-settings:
-    "opsz" 144,
-    "SOFT" 50;
-}
-
-.lede {
+.brand-name {
   font-family: var(--serif);
   font-size: 1.32rem;
-  font-weight: 400;
-  font-style: italic;
-  line-height: 1.45;
-  letter-spacing: -0.005em;
-  color: var(--text-dim);
-  margin: 0 0 28px;
-  max-width: 38em;
-  font-variation-settings:
-    "opsz" 36,
-    "SOFT" 50;
-}
-
-/* Lib + Lang side by side on wide screens, stacked on narrow. Each
-   keeps its own column border so the structural separation is visible
-   at a glance. */
-.pieces {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0;
-  margin: 0 0 40px;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-}
-.piece {
-  padding: 28px 24px;
-  border-right: 1px solid var(--rule);
-}
-.piece:last-child {
-  border-right: none;
-}
-.piece h3 {
-  margin-top: 0;
-  font-size: 1.18rem;
-}
-.piece p {
-  font-size: 0.96rem;
-  line-height: 1.55;
-  color: var(--text-dim);
-}
-.piece p:last-child {
-  margin-bottom: 0;
-}
-.piece a {
-  color: var(--accent);
-  border-bottom: 1px dotted var(--accent-dim);
-  text-decoration: none;
-}
-@media (max-width: 900px) {
-  .pieces {
-    grid-template-columns: 1fr;
-  }
-  .piece {
-    border-right: none;
-    border-bottom: 1px solid var(--rule);
-  }
-  .piece:last-child {
-    border-bottom: none;
-  }
-}
-
-h2 {
-  font-family: var(--serif);
-  font-size: clamp(1.6rem, 1.4rem + 0.8vw, 2.1rem);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.012em;
-  color: var(--text);
-  margin: 80px 0 20px;
-  padding-top: 28px;
-  border-top: 1px solid var(--rule);
   font-variation-settings:
     "opsz" 144,
     "SOFT" 30;
 }
 
-h3 {
+.brand-role {
   font-family: var(--serif);
-  font-size: 1.32rem;
-  font-weight: 600;
-  letter-spacing: -0.008em;
-  color: var(--text);
-  margin: 36px 0 10px;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--text-dim);
   font-variation-settings:
     "opsz" 36,
     "SOFT" 50;
 }
 
-h3 .import {
-  font-family: var(--mono);
-  font-size: 0.78em;
-  color: var(--accent);
-  font-weight: 500;
-}
-
-p {
-  margin: 0 0 14px;
-}
-
-a {
-  color: var(--text);
-  text-decoration: none;
-  border-bottom: 1px solid var(--rule);
-  transition: border-color 120ms ease;
-}
-a:hover {
-  border-bottom-color: var(--accent);
-}
-
-code {
-  font-family: var(--mono);
-  font-size: 0.92em;
-  background: var(--bg-elev);
-  padding: 1px 6px;
-  border-radius: 3px;
-  color: var(--text);
-}
-
-pre {
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.55;
-  background: var(--bg-code);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  padding: 16px 18px;
-  margin: 12px 0 20px;
-  overflow-x: auto;
-  -webkit-text-size-adjust: 100%;
-}
-
-pre code {
-  background: none;
-  padding: 0;
-  color: inherit;
-  font-size: inherit;
-}
-
-/* Code blocks inside <pre data-lang="…"> are rendered through Shiki at
-   build time (scripts/highlight-landing.ts) with dual-theme output: each
-   span carries `--shiki-light` and `--shiki-dark` CSS variables but no
-   default `color`. The rules below pick the active theme based on
-   [data-theme] on <html>. Inline-prose token classes (.pb-kw / .pb-op)
-   still use the accent variable directly. */
-:root[data-theme="light"] pre[data-lang] span,
-:root[data-theme="light"] pre[data-lang] {
-  color: var(--shiki-light);
-  font-style: var(--shiki-light-font-style, inherit);
-  font-weight: var(--shiki-light-font-weight, inherit);
-  text-decoration: var(--shiki-light-text-decoration, inherit);
-}
-:root[data-theme="dark"] pre[data-lang] span,
-:root[data-theme="dark"] pre[data-lang] {
-  color: var(--shiki-dark);
-  font-style: var(--shiki-dark-font-style, inherit);
-  font-weight: var(--shiki-dark-font-weight, inherit);
-  text-decoration: var(--shiki-dark-text-decoration, inherit);
-}
-.pure,
-.pb-kw {
-  color: var(--accent);
-  font-weight: 500;
-  font-style: italic;
-}
-.op,
-.pb-op {
-  color: var(--accent-dim);
-  font-weight: 600;
-}
-.pb-signal-ref {
-  color: var(--accent);
-}
-
-.install {
-  background: var(--bg-code);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  padding: 14px 18px;
-  font-family: var(--mono);
-  font-size: 14px;
-  color: var(--text);
-  margin-bottom: 14px;
-  white-space: nowrap;
-  overflow-x: auto;
-}
-.install .prompt {
-  color: var(--text-faint);
-  user-select: none;
-  margin-right: 10px;
-}
-
-.caveat {
-  font-size: 13px;
-  color: var(--text-faint);
-  font-family: var(--mono);
-  margin-bottom: 28px;
-}
-
-.modules h3 {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-top: 36px;
-}
-
-.modules p {
-  color: var(--text-dim);
-}
-
-.diff {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 16px 0 20px;
-}
-
-.diff figure.code {
-  margin: 0;
-}
-
-/* Per-block code wrapper. <figure> groups the language label
-   (in <figcaption>) with the <pre> body so the two stay visually
-   adjacent with no gap between them. The page-wide ligature FAB
-   handles toggling, so the header is label-only. */
-figure.code {
-  margin: 12px 0 20px;
-}
-.code-header {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-faint);
-  background: var(--bg-code);
-  border: 1px solid var(--rule);
-  border-bottom: none;
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
-  padding: 6px 12px;
-}
-figure.code > pre {
-  margin: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-.code-lang {
-  letter-spacing: 0.02em;
-}
-
-/* Tabbed code blocks — TypeScript / ParaBun toggle. Same .figure.code shell;
-   the lang-toggle row replaces the static .code-header. JS in fx.js syncs
-   all tabs on the page (and persists choice via localStorage). */
-figure.code.lang-tabs .code-header {
-  display: flex;
-  gap: 0;
-  padding: 0;
-}
-figure.code.lang-tabs .lang-toggle {
-  display: flex;
-  width: 100%;
-}
-figure.code.lang-tabs .lang-toggle button {
-  flex: 0 0 auto;
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  color: var(--text-faint);
-  background: transparent;
-  border: none;
-  padding: 6px 14px;
-  cursor: pointer;
-  border-right: 1px solid var(--rule);
-  transition: color 80ms ease;
-}
-figure.code.lang-tabs .lang-toggle button:hover {
-  color: var(--text);
-}
-figure.code.lang-tabs .lang-toggle button.active {
-  color: var(--text);
-  background: var(--bg-code);
-  position: relative;
-}
-figure.code.lang-tabs .lang-toggle button.active::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 -1px 0;
-  height: 1px;
-  background: var(--bg-code);
-}
-figure.code.lang-tabs pre[hidden] {
-  display: none;
-}
-
-/* Pre-paint default. Avoids a flash where both panels are visible until
-   fx.js loads. The dataset.lang on <html> is set in head before paint
-   (see index.html); we mirror it here to drive initial visibility. */
-html[data-lang="ts"] figure.code.lang-tabs pre[data-lang="parabun"],
-html[data-lang="parabun"] figure.code.lang-tabs pre[data-lang="ts"] {
-  display: none;
-}
-html[data-lang="ts"] figure.code.lang-tabs button[data-lang="ts"],
-html[data-lang="parabun"] figure.code.lang-tabs button[data-lang="parabun"] {
-  color: var(--text);
-  background: var(--bg-code);
-}
-
-@media (max-width: 640px) {
-  .diff {
-    grid-template-columns: 1fr;
-  }
-}
-
-table.bench {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 14px 0 8px;
-  font-family: var(--mono);
-  font-size: 13px;
-}
-
-table.bench th,
-table.bench td {
-  padding: 8px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--rule);
-}
-
-table.bench th {
-  color: var(--text-faint);
-  font-weight: 400;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-
-table.bench td.num-cell {
-  text-align: right;
-  color: var(--text-dim);
-}
-
-table.bench tr.winner td {
-  color: var(--text);
-}
-table.bench tr.winner td.num-cell {
-  color: var(--accent);
-}
-
-.footnote {
-  font-size: 14px;
-  color: var(--text-dim);
-}
-
-.footnote code {
-  background: var(--bg-code);
-}
-
-footer {
-  margin-top: 96px;
-  padding-top: 24px;
-  border-top: 1px solid var(--rule);
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--text-faint);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: space-between;
-}
-
-footer a {
-  color: var(--text-dim);
-}
-footer a:hover {
-  color: var(--text);
-}
-
-.disclaimer {
-  margin-top: 32px;
-  padding: 14px 16px;
-  border-left: 2px solid var(--accent);
-  background: var(--accent-soft);
-  font-size: 14px;
-  color: var(--text-dim);
-}
-
-/* Tier diagram: hardware → primitives → composed → apps. Vertical stack
-   reading bottom-up; each row has a label on the left and a flex of
-   module pills on the right. */
-.tiers {
-  margin: 24px 0 32px;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  background: var(--bg-elev);
-  overflow: hidden;
-}
-.tier {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  align-items: center;
-  border-bottom: 1px solid var(--rule);
-  padding: 14px 16px;
-  gap: 16px;
-}
-.tier:last-child {
-  border-bottom: none;
-}
-.tier-label {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.tier-label em {
-  display: block;
-  margin-top: 3px;
-  font-style: normal;
-  font-size: 11px;
-  color: var(--text-faint);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.tier-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.tier-row .mod-pill {
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 4px 10px;
-  border-radius: 3px;
-  background: var(--bg-code);
-  border: 1px solid var(--rule);
-  color: var(--accent);
-  /* Override global a { border-bottom } and underline. */
-  text-decoration: none;
-  display: inline-block;
-  transition:
-    border-color 120ms ease,
-    background-color 120ms ease;
-}
-a.mod-pill {
-  /* Re-state at higher specificity so the global `a` rule's border-bottom
-     doesn't bleed through. */
-  border-bottom: 1px solid var(--rule);
-}
-a.mod-pill:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-.tier-row .mod-pill.planned {
-  color: var(--text-faint);
-  border-style: dashed;
-}
-a.mod-pill.planned {
-  border-bottom-style: dashed;
-}
-.tier-row .mod-pill.hw {
-  color: var(--text-dim);
-  background: transparent;
-  border-style: dotted;
-}
-a.mod-pill.hw {
-  border-bottom-style: dotted;
-}
-a.mod-pill.hw:hover {
-  color: var(--text);
-  border-color: var(--text-dim);
-}
-@media (max-width: 640px) {
-  .tier {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-}
-
-.disclaimer strong {
-  color: var(--text);
-  font-weight: 500;
-}
-
-/* One-shot accent pulse on bench .winner rows when the table scrolls
-   into view, paired with the count-up in fx.js. */
-table.bench tr.winner td {
-  transition: background-color 240ms ease;
-}
-table.bench tr.winner.pulse td {
-  background-color: var(--accent-soft);
-}
-
-/* ─── Docs layout: sidebar + article column ───────────────────────────── */
-.docs-body .page.docs-layout {
-  max-width: 1180px;
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  grid-template-rows: auto 1fr;
-  gap: 0 56px;
-  padding: 72px 32px 128px;
-}
-.docs-body .page.docs-layout > header {
-  grid-column: 1 / -1;
-}
-.docs-side {
-  grid-column: 1;
-  grid-row: 2;
-  position: sticky;
-  top: 88px;
-  /* Stay above any default-z-index article content. Wide code blocks
-     and tables sometimes establish their own stacking contexts via
-     overflow: auto + scroll snapping; without an explicit z-index the
-     sticky sidebar can paint behind them. */
-  z-index: 2;
-  align-self: start;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  font-size: 14px;
-  border-right: 1px solid var(--rule);
-  padding-right: 32px;
-  /* Opaque background so the sticky sidebar masks article content that
-     might horizontally overflow into column 1's track during a sideways
-     scroll on a wide pre block. */
-  background: var(--bg);
-}
-
-/* The mobile-only disclosure trigger. Hidden on desktop; the nav is
-   shown directly. On mobile the toggle becomes a tap target labelled
-   with the current page title, and the nav is collapsed until tapped. */
-.docs-nav-toggle {
-  display: none;
-}
-.docs-nav-panel {
-  /* Default: visible on desktop. The mobile breakpoint hides this
-     unless the .open class is set by the toggle script. */
-  display: block;
-}
-.docs-side h4 {
-  margin: 0 0 8px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  color: var(--text-faint);
-  font-weight: 500;
-}
-.docs-side h4:not(:first-of-type) {
-  margin-top: 24px;
-}
-.docs-side ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.docs-side li {
-  margin: 0;
-}
-.docs-side a {
-  display: block;
-  padding: 4px 0;
-  color: var(--text-dim);
-  text-decoration: none;
-  border-bottom: none;
-  font-family: var(--mono);
-}
-.docs-side a:hover {
-  color: var(--text);
-}
-.docs-side a.active {
-  color: var(--accent);
-}
-.docs-content {
+.brand-meta {
   grid-column: 2;
-  grid-row: 2;
-  min-width: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  margin-top: 0.45rem;
 }
-.docs-content h1 {
-  margin-top: 0;
+.brand-meta code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg-elev) 50%, transparent);
+  padding: 0 4px;
+  border-radius: 3px;
 }
-.docs-content > .lede {
-  margin-top: -8px;
+
+.brand-url {
+  grid-column: 2;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--text-faint);
+  margin-top: 0.55rem;
+  letter-spacing: 0.02em;
+}
+.brand-card:hover .brand-url,
+.brand-card:focus-visible .brand-url {
   color: var(--text-dim);
 }
-.docs-content h2 {
-  margin-top: 56px;
-  scroll-margin-top: 88px;
+
+.splash-footer {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-faint);
 }
-.docs-content h3 {
-  margin-top: 32px;
-  scroll-margin-top: 88px;
-}
-.docs-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 16px 0;
-  font-size: 14px;
-}
-.docs-content table th,
-.docs-content table td {
-  text-align: left;
-  padding: 8px 12px;
+.splash-footer a {
+  color: inherit;
+  text-decoration: none;
   border-bottom: 1px solid var(--rule);
-  vertical-align: top;
+  padding-bottom: 1px;
 }
-.docs-content table th {
+.splash-footer a:hover {
   color: var(--text-dim);
-  font-weight: 500;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: transparent;
-}
-.docs-content blockquote {
-  margin: 16px 0;
-  padding: 12px 16px;
-  border-left: 3px solid var(--accent-dim);
-  background: var(--bg-elev);
-  color: var(--text-dim);
-  font-style: italic;
-}
-.docs-content blockquote code {
-  font-style: normal;
-}
-.docs-content figure.code {
-  margin: 16px 0;
-}
-.docs-content ul,
-.docs-content ol {
-  padding-left: 24px;
-}
-.docs-content ul li,
-.docs-content ol li {
-  margin: 4px 0;
-}
-.docs-content hr {
-  border: none;
-  border-top: 1px solid var(--rule);
-  margin: 32px 0;
+  border-bottom-color: var(--text-dim);
 }
 
-@media (max-width: 880px) {
-  .docs-body .page.docs-layout {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  .docs-side {
-    /* Drop sticky/scroll on mobile — the disclosure handles overflow
-       inside an explicit panel rather than via a 40vh scroll cage. */
-    position: static;
-    max-height: none;
-    overflow: visible;
-    border-right: none;
-    border-bottom: 1px solid var(--rule);
-    padding-right: 0;
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-    z-index: auto;
-  }
-  .docs-content {
-    grid-column: 1;
-    /* Sidebar already occupies (1, 2) — without an explicit row override,
-       the article would stack into the same cell. Row 3 lays it cleanly
-       below the sidebar. */
-    grid-row: 3;
-  }
-
-  /* Show the disclosure trigger; collapse the nav until the toggle opens it.
-     The label is a tap-friendly mono text button — flush with the brand and
-     header type to fit the rest of the chrome. */
-  .docs-nav-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 10px 0;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--rule);
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 13px;
-    cursor: pointer;
-    text-align: left;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .docs-nav-toggle:hover,
-  .docs-nav-toggle:focus-visible {
-    color: var(--text);
-    outline: none;
-  }
-  .docs-nav-toggle-label {
-    /* Long module titles can elide rather than wrap the toggle. */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-right: 12px;
-  }
-  .docs-nav-toggle-caret {
-    color: var(--text-faint);
-    font-size: 11px;
-    transition: transform 140ms ease;
-    flex-shrink: 0;
-  }
-  .docs-nav-toggle[aria-expanded="true"] .docs-nav-toggle-caret {
-    transform: rotate(180deg);
-  }
-
-  .docs-nav-panel {
-    display: none;
-    padding-top: 12px;
-    /* Inline expand, capped so 20 modules don't push the article off-screen.
-       Internal scroll keeps the article reachable without leaving the page. */
-    max-height: 60vh;
-    overflow-y: auto;
-  }
-  .docs-nav-panel.open {
-    display: block;
-  }
-}
-
-/* ─── Mobile (≤640px) ─────────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .page,
-  .docs-body .page.docs-layout {
-    padding: 32px 18px 96px;
-  }
-
-  /* Stack the brand above the nav — 7 nav items don't fit beside the brand
-     on a phone. Drop sticky too: a wrapped header would eat too much vertical
-     space when pinned. */
-  header {
-    position: static;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 0;
-    margin-top: 0;
-    margin-bottom: 36px;
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-bottom: none;
-  }
-  .nav {
-    flex-wrap: wrap;
-    gap: 14px;
-    font-size: 12px;
-  }
-
-  /* With sticky off, anchored headings can land right at the top edge. */
-  h2[id],
-  .docs-content h2,
-  .docs-content h3 {
-    scroll-margin-top: 16px;
-  }
-
-  h1 {
-    font-size: 32px;
-  }
-  h2 {
-    margin: 48px 0 16px;
-  }
-
-  /* Install commands wrap instead of forcing horizontal scroll. break-all
-     is OK here — these are URLs and shell commands, not prose. */
-  .install {
-    white-space: normal;
-    word-break: break-all;
-    font-size: 13px;
-    padding: 12px 14px;
-  }
-
-  pre {
-    font-size: 12px;
-    padding: 12px 14px;
-  }
-
-  /* Bench tables have rigid numeric columns that shouldn't wrap. Let the
-     table itself scroll horizontally; display: block keeps the inner
-     table semantics intact. */
-  table.bench {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-    font-size: 12px;
-  }
-  table.bench th,
-  table.bench td {
-    padding: 6px 10px;
-  }
-
-  /* Docs API tables (Option / Default / Description shape): descriptions
-     can wrap, so just tighten cells — no horizontal scroll needed. */
-  .docs-content table {
-    font-size: 13px;
-  }
-  .docs-content table th,
-  .docs-content table td {
-    padding: 6px 8px;
-  }
-
-  footer {
-    margin-top: 64px;
-    gap: 12px;
-  }
-
-  /* Pull the FAB tighter to the corner so it doesn't overlap the last
-     content line. */
-  .fab {
-    right: max(10px, env(safe-area-inset-right, 10px));
-    bottom: max(10px, env(safe-area-inset-bottom, 10px));
-    font-size: 11px;
-    padding: 6px 12px;
-  }
+::selection {
+  background: rgba(109, 180, 255, 0.25);
+  color: var(--text);
 }

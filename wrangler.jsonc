@@ -9,11 +9,17 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application",
   },
-  // Custom subdomain. Cloudflare's microfrontends-style path mounting
-  // (script.dev/parabun → this worker) was unreliable, so we run as a
-  // dedicated subdomain. Requires script.dev's zone to be on this CF
-  // account; wrangler claims the hostname on deploy.
-  "routes": [{ "pattern": "para.script.dev", "custom_domain": true }],
+  // Custom subdomains. Both para.script.dev and parabun.script.dev hit
+  // this same worker — parabun.script.dev was the dedicated runtime
+  // landing before the consolidation; now it serves the merged Para
+  // site too. Astro redirects (in astro.config.mjs) take parabun-side
+  // bookmarks to /runtime/* on para.script.dev. Requires script.dev's
+  // zone to be on this CF account; wrangler claims both hostnames on
+  // deploy.
+  "routes": [
+    { "pattern": "para.script.dev", "custom_domain": true },
+    { "pattern": "parabun.script.dev", "custom_domain": true },
+  ],
   // Keep the para-site.<acct>.workers.dev fallback alive too, so we have
   // a way to verify deploys before DNS propagation finishes for the custom
   // domain (and as a sanity URL when CF's edge caches act up).

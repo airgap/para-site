@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Para Lang — .pts syntax sugar over Para Lib</title>
+    <meta
+      name="description"
+      content="Para Lang is an optional .pts / .pjs syntax over Para Lib. signal / effect / ~> / -> reactive bindings, |> pipelines, ..! / ..& error chaining, integer ranges, pure / memo declarators, defer / arena blocks. Compiles to standard JavaScript that imports from @para/* npm packages."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      try {
+        const stored = localStorage.getItem("starlight-theme");
+        const t =
+          stored === "light" || stored === "dark"
+            ? stored
+            : matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+        document.documentElement.dataset.theme = t;
+      } catch {}
+      try {
+        const pref = localStorage.getItem("parabun-ligatures");
+        if (pref !== "off") document.documentElement.classList.add("ligatures");
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <span class="brand">
+          <svg class="binary" viewBox="0 0 32 32" aria-hidden="true">
+            <circle class="star-a" cx="11" cy="16" r="6" />
+            <circle class="star-b" cx="27" cy="16" r="4" />
+          </svg>
+          <a href="/" class="brand-link">Para</a>
+        </span>
+        <nav class="nav">
+          <a href="/libs/">libs</a>
+          <a href="/lang/" aria-current="page">lang</a>
+          <a href="/runtime/">runtime</a>
+          <a href="/docs/">docs</a>
+          <a href="https://github.com/airgap/parabun" target="_blank" rel="noopener">github</a>
+        </nav>
+      </header>
+
+      <h1>Para Lang</h1>
+      <p class="lede">
+        An optional <code>.pts</code> / <code>.pjs</code> syntax over <a href="/libs/">Para Lib</a>. Adds reactive
+        bindings (<code>signal</code> / <code>effect</code> / <code>~&gt;</code> / <code>-&gt;</code>), pipelines
+        (<code>|&gt;</code>), error chaining (<code>..!</code> / <code>..&amp;</code>), integer ranges,
+        <code>pure</code> / <code>memo</code> declarators, and <code>defer</code> / <code>arena</code> blocks. Compiles
+        to standard JavaScript at parse time.
+      </p>
+      <p class="lede">
+        The reactive forms desugar to imports from <code>@para/signals</code>; the rest desugar to plain JS. The
+        <code>.pts</code> compiler today lives inside <a href="/runtime/">ParaBun</a>; a standalone
+        <code>@para/transpile</code> for non-ParaBun build hosts is in development.
+      </p>
+
+      <h2 id="syntax">Syntax (Para Lang)</h2>
+
+      <h3>Signals and effects</h3>
+      <p>
+        A <code>signal</code> declaration creates a reactive cell. Bare reads inside a tracked context (an
+        <code>effect</code>, a <code>derived</code>, a <code>when</code> block, or another signal's RHS) compile to
+        <code>.get()</code>. Bare writes compile to <code>.set()</code>. A signal whose initializer reads other signals
+        is auto-promoted to a derived value.
+      </p>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">signal</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> count</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">signal</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> doubled</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> count</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> *</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 2</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">       // derived; recomputes when count changes</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">effect</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">console</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">doubled</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">  // runs once now, again on each change</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">count</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">++</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">                          // count.set(count.get() + 1)</span></span></code></pre>
+
+      <h3>Edge-triggered handlers</h3>
+      <p>
+        A <code>when</code> block fires its body once on each false&rarr;true transition of the predicate.
+        <code>when not</code> fires on the true&rarr;false transition. The predicate is tracked the same way an effect
+        body is.
+      </p>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">signal</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> score</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">when</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> score</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> >=</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 100</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">unlockAchievement</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">century</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">when</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> not</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> online</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">   { </span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">showOfflineBanner</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span></span></code></pre>
+
+      <h3>Reactive bindings</h3>
+      <p>
+        <code>A ~&gt; B</code> desugars to <code>effect(() =&gt; { B = A; })</code>, an assignment that stays in sync.
+        <code>A -&gt; fn</code> desugars to <code>effect(() =&gt; { fn(A); })</code>, a call binding. Both are shorthand
+        for the common single-statement effect.
+      </p>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">signal</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> name</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">world</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">name</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> ~></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> document</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">title</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">          // title tracks name</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">name</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> -></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> console</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">log</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">             // logs on every change</span></span></code></pre>
+
+      <h3>Ranges and pipelines</h3>
+      <p>
+        <code>a..b</code> is an exclusive integer range; <code>a..=b</code> is inclusive. The pipeline operator
+        <code>|&gt;</code> threads a value through a sequence of unary calls.
+      </p>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">for</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> (</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> i</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> of</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">n</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> work</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">i</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> evens</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">=</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">20</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> |></span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> filter</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">i</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> i</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> %</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 2</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ===</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 0</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> out</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> pixels</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> |></span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> map</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">p</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> p</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> *</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 1.2</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> |></span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> clamp</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">0</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 255</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+
+      <h3>Error operators</h3>
+      <p>
+        <code>..!</code> is <code>.catch</code>. <code>..&amp;</code> is <code>.finally</code>. They chain naturally
+        with <code>await</code> to flatten a <code>try</code>/<code>catch</code> block.
+      </p>
+      <pre
+        data-lang="pts"
+      ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> data</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> fetch</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">url</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">then</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">r</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> r</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">json</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">())</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  ..!</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> err</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> defaults</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">  ..&#x26;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> ()</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">  =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> spinner</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">hide</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">()</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+
+      <h2 id="compile">Compilation</h2>
+      <p>
+        Para files (<code>.pts</code>) are parsed by <a href="/runtime/">ParaBun</a>'s transpiler.
+        (Mainline Bun doesn't recognize the syntax — the parser additions are part of the ParaBun fork.) The output is
+        standard JavaScript with a handful of imports from <code>para:*</code> module specifiers.
+      </p>
+      <p>
+        On ParaBun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,
+        Cloudflare Workers, …) alias them to the matching <code>@para/*</code> npm packages in your bundler.
+      </p>
+      <pre
+        data-lang="ts"
+      ><code><span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// vite.config.ts</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">defineConfig</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">vite</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">export</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> default</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> defineConfig</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  resolve</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">    alias</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> find</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> /</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">^</span><span style="--shiki-light:#22863A;--shiki-dark:#B4F9F8">para:</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">(</span><span style="--shiki-light:#22863A;--shiki-dark:#BB9AF7">.</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">*</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">$</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">/</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> replacement</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@para/$1</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+      <p>The same one-line alias works for esbuild, webpack, and rollup. See the install guide for the variants.</p>
+
+      <div class="install"><span class="prompt">$</span>npm install @para/signals @para/parallel @para/pipeline</div>
+      <div class="install"><span class="prompt">$</span>parabun build src/main.pts --outdir dist/</div>
+
+      <p class="caveat">
+        ParaBun is required for the build step today (it owns the <code>.pts</code> parser). A standalone
+        npm-installable transpiler (<code>@para/transpile</code>) is on the roadmap.
+      </p>
+
+      <h2 id="examples">Examples</h2>
+      <p>
+        Three worked projects, one per host environment. Each is a complete project with file layout, source, and build
+        commands.
+      </p>
+      <ul>
+        <li>
+          <a href="/docs/examples/frontend/">Frontend</a> &mdash; todo list with reactive DOM updates. Vite + vanilla
+          DOM.
+        </li>
+        <li>
+          <a href="/docs/examples/backend/">Backend</a> &mdash; WebSocket server with per-connection signals. Node.
+        </li>
+        <li>
+          <a href="/docs/examples/edge/">Edge</a> &mdash; HTTP handler with per-request signals. Cloudflare Workers.
+        </li>
+      </ul>
+
+      <footer>
+        <p>
+          <a href="/docs/">docs</a> &middot; <a href="/docs/language/">language reference</a> &middot;
+          <a href="/docs/install-libs/">install</a> &middot;
+          <a href="https://github.com/airgap/parabun">github</a>
+        </p>
+      </footer>
+    </main>
+    <script src="fx.js"></script>
+  </body>
+</html>

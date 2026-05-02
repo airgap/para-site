@@ -1,17 +1,12 @@
 ---
-// Starlight SiteTitle override for para.script.dev — replaces the
-// default title text with a "Para / ParaBun" pair where Para is the
-// active side and ParaBun links across to the other subdomain.
-// Mirror lives at parabun-site/src/components/SiteTitle.astro with
-// the active/inactive flipped.
+// Single "Para" brand for the consolidated docs. Lib / Lang / Runtime
+// are sub-sections of the same Para ecosystem (each with its own
+// landing under / / libs / lang / runtime), so the docs header doesn't
+// need to disambiguate between products — they all live here.
 ---
 
 <a href="/" class="site-title sl-flex">
-  <span class="brand-pair">
-    <span class="brand-active">Para</span>
-    <span class="brand-sep">/</span>
-    <a class="brand-link" href="https://parabun.script.dev">ParaBun</a>
-  </span>
+  <span class="brand-active">Para</span>
 </a>
 
 <style>
@@ -26,29 +21,8 @@
       "opsz" 144,
       "SOFT" 30;
   }
-  .brand-pair {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.4ch;
-  }
   .brand-active {
     color: var(--pb-text);
     font-weight: 700;
-  }
-  .brand-sep {
-    color: var(--pb-text-faint);
-    font-weight: 300;
-    font-style: italic;
-  }
-  .brand-link {
-    color: var(--pb-text-faint);
-    font-weight: 400;
-    text-decoration: none;
-    transition: color 160ms ease;
-  }
-  .brand-link:hover,
-  .brand-link:focus-visible {
-    color: var(--pb-accent);
-    outline: none;
   }
 </style>

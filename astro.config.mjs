@@ -10,16 +10,16 @@ import parabunJsGrammar from "./src/grammars/parabun-js.tmLanguage.json" with { 
 import parabunJsxGrammar from "./src/grammars/parabun-jsx.tmLanguage.json" with { type: "json" };
 import parabunInjectGrammar from "./src/grammars/parabun-inject.tmLanguage.json" with { type: "json" };
 
-// Hand-curated sidebar — the docs sit flat under src/content/docs/docs/* to
-// preserve simple /docs/<slug>/ URLs. Para's surface is the language
-// itself plus the runtime modules the language compiles down to. Hardware-
-// bound modules (gpu, llm, camera, gpio, …) live on parabun.script.dev — we
-// link there rather than mirror them.
+// Hand-curated sidebar — every doc page lives flat under
+// src/content/docs/docs/* with one Starlight tree at /docs/. Modules
+// don't collide between products (signals vs gpu vs language); install
+// pages are split per-product (install-libs / install-runtime).
 const docsRoot = "/docs";
 const guides = [
   { label: "Para docs", link: `${docsRoot}/` },
   { label: "Playground", link: "/playground" },
-  { label: "Install", link: `${docsRoot}/install/` },
+  { label: "Install (libs)", link: `${docsRoot}/install-libs/` },
+  { label: "Install (runtime)", link: `${docsRoot}/install-runtime/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
 ];
 const examples = [
@@ -28,13 +28,36 @@ const examples = [
   { label: "Backend (Node)", link: `${docsRoot}/examples/backend/` },
   { label: "Edge (Workers)", link: `${docsRoot}/examples/edge/` },
 ];
-const modules = ["signals", "arena", "parallel", "pipeline", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
+const libModules = ["signals", "arena", "parallel", "pipeline", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
   label: `para:${slug}`,
   link: `${docsRoot}/${slug}/`,
 }));
+const runtimeModules = [
+  "assistant",
+  "audio",
+  "camera",
+  "gpio",
+  "gpu",
+  "i2c",
+  "image",
+  "llm",
+  "speech",
+  "spi",
+  "video",
+  "vision",
+].map(slug => ({ label: `parabun:${slug}`, link: `${docsRoot}/${slug}/` }));
+
+// Pre-consolidation parabun.script.dev had its configurator at /configure;
+// the page now lives at /runtime/configure/ since both subdomains hit the
+// same worker. Old bookmarks still work via this 301.
+const legacyParabunRedirects = {
+  "/configure": "/runtime/configure/",
+  "/configure/": "/runtime/configure/",
+};
 
 export default defineConfig({
   site: "https://para.script.dev",
+  redirects: legacyParabunRedirects,
   integrations: [
     starlight({
       title: "Para",
@@ -46,11 +69,8 @@ export default defineConfig({
       sidebar: [
         { label: "Guides", items: guides },
         { label: "Examples", items: examples },
-        { label: "Modules", items: modules },
-        {
-          label: "Hardware (ParaBun runtime)",
-          items: [{ label: "parabun.script.dev →", link: "https://parabun.script.dev/docs/" }],
-        },
+        { label: "Lib modules (cross-runtime)", items: libModules },
+        { label: "Runtime modules (ParaBun)", items: runtimeModules },
       ],
       expressiveCode: {
         // Custom TextMate grammars for `.pts` / `.ptsx` / `.pjs` / `.pjsx`.

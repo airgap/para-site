@@ -57,8 +57,12 @@ function rawCode(blockHtml: string): string {
   return decodeEntities(stripSpans(blockHtml));
 }
 
-const indexPath = new URL("../public/index.html", import.meta.url).pathname;
-const original = await Bun.file(indexPath).text();
+// Process every .html file under public/ so the libs / lang / runtime
+// landings get the same Shiki treatment as the umbrella index.
+const publicDir = new URL("../public/", import.meta.url).pathname;
+const glob = new Bun.Glob("**/*.html");
+const targets: string[] = [];
+for await (const rel of glob.scan({ cwd: publicDir })) targets.push(publicDir + rel);
 
 const highlighter = await createHighlighter({
   langs: [
@@ -84,30 +88,39 @@ const highlighter = await createHighlighter({
   },
 });
 
-let blockCount = 0;
-const rewritten = original.replace(
-  /<pre\b([^>]*)>([\s\S]*?<code>)([\s\S]*?)(<\/code>[\s\S]*?)<\/pre>/g,
-  (_m, preAttrs, preToCode, body, codeToEnd) => {
-    const langMatch = preAttrs.match(/\bdata-lang=["']([\w-]+)["']/);
-    const lang = langMatch ? langMatch[1] : "ts";
-    const code = rawCode(body);
-    const targetLang = lang === "ts" ? "typescript" : lang;
-    const html = highlighter.codeToHtml(code, {
-      lang: targetLang,
-      themes: { light: "min-light", dark: "tokyo-night" },
-      // No default color → both themes emit only as CSS variables on each
-      // span. CSS rules under [data-theme="…"] pick the right one. Avoids
-      // hard-coding either theme's hex into the markup, which would lock
-      // the unselected theme to a fallback color.
-      defaultColor: false,
-    });
-    const innerMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-    const inner = innerMatch ? innerMatch[1] : code;
-    blockCount++;
-    return `<pre${preAttrs}>${preToCode}${inner}${codeToEnd}</pre>`;
-  },
-);
-
-await Bun.write(indexPath, rewritten);
+let totalBlocks = 0;
+let totalFiles = 0;
+for (const path of targets) {
+  const original = await Bun.file(path).text();
+  let fileBlocks = 0;
+  const rewritten = original.replace(
+    /<pre\b([^>]*)>([\s\S]*?<code>)([\s\S]*?)(<\/code>[\s\S]*?)<\/pre>/g,
+    (_m, preAttrs, preToCode, body, codeToEnd) => {
+      const langMatch = preAttrs.match(/\bdata-lang=["']([\w-]+)["']/);
+      const lang = langMatch ? langMatch[1] : "ts";
+      const code = rawCode(body);
+      const targetLang = lang === "ts" ? "typescript" : lang;
+      const html = highlighter.codeToHtml(code, {
+        lang: targetLang,
+        themes: { light: "min-light", dark: "tokyo-night" },
+        // No default color → both themes emit only as CSS variables on each
+        // span. CSS rules under [data-theme="…"] pick the right one. Avoids
+        // hard-coding either theme's hex into the markup, which would lock
+        // the unselected theme to a fallback color.
+        defaultColor: false,
+      });
+      const innerMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
+      const inner = innerMatch ? innerMatch[1] : code;
+      fileBlocks++;
+      return `<pre${preAttrs}>${preToCode}${inner}${codeToEnd}</pre>`;
+    },
+  );
+  if (fileBlocks > 0) {
+    await Bun.write(path, rewritten);
+    console.log(`  ${path}: ${fileBlocks} blocks`);
+    totalBlocks += fileBlocks;
+    totalFiles++;
+  }
+}
 highlighter.dispose();
-console.log(`re-highlighted ${blockCount} code blocks → ${indexPath}`);
+console.log(`re-highlighted ${totalBlocks} blocks across ${totalFiles} file(s)`);

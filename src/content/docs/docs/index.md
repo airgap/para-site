@@ -12,7 +12,7 @@ You can use the libraries from plain TypeScript or JavaScript without ever touch
 
 ## Sections
 
-- **[Install](/docs/install/)** — install the `@para/*` packages and (if using `.pts` files) the parabun build step that compiles them.
+- **[Install (libs)](/docs/install-libs/)** — `@para/*` packages, plus the parabun build step if you use `.pts` files. **[Install (runtime)](/docs/install-runtime/)** — install ParaBun itself for the GPU / hardware modules.
 - **Modules** — API reference for each library:
   - [`@para/signals`](/docs/signals/) — reactive cells, derived values, effects
   - [`@para/parallel`](/docs/parallel/) — `pmap` / `preduce` over a Worker pool
@@ -28,4 +28,4 @@ You can use the libraries from plain TypeScript or JavaScript without ever touch
 
 ## Related projects
 
-[ParaBun](https://parabun.script.dev) is a fork of Bun that bundles Para and adds native modules for GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, and GPIO / I²C / SPI on Linux. The libraries documented here run anywhere a JS engine runs; ParaBun is the runtime to reach for when you also need hardware.
+[ParaBun](/runtime) is a fork of Bun that bundles Para and adds native modules for GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, and GPIO / I²C / SPI on Linux. The libraries documented here run anywhere a JS engine runs; ParaBun is the runtime to reach for when you also need hardware.

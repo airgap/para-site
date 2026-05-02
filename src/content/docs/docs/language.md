@@ -7,7 +7,7 @@ description: ParaBun's optional TypeScript dialect. Parse-time desugarings — o
 
 The same extensions also work over plain JavaScript in `.pjs` / `.pjsx` files. We don't lead with that path — `.pts` is the canonical Para surface — but it's there if you need it.
 
-GitHub's TextMate grammars don't recognize `.pts` — install the [editor extension](/docs/install/#editor-extension) for syntax highlighting + LSP support.
+GitHub's TextMate grammars don't recognize `.pts` — install the [editor extension](/docs/install-runtime/#editor-extension) for syntax highlighting + LSP support.
 
 ## `pure` and `memo`
 
