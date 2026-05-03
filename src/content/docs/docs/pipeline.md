@@ -20,8 +20,19 @@ Each operator is a transducer — a function `Iterable → Iterable` (sync or as
 | `take(n)` / `drop(n)` | Window the iteration. |
 | `takeWhile(fn)` / `dropWhile(fn)` | Window by predicate. |
 | `flat()` / `flatMap(fn)` | Flatten one level / map+flatten. |
-| `chunk(n)` | Group consecutive items into arrays of size `n` (last group may be short). |
+| `chunk(n)` | Non-overlapping arrays of size `n` (last group may be short). |
+| `windowed(n, step?)` | Sliding window of size `n`, advancing by `step` (default 1). |
+| `pairwise()` | Yields `[prev, curr]` tuples. |
+| `enumerate()` | Yields `[index, value]`. |
+| `scan(fn, init)` | Running fold — emits each intermediate accumulator. |
+| `distinct(keyFn?)` | Drop repeats anywhere in the stream. |
+| `distinctUntilChanged(eqFn?)` | Drop adjacent repeats only. |
 | `tap(fn)` | Side effect; passes items through. |
+| `delay(ms)` | Sleep `ms` between yields. |
+| `throttle(ms)` | Emit at most once per `ms` window. |
+| `debounce(ms)` | Emit only after `ms` of upstream silence. |
+| `catchError(handler)` | Recover from upstream errors with a value or substitute stream. |
+| `retry(times)` | Restart the source on error up to `times` times. |
 
 ## Sinks
 
@@ -33,6 +44,12 @@ Each operator is a transducer — a function `Iterable → Iterable` (sync or as
 | `forEach(fn)` | Side-effect-only consumer. |
 | `count()` | Count items. |
 | `sum()` | Numeric sum (Kahan-compensated). |
+| `first(pred?)` / `last(pred?)` / `find(pred)` | Selector terminals. |
+| `min(keyFn?)` / `max(keyFn?)` | Extreme by numeric key. |
+| `every(pred)` / `some(pred)` | Universal / existential. |
+| `toMap(keyFn, valueFn?)` / `toSet` | Collect into `Map` / `Set`. |
+| `groupBy(keyFn)` | `Map<K, T[]>`. |
+| `partition(pred)` | `[matched[], unmatched[]]`. |
 
 ## Sources
 
@@ -48,6 +65,18 @@ const evenSquares = pipeline.range(0, 1_000)
   .map(x => x * x)
   .toFloat32Array();
 ```
+
+### Other sources
+
+| | |
+| --- | --- |
+| `of(...values)` | Wrap arguments as a one-shot iterable. |
+| `from(source)` | Identity wrapper — handy in dynamic chains. |
+| `empty()` | Yields nothing. |
+| `concat(...sources)` | Run sources end-to-end. |
+| `merge(...sources)` | Race-style interleave across async sources. |
+| `zip(...sources)` | Lockstep tuples; stops at the shortest source. |
+| `repeat(source, n?)` | Replay a source `n` times (default infinite). |
 
 ### Bring your own
 

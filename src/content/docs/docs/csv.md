@@ -39,7 +39,7 @@ const cols = await csv.parseColumns(Bun.file("./sensors.csv"), {
 
 **`headers`** — `true` (default) treats the first row as headers and matches schema keys against header cell names. `false` maps schema keys to column indices in declaration order. Or pass an explicit array of header names to skip the lookup.
 
-**`delimiter`** / **`quote`** — same as `parseCsv` (default `,` and `"`).
+All of `parseCsv`'s dialect options apply: `delimiter`, `quote`, `escape`, `comment`, `trim`, `skipEmptyLines`. UTF-8 BOM is stripped automatically.
 
 Empty / missing numeric cells become `NaN` for floats, `0` for ints. The result objects share no backing buffers with the input.
 
@@ -118,15 +118,21 @@ for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true })) {
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `header` | `false` | When true, the first row is the column names; subsequent rows are emitted as objects keyed by column. When false, rows are `string[]`. |
-| `delimiter` | `","` | Single-character cell separator. |
+| `headers` | `true` | When `true`, the first row is the column names; subsequent rows are emitted as objects keyed by column. When `false`, rows are `string[]`. Pass an explicit `string[]` to use them as headers and treat every input row as data. |
+| `delimiter` | `","` | Single-character cell separator. Pass `""` to auto-detect from the first non-comment line — the lexer counts `,` `\t` `;` `|` outside quoted regions and picks the winner (comma on ties). |
 | `quote` | `"\""` | Single-character quote that wraps cells with embedded delimiters / newlines. |
-| `escape` | same as `quote` | RFC 4180 doubles the quote (`""`) to escape; some dialects use `\\"`. |
-| `comment` | none | If set, lines starting with this character are skipped. |
-| `inferTypes` | `true` (with `header`) | Per-cell type inference: numeric → `number`, `true` / `false` → `boolean`, empty / `null` → `null`. Plain strings pass through. |
-| `parallel` | `false` | See below. |
+| `escape` | same as `quote` | RFC 4180 doubles the quote (`""`) to escape. Set to `"\\"` for backslash-escape dialects. When `escape !== quote` the parser stops treating `""` as an escape. |
+| `comment` | `""` (off) | If set, lines starting with this character (when no field has been opened yet) are skipped entirely. |
+| `trim` | `false` | Strip leading and trailing whitespace from each cell. Quoted cells are preserved verbatim — quoting exists *to* keep their whitespace. |
+| `skipEmptyLines` | `true` | Drop wholly-blank rows. With `trim: true`, all-whitespace rows count as blank. Set `false` to surface them. |
+| `typeInference` | `true` | Per-cell type inference: numeric → `number`, `"true"` / `"false"` → `boolean`, empty → `null`. Plain strings pass through. Disabled automatically without `headers`. |
+| `skipLines` | `0` | Skip this many leading rows before header detection. |
+| `maxRows` | `Infinity` | Cap the number of data rows yielded. The header row does not count. Useful for previews. |
+| `transformHeader` | none | `(header, index) => string`. Maps each header cell before it becomes the object key (or, on the columnar paths, the schema-lookup name). Common use: normalize case so the CSV's `"First Name"` matches a `first_name` schema key. |
+| `transform` | none | `(value, column) => string`. Maps each cell value before type inference. `column` is the header name when `headers` is set, otherwise the column index. `parseCsv` only — the columnar paths write straight into TypedArrays where a string→string mapping doesn't fit. |
+| `parallel` | `false` | See [Parallel mode](#parallel-mode) below. |
 
-Without `header`, every row is an array of strings (no inference — keeps fast-path simple).
+A leading UTF-8 BOM (U+FEFF) is stripped from the first chunk automatically; you do not need to handle it. Without `headers`, every row is an array of strings (no inference).
 
 ## Parallel mode
 
@@ -165,8 +171,44 @@ arrow.mean(tbl.column("score"));
 
 For very large CSVs, batch the bridge — call `arrow.fromRows` per N rows instead of materializing them all first.
 
+## `stringify(rows, opts?)`
+
+The inverse of `parseCsv` — take rows in memory and emit RFC 4180 CSV text.
+
+```ts
+import csv from "para:csv";
+
+const text = csv.stringify([
+  { id: 1, name: "Ada, Lovelace", note: 'said "hi"' },
+  { id: 2, name: "Grace",         note: "ok" },
+]);
+// id,name,note
+// 1,"Ada, Lovelace","said ""hi"""
+// 2,Grace,ok
+```
+
+`rows` can be either an array of objects (header row inferred from the union of keys, in first-seen order) or an array of arrays (no header row unless you pass `headers` explicitly).
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `delimiter` | `","` | Field delimiter. |
+| `quote` | `"\""` | Quote character. |
+| `escape` | same as `quote` | Doubled-quote (`""`) by default; set to `"\\"` for backslash-escape output. |
+| `newline` | `"\r\n"` | Row terminator. CRLF is what Excel expects; pass `"\n"` for Unix-only readers. |
+| `headers` | `true` for object rows / `false` for array rows | `true` emits the inferred header row, `false` skips it, or pass `string[]` to specify exactly which columns and in what order. |
+| `bom` | `false` | Prefix the output with a UTF-8 BOM (U+FEFF) for tools that need it (mainly Excel for non-ASCII text). |
+
+Cells are quoted only when they contain the delimiter, the quote character, the escape character (if distinct), or a CR/LF. `null` / `undefined` round-trip as empty cells. `Date` values stringify as ISO 8601.
+
+```ts
+// Round-trip preserves the data.
+const text = csv.stringify(rows);
+const back = [];
+for await (const r of csv.parseCsv(text, { headers: true })) back.push(r);
+```
+
 ## Limits
 
 - Multi-byte delimiters / quotes aren't supported. RFC 4180 specifies single-byte for both.
-- Parallel mode requires the input has no quoted cells (otherwise byte-boundary chunking can split a quoted region).
+- Parallel mode requires the input has no quoted cells (otherwise byte-boundary chunking can split a quoted region) and a default dialect (no `comment`, `trim`, or distinct `escape`).
 - Type inference is per-cell — there's no whole-column type promotion. If column `score` has mostly numbers and one `"N/A"`, you get a mix of `number` and `string`; coerce on your end if that's a problem.
