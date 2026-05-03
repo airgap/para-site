@@ -1,114 +1,91 @@
 ---
 title: para:parallel
-description: pmap / preduce over a persistent worker pool. SharedArrayBuffer typed arrays cross the wire by handle, not copy.
+description: pmap / preduce / run over a persistent worker pool. AbortSignal, timeout, transferables, recycling, stats.
 ---
 
 ```ts
-import { pmap, preduce, pool, Mutex, Semaphore } from "para:parallel";
+import parallel from "para:parallel";
 ```
 
-A persistent worker pool plus a small concurrency-control toolkit. Functions are serialized via `fn.toString()`, so pmap / preduce bodies must be **pure** — no closures, no outer references, no `this`. TypedArrays passed through a `SharedArrayBuffer` cross workers by handle in `postMessage`, so per-chunk dispatch is fixed-cost regardless of input size.
+A persistent worker pool. Functions are serialized via `fn.toString()`, so callbacks must be **pure** — no closures, no outer references, no `this`. TypedArray inputs auto-transfer their chunk-slice buffers; non-TypedArray inputs structured-clone.
 
-## `pmap(fn, input, opts?)`
-
-Chunked map across worker threads. Returns a typed array (or array) of the same length as `input`.
+## Functional API (process-wide singleton)
 
 ```ts
-import { pmap } from "para:parallel";
+import { pmap, preduce, run } from "para:parallel";
 
-pure function score(row) { return row.reduce((a, b) => a + b * b, 0); }
-
-const rows = new Float32Array(new SharedArrayBuffer(1_000_000 * 4));
-// ...fill rows...
 const scores = await pmap(score, rows, { concurrency: 8 });
+const total  = await preduce((a, b) => a + b, scores, 0);
+const blob   = await run(crunch, [largeInput], { transfer: [largeInput.buffer] });
 ```
 
-| Option | Default | Description |
+| Call | Shape |
+| --- | --- |
+| `pmap(fn, items, opts?)` | Parallel map — `(value, index) => result`, sync or async. |
+| `preduce(fn, items, init, opts?)` | Parallel reduce — `(acc, value, index) => acc`. Reducer must be associative. Optional `mapFn` fuses a per-element map into the worker pass. |
+| `run(fn, args?, opts?)` | One-off off-thread call: ship `fn` and the `args` array, await its result. The "do this CPU-bound thing without blocking" call. |
+| `disposeWorkers()` | Tear down the singleton pool (mostly for tests / hot reload). |
+
+## Pool API (explicit lifetime + config)
+
+```ts
+import { createPool } from "para:parallel";
+
+await using pool = createPool({ concurrency: 8, maxTasksPerWorker: 1000 });
+
+const out = await pool.pmap(score, rows);
+const r   = await pool.run(crunch, [input]);
+console.log(pool.stats()); // { workers, busy, idle, queued, waiting, completed, sequential }
+```
+
+| Config | Default | Description |
 | --- | --- | --- |
-| `concurrency` | `cores - 1` | Number of workers. Capped at host hardware concurrency. |
-| `chunkSize` | auto | Items per worker dispatch. Auto-picks based on input size + concurrency. |
-| `transferable` | `true` | When `input` is `Float32Array`-over-SAB, transfer the underlying buffer rather than `structuredClone` it. |
+| `concurrency` | `navigator.hardwareConcurrency` (or `os.availableParallelism()`) | Worker count. |
+| `maxTasksPerWorker` | `Infinity` | Recycle a worker (terminate + respawn) once it has completed this many tasks. Defends against memory growth in long-lived pools. |
 
-`fn` must be pure — the pre-parser of `.pts` / `.pjs` files enforces this; for plain `.ts` / `.js`, the runtime checks `fn.toString()` and rejects free-variable references at dispatch time.
+`pool` exposes `.pmap`, `.preduce`, `.run`, `.stats()`, `.dispose()`. `dispose()` rejects every queued and in-flight task with a "pool is disposed" error so awaiting callers don't hang.
 
-## `preduce(fn, init, input, opts?)`
+## Per-call options
 
-Same chunking model as `pmap`, but each worker reduces a sub-range with `fn(acc, x)` starting from `init`. Workers' partial reduces are then folded with the same `fn` on the main thread. `fn` must be associative and pure.
+| Option | Description |
+| --- | --- |
+| `signal` | An `AbortSignal`. Aborting before the call: rejects immediately with `AbortError`. Aborting mid-flight: terminates the worker holding the task, replaces it with a fresh one, and rejects the call. The pool stays usable. |
+| `timeout` | Milliseconds. Same forceful termination as `signal` if the worker exceeds it; rejects with `TimeoutError`. |
+| `concurrency` | (`pmap` / `preduce`) Maximum slots used for this call. Capped to the pool's configured concurrency. |
+| `transfer` | (`run`) `Transferable[]` to send zero-copy alongside `args`. Use when `args` includes an `ArrayBuffer` you don't need on the calling side. |
 
-```ts
-const total = await preduce((a, b) => a + b, 0, scores, { concurrency: 8 });
-```
-
-## `pool` — explicit pool with `.map` / `.reduce` / `dispatch`
-
-When you want lifetime control over the worker pool — e.g. long-running services that don't want to tear down + bring up workers per call — get a handle:
+`pmap` / `preduce` already auto-transfer the chunk-slice buffer for TypedArray inputs — a 100 MB `Float32Array` splits into N transferred chunks rather than N copies.
 
 ```ts
-import { pool } from "para:parallel";
-
-await using p = pool({ concurrency: 8, modulePath: import.meta.path });
-
-const out = await p.map(score, rows);            // closure-aware: the pool can see local `score`
-const total = await p.reduce((a, b) => a + b, 0, out);
-const result = await p.dispatch("rankBatch", { batch });   // RPC
-```
-
-`p` is `AsyncDisposable` — `await using` triggers worker teardown on scope exit. `pool({ modulePath })` tells each worker which module to load up front, so dispatched function references resolve in worker scope.
-
-### Reactive signals
-
-| Signal | Type | When it changes |
-| --- | --- | --- |
-| `p.signals.workersCount` | `number` | Number of workers that have completed init successfully. Increments as each worker's init message returns; drops to 0 on `dispose()`. |
-| `p.signals.queued` | `number` | Number of run-requests waiting on an idle worker. Updates synchronously on `run()` dispatch and on `drainQueue` consumption. |
-| `p.signals.inflight` | `number` | Number of run-requests currently executing on workers. Updates synchronously on dispatch (incl. drain) and on message return. |
-
-```ts
-import { effect } from "para:signals";
-effect(() => {
-  if (p.signals.queued.get() > 0) console.log(`pool backed up: ${p.signals.queued.get()} queued`);
-});
-```
-
-All three signals reset to 0 in `dispose()`.
-
-## Concurrency primitives
-
-`Mutex` and `Semaphore` are the standard primitives, awaitable.
-
-```ts
-const lock = new Mutex();
-async function critical() {
-  await using release = await lock.acquire();
-  // ...one holder at a time...
-}
-
-const limit = new Semaphore(4);
-async function rateLimited() {
-  await using release = await limit.acquire();
-  // ...up to 4 in flight...
+const ctrl = new AbortController();
+setTimeout(() => ctrl.abort(), 5000);
+try {
+  const out = await pool.run(longCalc, [job], { signal: ctrl.signal, timeout: 30_000 });
+} catch (e) {
+  if (e.name === "AbortError") /* user cancelled */;
+  if (e.name === "TimeoutError") /* exceeded 30s */;
 }
 ```
+
+## Constraints
+
+- **Functions must be pure.** They cross to the worker via `fn.toString()` and rehydrate with `new Function(…)`. Closures over outer scope, references to outer `this`, and impure globals don't survive the transfer.
+- `preduce`'s reducer must be associative — chunks reduce in parallel and the final fold combines partials. The reducer is invoked for the final fold as `fn(acc, partial)` (no index argument), so don't depend on `i`.
 
 ## Tuning
 
-`pmap` / `preduce` calibrate the worker count on first call (`disposeWorkers()` resets the pool; `_resetHeuristic()` clears the calibration cache — both are intended for tests, not production code).
-
 The pool wins clearly when:
 
-- The function body is real work (matrix ops, image kernels, parsing big strings — anything that runs O(N) in `chunkSize`).
-- The input is large enough that per-chunk dispatch (~50 µs per worker hop) is amortized.
-- Inputs are typed arrays over `SharedArrayBuffer` so transfer is by handle.
+- The function body is real work (matrix ops, image kernels, parsing big strings).
+- The input is large enough that per-chunk worker dispatch (~50 µs per hop) is amortized.
 
 It loses when:
 
-- The function is cheap arithmetic — JS scalar loops on the main thread are faster than crossing process / worker boundaries.
-- Inputs aren't SAB-backed; per-chunk `structuredClone` of plain typed arrays makes the pool's overhead grow with input size.
+- The function is cheap arithmetic — main-thread JS is faster than crossing the worker boundary.
+- Inputs aren't typed arrays — structured-clone copy of plain arrays makes the pool's overhead grow with input size.
 
 For small payloads or trivial functions, [`para:simd`](/docs/simd/) on the main thread is almost always the right choice.
 
-## Limits
+## Sequential fallback
 
-- `pmap` over an iterable (not a typed array) materializes through an array first — chunking happens after that.
-- Mixed-element-type inputs aren't supported; the pool typed-array detection is strict.
-- One pool per process today. Multi-pool with isolated calibrations is on the roadmap.
+In environments without `Worker` / `Blob` / `URL` (or where strict CSP blocks `new Function`), the pool transparently runs sequentially. `pool.stats().sequential` reports which mode you're in. `signal` and `timeout` still apply in the sequential path — the abort is observed between iterations.
