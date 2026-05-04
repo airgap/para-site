@@ -53,13 +53,13 @@
           <canvas class="nav-3body" data-current="runtime" aria-hidden="true"></canvas>
           <a href="/" class="brand-link">Para</a>
         </span>
-        <details class="nav-dropdown">
-          <summary class="nav-toggle" aria-label="Menu">
+        <div class="nav-dropdown">
+          <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Menu">
             <span class="nav-toggle-bar"></span>
             <span class="nav-toggle-bar"></span>
             <span class="nav-toggle-bar"></span>
-          </summary>
-          <nav class="nav">
+          </button>
+          <nav id="primary-nav" class="nav">
             <a href="/libs/">libs</a>
             <a href="/lang/">lang</a>
             <a href="/runtime/" aria-current="page">runtime</a>
@@ -67,7 +67,7 @@
             <a href="/runtime/configure/">configure</a>
             <a href="https://github.com/airgap/parabun" target="_blank" rel="noopener">github</a>
           </nav>
-        </details>
+        </div>
       </header>
 
       <h1>ParaBun</h1>
@@ -529,8 +529,8 @@
       <figure class="code lang-tabs">
         <div class="code-header">
           <div class="lang-toggle" role="tablist">
-            <button data-lang="ts" type="button">TypeScript</button>
-            <button data-lang="parabun" type="button">Para</button>
+            <button data-lang="ts" type="button">ts</button>
+            <button data-lang="parabun" type="button">pts</button>
           </div>
         </div>
         <pre
@@ -595,8 +595,8 @@
       <figure class="code lang-tabs">
         <div class="code-header">
           <div class="lang-toggle" role="tablist">
-            <button data-lang="ts" type="button">TypeScript</button>
-            <button data-lang="parabun" type="button">Para</button>
+            <button data-lang="ts" type="button">ts</button>
+            <button data-lang="parabun" type="button">pts</button>
           </div>
         </div>
         <pre
@@ -660,8 +660,8 @@
       <figure class="code lang-tabs">
         <div class="code-header">
           <div class="lang-toggle" role="tablist">
-            <button data-lang="ts" type="button">TypeScript</button>
-            <button data-lang="parabun" type="button">Para</button>
+            <button data-lang="ts" type="button">ts</button>
+            <button data-lang="parabun" type="button">pts</button>
           </div>
         </div>
         <pre
@@ -899,6 +899,7 @@
       })();
     </script>
     <script src="/nav-3body.js" defer></script>
+    <script src="/nav-toggle.js" defer></script>
     <script src="fx.js" defer></script>
   </body>
 </html>

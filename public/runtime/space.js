@@ -11,13 +11,20 @@
   const canvas = document.createElement("canvas");
   canvas.id = "__space";
   canvas.setAttribute("aria-hidden", "true");
+  // z-index: 0 (NOT negative) is deliberate. Chromium composites
+  // negative-z-index fixed elements onto a separate compositor layer
+  // that backdrop-filter does not sample from — meaning the floating
+  // header's `backdrop-filter: blur(...)` would have nothing to blur
+  // and the pill rendered as flat dark. With z-index: 0 the canvas
+  // sits in the normal positioned-element stack, behind main (which
+  // has z-index: 1), and IS picked up by the header's backdrop blur.
   canvas.style.cssText = `
     position: fixed;
     inset: 0;
     width: 100vw;
     height: 100vh;
     pointer-events: none;
-    z-index: -10;
+    z-index: 0;
   `;
   function mount() {
     if (document.body) document.body.insertBefore(canvas, document.body.firstChild);

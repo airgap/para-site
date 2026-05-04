@@ -36,6 +36,8 @@ memo async fetchProfile(id: string) { return await db.users.get(id); }
 
 `signal NAME = <rhs>` declares a reactive cell. Bare reads desugar to `.get()`, assignments to `.set()`. If the RHS references another in-scope signal, the binding auto-promotes to a read-only `derived()`. `effect { ... }` tracks every signal it reads and re-runs on change.
 
+`derived NAME = <rhs>` is the explicit form — useful when you want the keyword to telegraph "this is read-only" instead of relying on the auto-promote heuristic. Lowers identically to a `derived()` call with the same bare-read rewrite. Cells (writable) get `signal`; deriveds (read-only) can be `signal` (auto) or `derived` (explicit) — pick `derived` when clarity matters more than brevity.
+
 `A ~> B` is a reactive **assignment** binding. It desugars to `effect(() => { B = A; })`, so `B` stays in step with `A` and whatever signals `A` reads from.
 
 `A -> fn` is a reactive **call** binding — the call-sink complement to `~>`. It desugars to `effect(() => { fn(A); })`, so `fn` is called with the latest value of `A` whenever its tracked deps change. RHS must be a callable target (identifier, `obj.method`, or `arr[i]`) — bare calls, literals, and arrows are rejected.
@@ -45,8 +47,8 @@ memo async fetchProfile(id: string) { return await db.users.get(id); }
 `when EXPR { BODY }` is a statement-level **edge-triggered** block. It fires `BODY` once each time `EXPR` transitions false → true. The dual `when not EXPR { BODY }` fires on the true → false edge. Both desugar to `signals.when(() => EXPR, () => { BODY })` — the `not` form pushes the negation into the predicate (`() => !(EXPR)`), since the falling edge is just the rising edge of the inverse. Distinct from suffix `when`: position disambiguates — suffix is every-truthy guard, block is edge-triggered.
 
 ```parabun
-signal count = 0;
-signal doubled = count * 2;   // auto-derived
+signal  count   = 0;
+derived doubled = count * 2;   // explicit form — same lowering as auto-promote
 
 effect { console.log(count, doubled); }
 
@@ -75,21 +77,27 @@ when connected { showOnlineBanner(); }
 when not       { showOfflineBanner(); }
 ```
 
-## `|>`, `..!`, `..&`, `..` / `..=`
+## `|>`, `..>`, `..!`, `..&`, `..` / `..=`
 
 - `x |> f` is `f(x)`. `pure` functions threaded through `|>` are inlined at parse time — no call overhead.
+- `..>` is `.then` in suffix position.
 - `..!` is `.catch` in suffix position.
 - `..&` is `.finally` in suffix position.
 - `a..b` is an exclusive integer range; `a..=b` is inclusive.
+
+The three Promise operators (`..>`, `..!`, `..&`) cover the whole `Promise.prototype` chain surface symmetrically — same precedence, same handler shape, composable in any order. Note: bare arrow handlers (`..> r => r.json()`) parse at conditional level so they need parens — `..> ((r) => r.json())` — or use a named handler. `await` binds tighter than the dotted operators, so `await p ..> f` parses as `(await p).then(f)`; wrap with `await (p ..> f)` to await the whole chain.
 
 ```parabun
 pure function sq(x: number) { return x * x; }
 
 const result = 5 |> sq |> sq;   // 625 — both calls inlined
 
-const json = await fetch("/api").then(r => r.json())
-  ..! err => console.error(err)      // .catch
-  ..& () => console.log("done");     // .finally
+const data = await (
+  fetch("/api")
+    ..> ((r) => r.json())              // .then  — runs on success
+    ..! ((err) => fallback)            // .catch — runs on rejection
+    ..& (() => spinner.hide())         // .finally — runs always
+);
 
 for (const i of 0..=9) emit(i);      // [0..9]
 ```
@@ -112,6 +120,63 @@ arena {
   // ...numeric work...
 }                                       // buf freed here, no GC pressure
 ```
+
+## `parallel`
+
+`parallel` is the answer to `const [a, b, c, d, e] = await Promise.all([f, g, h, i, j])` — the positional-array shape where reordering one side without the other is a silent bug, and where every long name effectively appears twice.
+
+Two forms, picked by what you need:
+
+**Statement form** — names appear exactly once, hoisted into scope:
+
+```parabun
+parallel let user     = fetchUser(id),
+             posts    = fetchPosts(id),
+             comments = fetchComments(id);
+// names now in scope; all three RHSes ran concurrently
+```
+
+Lowers to `const [user, posts, comments] = await Promise.all([fetchUser(id), fetchPosts(id), fetchComments(id)]);`. `parallel const` works the same way; pick whichever reads better.
+
+The statement form composes per-decl with `..!` / `..&` / `..>` for **per-item** error handling — each binding catches its own rejection independently:
+
+```parabun
+parallel let user     = fetchUser(id)     ..! defaultUser,
+             posts    = fetchPosts(id)    ..! [],
+             comments = fetchComments(id) ..! [];
+```
+
+**Expression form** — returns a `Promise` of an object with the names mapped to resolved values. Use when you need the bag itself (returning, passing inline, chaining `..!` over the **whole batch**):
+
+```parabun
+const bundle = await parallel { user: fetchUser(id), posts: fetchPosts(id) };
+
+return await parallel { metrics: fetchMetrics(), session: fetchSession() };
+
+const data = await parallel { user: …, posts: … } ..! err => fallbackBundle;
+```
+
+Both forms use `Promise.all` semantics — fail-fast on first rejection. For `allSettled`-flavored independence, use the statement form's per-decl `..!` instead.
+
+## `Nd` decimal literals
+
+`0.1 + 0.2 !== 0.3` keeps biting people. Para's `Nd` literal suffix produces a `Decimal` value with exact arithmetic — `coef * 10^exp` representation, BigInt internally, no floating-point roundoff:
+
+```parabun
+import { Decimal } from "@para/decimal";
+
+0.1d.plus(0.2d).eq(0.3d);                              // true
+0.1d.times(3d).eq(0.3d);                               // true
+1d.dividedBy(3d, { precision: 20 }).toString();        // "0.33333333333333333333"
+100d.dividedBy(8d).toString();                         // "12.5" — exact
+
+const tax   = price.times(0.0825d);
+const total = price.plus(tax);
+```
+
+Each `Nd` literal lowers to `__paraDec("N")` — using the **string** source, never roundtripping through float. JS doesn't allow operator overloading, so arithmetic is explicit method calls: `.plus`, `.minus`, `.times`, `.dividedBy` (alias `.div`), `.eq`, `.lt`, `.gt`, `.lte`, `.gte`, `.neg`, `.abs`. Conversions: `.toNumber()`, `.toString()`, `.toBigInt()`. Division takes `{ precision, roundingMode }` — seven `RoundingMode` variants (default `HALF_EVEN`); division-by-zero throws.
+
+The `@para/decimal` package is self-contained — no `decimal.js` / `big.js` dep — and ships ~300 lines of TypeScript.
 
 ## Diagnostics
 

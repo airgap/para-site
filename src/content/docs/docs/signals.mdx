@@ -57,13 +57,14 @@ A read-only signal computed from others. Tracks every signal `fn` reads; re-eval
   </TabItem>
   <TabItem label="ParaBun">
     ```parabun
-    signal double = count * 2;   // RHS reads `count` → auto-derived
+    derived double = count * 2;   // explicit form — keyword telegraphs read-only
+    signal  doubleAuto = count * 2; // also a derived (auto-promoted from RHS)
     double;            // 4 (after count = 2)
     ```
   </TabItem>
 </Tabs>
 
-`derived` is lazy — it only re-evaluates when read after an invalidation. Multiple reads between writes return the cached value. A parabun `signal NAME = expr` whose RHS reads another in-scope signal is automatically promoted to a read-only `derived()`.
+`derived` is lazy — it only re-evaluates when read after an invalidation. Multiple reads between writes return the cached value. In `.pts` / `.pjs` files you can spell deriveds two ways: explicit `derived NAME = expr` (keyword telegraphs that the binding is read-only and is the recommended form when clarity matters), or implicit `signal NAME = expr` whose RHS reads another in-scope signal (auto-promoted to a `derived()`). Same lowering, same runtime.
 
 ## `effect(fn)`
 

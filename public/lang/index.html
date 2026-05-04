@@ -39,20 +39,20 @@
           <canvas class="nav-3body" data-current="lang" aria-hidden="true"></canvas>
           <a href="/" class="brand-link">Para</a>
         </span>
-        <details class="nav-dropdown">
-          <summary class="nav-toggle" aria-label="Menu">
+        <div class="nav-dropdown">
+          <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Menu">
             <span class="nav-toggle-bar"></span>
             <span class="nav-toggle-bar"></span>
             <span class="nav-toggle-bar"></span>
-          </summary>
-          <nav class="nav">
+          </button>
+          <nav id="primary-nav" class="nav">
             <a href="/libs/">libs</a>
             <a href="/lang/" aria-current="page">lang</a>
             <a href="/runtime/">runtime</a>
             <a href="/docs/">docs</a>
             <a href="https://github.com/airgap/parabun" target="_blank" rel="noopener">github</a>
           </nav>
-        </details>
+        </div>
       </header>
 
       <h1>Para Lang</h1>
@@ -192,6 +192,7 @@
       </footer>
     </main>
     <script src="/nav-3body.js" defer></script>
+    <script src="/nav-toggle.js" defer></script>
     <script src="fx.js"></script>
   </body>
 </html>

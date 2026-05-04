@@ -32,6 +32,7 @@ npm install @para/csv         # RFC 4180 streaming parser
 npm install @para/arrow       # in-memory tables + IPC + Parquet
 npm install @para/rtp         # RFC 3550 packet framing
 npm install @para/mcp         # Model Context Protocol client
+npm install @para/decimal     # exact-decimal arithmetic (backs `0.1d` literals)
 ```
 
 `@para/pipeline` is the runtime backing the Para Lang `|>` operator. It's

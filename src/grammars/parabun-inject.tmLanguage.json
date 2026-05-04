@@ -8,100 +8,184 @@
   "patterns": [
     {
       "match": "\\b(fun)\\b(?=\\s*[a-zA-Z_$*(<])",
-      "captures": { "1": { "name": "storage.type.function.parabun" } }
+      "captures": {
+        "1": {
+          "name": "storage.type.function.parabun"
+        }
+      }
     },
     {
       "match": "\\b(export)\\s+(pure)\\s+(async)\\s+(fun(?:ction)?)\\b",
       "captures": {
-        "1": { "name": "keyword.control.export" },
-        "2": { "name": "keyword.other.pure.parabun" },
-        "3": { "name": "storage.modifier.async" },
-        "4": { "name": "storage.type.function.parabun" }
+        "1": {
+          "name": "keyword.control.export"
+        },
+        "2": {
+          "name": "keyword.other.pure.parabun"
+        },
+        "3": {
+          "name": "storage.modifier.async"
+        },
+        "4": {
+          "name": "storage.type.function.parabun"
+        }
       }
     },
     {
       "match": "\\b(export)\\s+(pure)\\s+(fun(?:ction)?)\\b",
       "captures": {
-        "1": { "name": "keyword.control.export" },
-        "2": { "name": "keyword.other.pure.parabun" },
-        "3": { "name": "storage.type.function.parabun" }
+        "1": {
+          "name": "keyword.control.export"
+        },
+        "2": {
+          "name": "keyword.other.pure.parabun"
+        },
+        "3": {
+          "name": "storage.type.function.parabun"
+        }
       }
     },
     {
       "match": "\\b(pure)\\s+(async)\\s+(fun(?:ction)?)\\b",
       "captures": {
-        "1": { "name": "keyword.other.pure.parabun" },
-        "2": { "name": "storage.modifier.async" },
-        "3": { "name": "storage.type.function.parabun" }
+        "1": {
+          "name": "keyword.other.pure.parabun"
+        },
+        "2": {
+          "name": "storage.modifier.async"
+        },
+        "3": {
+          "name": "storage.type.function.parabun"
+        }
       }
     },
     {
       "match": "\\b(pure)\\s+(fun(?:ction)?)\\b",
       "captures": {
-        "1": { "name": "keyword.other.pure.parabun" },
-        "2": { "name": "storage.type.function.parabun" }
+        "1": {
+          "name": "keyword.other.pure.parabun"
+        },
+        "2": {
+          "name": "storage.type.function.parabun"
+        }
       }
     },
     {
       "match": "\\b(pure)\\s+(async)\\b(?=\\s*(?:\\(|\\w+\\s*=>))",
       "captures": {
-        "1": { "name": "keyword.other.pure.parabun" },
-        "2": { "name": "storage.modifier.async" }
+        "1": {
+          "name": "keyword.other.pure.parabun"
+        },
+        "2": {
+          "name": "storage.modifier.async"
+        }
       }
     },
     {
       "match": "\\b(pure)\\b(?=\\s*(?:\\(|\\w+\\s*=>))",
-      "captures": { "1": { "name": "keyword.other.pure.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.other.pure.parabun"
+        }
+      }
     },
     {
       "match": "\\b(signal)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=,;:!])",
-      "captures": { "1": { "name": "storage.type.signal.parabun" } }
+      "captures": {
+        "1": {
+          "name": "storage.type.signal.parabun"
+        }
+      }
+    },
+    {
+      "match": "\\b(derived)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=,;:!])",
+      "captures": {
+        "1": {
+          "name": "storage.type.derived.parabun"
+        }
+      }
     },
     {
       "match": "\\b(effect)\\b(?=\\s*\\{)",
-      "captures": { "1": { "name": "keyword.control.effect.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.control.effect.parabun"
+        }
+      }
     },
     {
-      "comment": "when EXPR { ... } / when not EXPR { ... } — edge-triggered handler",
+      "comment": "when EXPR { ... } / when not EXPR { ... } \u2014 edge-triggered handler",
       "match": "\\b(when)\\s+(not)\\b",
       "captures": {
-        "1": { "name": "keyword.control.when.parabun" },
-        "2": { "name": "keyword.control.when.not.parabun" }
+        "1": {
+          "name": "keyword.control.when.parabun"
+        },
+        "2": {
+          "name": "keyword.control.when.not.parabun"
+        }
       }
     },
     {
       "match": "\\b(when)\\b(?=\\s+[!A-Za-z_$])",
-      "captures": { "1": { "name": "keyword.control.when.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.control.when.parabun"
+        }
+      }
     },
     {
       "match": "\\b(arena)\\b(?=\\s*\\{)",
-      "captures": { "1": { "name": "keyword.control.arena.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.control.arena.parabun"
+        }
+      }
     },
     {
       "match": "\\b(memo)\\s+(async)\\s+(?=[A-Za-z_$][\\w$]*\\s*(?:<|\\())",
       "captures": {
-        "1": { "name": "keyword.other.memo.parabun" },
-        "2": { "name": "storage.modifier.async" }
+        "1": {
+          "name": "keyword.other.memo.parabun"
+        },
+        "2": {
+          "name": "storage.modifier.async"
+        }
       }
     },
     {
       "match": "\\b(memo)\\s+(?!async\\b)(?=[A-Za-z_$][\\w$]*\\s*(?:<|\\())",
-      "captures": { "1": { "name": "keyword.other.memo.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.other.memo.parabun"
+        }
+      }
     },
     {
       "match": "\\b(memo)\\s+(async)\\s+(?=\\(|[A-Za-z_$][\\w$]*\\s*=>)",
       "captures": {
-        "1": { "name": "keyword.other.memo.parabun" },
-        "2": { "name": "storage.modifier.async" }
+        "1": {
+          "name": "keyword.other.memo.parabun"
+        },
+        "2": {
+          "name": "storage.modifier.async"
+        }
       }
     },
     {
       "match": "\\b(memo)\\s+(?=\\(|<[\\w\\s,=]+>\\s*\\(|[A-Za-z_$][\\w$]*\\s*=>)",
-      "captures": { "1": { "name": "keyword.other.memo.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.other.memo.parabun"
+        }
+      }
     },
     {
       "match": "\\b(defer)\\b(?=\\s+[A-Za-z_$])",
-      "captures": { "1": { "name": "keyword.control.defer.parabun" } }
+      "captures": {
+        "1": {
+          "name": "keyword.control.defer.parabun"
+        }
+      }
     },
     {
       "name": "keyword.operator.range-inclusive.parabun",
@@ -116,8 +200,13 @@
       "match": "\\.\\.&"
     },
     {
+      "name": "keyword.operator.then.parabun",
+      "match": "\\.\\.>"
+    },
+    {
       "name": "keyword.operator.range.parabun",
-      "match": "\\.\\."
+      "comment": "Bare `..` range \u2014 the negative lookahead is critical so the pattern doesn't eat the first two dots of `...` (spread/rest), leaving the trailing `.x` to look like member access. The `..=` / `..!` / `..&` / `..>` variants above can't collide since each carries its own third character.",
+      "match": "\\.\\.(?!\\.)"
     },
     {
       "name": "keyword.operator.pipeline.parabun",
@@ -130,6 +219,18 @@
     {
       "name": "keyword.operator.callbind.parabun",
       "match": "(?<![\\-=<])->"
+    },
+    {
+      "comment": "Nd decimal literal — base-10 number followed by `d` suffix",
+      "match": "(?<![\\w$.])((?:\\.\\d+|\\d+(?:\\.\\d*)?)(?:[eE][+-]?\\d+)?)(d)(?![\\w$])",
+      "captures": {
+        "1": {
+          "name": "constant.numeric.decimal.parabun"
+        },
+        "2": {
+          "name": "keyword.other.suffix.decimal.parabun"
+        }
+      }
     }
   ]
 }

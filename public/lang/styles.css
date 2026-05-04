@@ -407,19 +407,26 @@ header {
   gap: 24px;
   margin-top: 14px;
   margin-bottom: 56px;
-  /* Floating pill: insets from the .page edges + 14px corners + glass
-     blur. backdrop-filter is back here because the surface is smaller
-     than full-viewport and the nebulae underneath are on a GPU layer,
-     so the per-frame rasterization cost stays bounded. */
+  /* Floating pill. Glass needs the surface tint to *contrast* with the
+     page bg, otherwise blur is invisible — a 35% dark fill over a near-
+     black page reads as solid black no matter how strong the blur is.
+     Use a tiny white/black tint per theme instead so the pane itself
+     telegraphs "frosted surface", and blur the sparse starfield through
+     it. saturate(180%) amps the few colored stars that fall behind so
+     the blur is perceptible even in star-poor regions. */
   position: sticky;
   top: 14px;
   z-index: 10;
   padding: 14px;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-  border: 1px solid var(--rule);
+  background: color-mix(in srgb, white 7%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid color-mix(in srgb, white 12%, transparent);
   border-radius: 14px;
+}
+:root[data-theme="light"] header {
+  background: color-mix(in srgb, var(--bg) 65%, transparent);
+  border-color: color-mix(in srgb, var(--text) 10%, transparent);
 }
 
 /* Once anchor-linked, the heading would otherwise scroll under the sticky
@@ -471,19 +478,27 @@ h2[id] {
   outline: none;
 }
 
-/* Desktop: <details class="nav-dropdown"> is transparent (display:
-   contents) and the summary hidden, so the nav reads as the same
-   inline link list as before. The mobile @media block below makes
-   the details a real block + the summary into a hamburger button. */
+/* Desktop: <div class="nav-dropdown"> is transparent (display:
+   contents) and the toggle button hidden, so the nav reads as a plain
+   inline link list. The mobile @media block below promotes the dropdown
+   to a real block, shows the hamburger, and hides the nav until the
+   button flips aria-expanded.
+
+   We dropped the original <details><summary> here because modern
+   Chromium (≥ 131) enforces content-visibility: hidden on a closed
+   <details>'s ::details-content slot — and that wins over `display:
+   contents` on the parent, leaving the nav links invisible at desktop
+   widths even though display: contents nominally promotes them inline. */
 .nav-dropdown {
   display: contents;
 }
 .nav-toggle {
   display: none;
-  list-style: none;
-}
-.nav-toggle::-webkit-details-marker {
-  display: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
 }
 
 .nav {
@@ -735,15 +750,17 @@ pre code {
    default `color`. The rules below pick the active theme based on
    [data-theme] on <html>. Inline-prose token classes (.pb-kw / .pb-op)
    still use the accent variable directly. */
-:root[data-theme="light"] pre[data-lang] span,
-:root[data-theme="light"] pre[data-lang] {
+:root[data-theme="light"] pre span,
+:root[data-theme="light"] pre code {
   color: var(--shiki-light);
   font-style: var(--shiki-light-font-style, inherit);
   font-weight: var(--shiki-light-font-weight, inherit);
   text-decoration: var(--shiki-light-text-decoration, inherit);
 }
-:root[data-theme="dark"] pre[data-lang] span,
-:root[data-theme="dark"] pre[data-lang] {
+:root[data-theme="dark"] pre span,
+:root[data-theme="dark"] pre code,
+:root:not([data-theme="light"]) pre span,
+:root:not([data-theme="light"]) pre code {
   color: var(--shiki-dark);
   font-style: var(--shiki-dark-font-style, inherit);
   font-weight: var(--shiki-dark-font-weight, inherit);
@@ -1315,23 +1332,51 @@ table.bench tr.winner.pulse td {
   }
 
   /* Mobile header: brand on the left, hamburger on the right. The
-     <details class="nav-dropdown"> wrapper holds both the summary
-     (hamburger) and the nav links; on desktop the wrapper goes
-     display:contents and the nav stays inline. Here it becomes a
-     real block so the dropdown panel positions against it. */
+     <div class="nav-dropdown"> wrapper holds the toggle button + nav;
+     on desktop the wrapper goes display:contents and the nav stays
+     inline. Here it becomes a real block so the dropdown panel
+     positions against it, and the open state is driven by the button's
+     aria-expanded. */
+  /* Mobile header is a glass pill — same recipe as desktop, just
+     reflowed for brand + hamburger. The button itself goes transparent
+     because it lives inside the glass pane.
+
+     The glass is painted by a ::before pseudo, NOT by backdrop-filter
+     on the header element itself. If the header had backdrop-filter,
+     it would become a backdrop root for its descendants — which would
+     break the dropdown's own backdrop-filter (the dropdown would
+     compute its blur inside the header's box and have nothing to
+     sample). The pseudo is "in" the header visually but not an
+     ancestor of anything, so descendants' backdrop walks skip past
+     it back up to html. */
   header {
-    position: static;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 0;
-    margin-top: 0;
-    margin-bottom: 36px;
+    padding: 10px 14px;
+    margin-top: 14px;
+    margin-bottom: 28px;
+    position: sticky;
+    top: 14px;
+    z-index: 10;
     background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border-bottom: none;
+    border: 0;
+    border-bottom: 0;
+    border-radius: 14px;
+  }
+  header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in srgb, white 7%, transparent);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid color-mix(in srgb, white 12%, transparent);
+    border-radius: inherit;
   }
   .nav-dropdown {
     display: block;
@@ -1345,18 +1390,14 @@ table.bench tr.winner.pulse td {
     width: 36px;
     height: 36px;
     padding: 8px 7px;
-    border: 1px solid var(--rule);
+    border: 0;
     border-radius: 8px;
-    background: color-mix(in srgb, var(--bg) 60%, transparent);
-    backdrop-filter: blur(10px) saturate(150%);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    background: transparent;
     cursor: pointer;
-    list-style: none;
     user-select: none;
   }
-  .nav-toggle::-webkit-details-marker,
-  .nav-toggle::marker {
-    display: none;
+  .nav-toggle:hover {
+    background: color-mix(in srgb, white 6%, transparent);
   }
   .nav-toggle-bar {
     display: block;
@@ -1367,16 +1408,17 @@ table.bench tr.winner.pulse td {
       transform 200ms ease,
       opacity 160ms ease;
   }
-  .nav-dropdown[open] .nav-toggle-bar:nth-child(1) {
+  .nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(1) {
     transform: translateY(7px) rotate(45deg);
   }
-  .nav-dropdown[open] .nav-toggle-bar:nth-child(2) {
+  .nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(2) {
     opacity: 0;
   }
-  .nav-dropdown[open] .nav-toggle-bar:nth-child(3) {
+  .nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(3) {
     transform: translateY(-7px) rotate(-45deg);
   }
   .nav-dropdown .nav {
+    display: none;
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
@@ -1384,17 +1426,33 @@ table.bench tr.winner.pulse td {
     gap: 4px;
     min-width: 180px;
     padding: 10px 14px;
-    border: 1px solid var(--rule);
+    border: 1px solid color-mix(in srgb, white 12%, transparent);
     border-radius: 12px;
-    background: color-mix(in srgb, var(--bg) 75%, transparent);
-    backdrop-filter: blur(12px) saturate(150%);
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    /* Same glass recipe as the desktop header — light tint on dark so
+       the pane reads as a frosted surface, blur the starfield through. */
+    background: color-mix(in srgb, white 7%, transparent);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     font-size: 14px;
     z-index: 50;
   }
+  :root[data-theme="light"] header::before,
+  :root[data-theme="light"] .nav-dropdown .nav {
+    background: color-mix(in srgb, var(--bg) 65%, transparent);
+    border-color: color-mix(in srgb, var(--text) 10%, transparent);
+  }
+  :root[data-theme="light"] .nav-toggle:hover {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+  .nav-dropdown:has(.nav-toggle[aria-expanded="true"]) .nav {
+    display: flex;
+  }
   .nav-dropdown .nav a {
     padding: 8px 4px;
+  }
+  .nav-dropdown .nav a:last-child {
+    border-bottom: none;
   }
 
   /* With sticky off, anchored headings can land right at the top edge. */
