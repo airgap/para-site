@@ -85,7 +85,7 @@ when not       { showOfflineBanner(); }
 - `..&` is `.finally` in suffix position.
 - `a..b` is an exclusive integer range; `a..=b` is inclusive.
 
-The three Promise operators (`..>`, `..!`, `..&`) cover the whole `Promise.prototype` chain surface symmetrically — same precedence, same handler shape, composable in any order. Note: bare arrow handlers (`..> r => r.json()`) parse at conditional level so they need parens — `..> ((r) => r.json())` — or use a named handler. `await` binds tighter than the dotted operators, so `await p ..> f` parses as `(await p).then(f)`; wrap with `await (p ..> f)` to await the whole chain.
+The three Promise operators (`..>`, `..!`, `..&`) cover the whole `Promise.prototype` chain surface symmetrically — same precedence, same handler shape, composable in any order. Bare arrow handlers compose without parens: each arrow body terminates at the next chain operator. If you need a chain operator *inside* an arrow body, parens force the nesting — `..! err => (recover() ..! finalFallback)`. `await` binds tighter than the dotted operators, so `await p ..> f` parses as `(await p).then(f)`; wrap with `await (p ..> f)` to await the whole chain.
 
 ```parabun
 pure function sq(x: number) { return x * x; }
@@ -94,9 +94,9 @@ const result = 5 |> sq |> sq;   // 625 — both calls inlined
 
 const data = await (
   fetch("/api")
-    ..> ((r) => r.json())              // .then  — runs on success
-    ..! ((err) => fallback)            // .catch — runs on rejection
-    ..& (() => spinner.hide())         // .finally — runs always
+    ..> r => r.json()             // .then  — runs on success
+    ..! err => fallback           // .catch — runs on rejection
+    ..& () => spinner.hide()      // .finally — runs always
 );
 
 for (const i of 0..=9) emit(i);      // [0..9]
