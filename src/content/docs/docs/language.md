@@ -87,6 +87,8 @@ when not       { showOfflineBanner(); }
 
 The three Promise operators (`..>`, `..!`, `..&`) cover the whole `Promise.prototype` chain surface symmetrically — same precedence, same handler shape, composable in any order. Bare arrow handlers compose without parens: each arrow body terminates at the next chain operator. If you need a chain operator *inside* an arrow body, parens force the nesting — `..! err => (recover() ..! finalFallback)`. `await` binds tighter than the dotted operators, so `await p ..> f` parses as `(await p).then(f)`; wrap with `await (p ..> f)` to await the whole chain.
 
+A leading `.` in `..>` / `..!` handler position is sugar for "method/property on the resolved value": `..> .json()` desugars to `..> (_) => _.json()`. Chains of access work too — `..> .users[0].id`. The sugar doesn't apply to `..&` since `.finally` callbacks receive no value.
+
 ```parabun
 pure function sq(x: number) { return x * x; }
 
@@ -94,8 +96,8 @@ const result = 5 |> sq |> sq;   // 625 — both calls inlined
 
 const data = await (
   fetch("/api")
-    ..> r => r.json()             // .then  — runs on success
-    ..! err => fallback           // .catch — runs on rejection
+    ..> .json()                   // .then  — call .json() on the response
+    ..! .message                  // .catch — extract error message
     ..& () => spinner.hide()      // .finally — runs always
 );
 
