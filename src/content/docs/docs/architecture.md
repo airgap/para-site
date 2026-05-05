@@ -69,55 +69,33 @@ export const { parseStream } = impl;
 
 The native fast paths are **opt-in upgrades**, not requirements. If `parabun:csv` doesn't exist (yet, or because you're on Node), the bundled JS impl handles it.
 
-## Module matrix
+## Library acceleration
 
-Every module on one axis, every module it can consume on the other. `●` = direct dependency. `○` = optional native fast-path routing (the library quietly uses the native impl when on Parabun, falls back to its own JS elsewhere). Empty = no relationship.
+Most `@para/*` libraries can route to a `parabun:*` native impl when running on Parabun. The user-facing import doesn't change — `import "@para/csv"` works identically in Node, Deno, browsers, and Parabun, but on Parabun it transparently uses the native fast path under the hood.
 
-Read a row as "this module depends on…"; read a column as "this module is depended on by…". Column abbreviations: **sig** = signals, **par** = parallel, **are** = arena, **sim** = simd, **csv**, **arr** = arrow, **rtp**, **mcp**, **gpu**, **aud** = audio, **vid** = video, **img** = image, **vis** = vision, **llm**, **spe** = speech, **ass** = assistant, **gpi** = gpio, **i2c**, **spi**, **cam** = camera.
-
-| | sig | par | are | sim | csv | arr | rtp | mcp | gpu | aud | vid | img | vis | llm | spe | ass | gpi | i2c | spi | cam |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **`@para/signals`**     |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/parallel`**    | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/arena`**       |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/simd`**        |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/csv`**         |   | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/arrow`**       |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/rtp`**         | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`@para/mcp`**         |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:gpu`**       | ● |   |   | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:audio`**     | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:video`**     |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:image`**     |   |   |   |   |   |   |   |   | ● |   | ● |   |   |   |   |   |   |   |   |   |
-| **`parabun:vision`**    | ● |   |   |   |   |   |   |   | ● |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:llm`**       | ● |   |   |   |   |   |   |   | ● |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:speech`**    |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:assistant`** | ● |   |   |   |   |   |   | ● |   | ● |   |   |   | ● | ● |   |   |   |   |   |
-| **`parabun:gpio`**      | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:i2c`**       | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:spi`**       | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **`parabun:camera`**    | ● |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-
-`parabun:speech` and `parabun:video` have no direct module deps — `speech` takes its STT/TTS engines as user-supplied parameters rather than importing them, and `video` only uses an internal ffmpeg helper module (no cross-module require). They appear "self-contained" in the matrix despite composing other modules at the user-API level.
-
-Optional native fast paths (`○` cells in the matrix above are routed through `try { import("parabun:csv") } catch { /* JS */ }` shims):
-
-| Library | Routes to | Status |
+| `@para/*` package | `parabun:*` native fast path | Status |
 |---|---|---|
+| `@para/signals` | — | pure JS — fast enough |
+| `@para/parallel` | `parabun:parallel` (native pool + SharedArrayBuffer primitives) | planned |
 | `@para/arena` | `parabun:arena` (defer JSC GC during `scope()`) | **shipped** |
-| `@para/csv` | `parabun:csv` (Highway-SIMD parser) | planned |
+| `@para/simd` | `parabun:simd` (FFI to Highway SIMD intrinsics) | planned |
+| `@para/csv` | `parabun:csv` (Highway-SIMD CSV parser) | planned |
 | `@para/arrow` | `parabun:arrow` (native FlatBuffers + zstd) | planned |
-| `@para/simd` | `parabun:simd` (FFI to Highway intrinsics) | planned |
-| `@para/parallel` | `parabun:parallel` (native pool + SAB) | planned |
+| `@para/rtp` | — | pure JS — framing is JS-cheap |
+| `@para/mcp` | — | pure JS — JSON-RPC over stdio/ws is JS-cheap |
 
-`@para/signals`, `@para/rtp`, and `@para/mcp` have no native fast path because pure JS is already cheap enough relative to the work they do.
+Three packages don't get a native counterpart because pure JS is already at parity with what native code could do — they're not CPU-bound.
 
-A few patterns visible in the matrix:
+The shim that does the routing is ~10 lines per library:
 
-- **Column 1 is dense.** `@para/signals` is consumed by almost every `parabun:*` module — it's the universal reactive-state substrate. One observable primitive across the whole stack.
-- **`parabun:gpu` is the second hub.** Used by `parabun:llm`, `parabun:image`, and `parabun:vision`. Same matVec / conv2D kernels back per-token inference and image blur.
-- **`parabun:assistant` is the busiest row.** It composes — `parabun:llm` + `parabun:speech` + `parabun:audio` + `@para/mcp` + `@para/signals` — rather than implementing primitives.
-- **`parabun:image` ↔ `parabun:video` are mutually adjacent**, sharing the ffmpeg integration for frame export and audio extraction.
+```ts
+let impl;
+try { impl = await import("parabun:csv"); }       // Parabun → native, fastest
+catch { impl = await import("./impl-js.ts"); }    // everywhere else → bundled JS
+export const { parseStream, /* … */ } = impl;
+```
+
+If you're writing a library that consumes `@para/csv`, you don't have to think about which side you're on — the routing happens at module load.
 
 A few notable shapes in that graph:
 
