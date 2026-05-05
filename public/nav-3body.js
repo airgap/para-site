@@ -19,7 +19,7 @@
 (() => {
   const STARS = {
     lib: "#6db4ff",
-    lang: "#ffd54a",
+    lang: "#10b981",
     runtime: "#ff5c4a",
   };
 

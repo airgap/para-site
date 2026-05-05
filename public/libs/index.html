@@ -57,14 +57,13 @@
 
       <h1>Para Lib</h1>
       <p class="lede">
-        Eight TypeScript libraries — <code>signals</code>, <code>parallel</code>, <code>arena</code>, <code>simd</code>,
-        <code>csv</code>, <code>arrow</code>, <code>rtp</code>, <code>mcp</code> — published as individual
-        <code>@para/*</code> npm packages. Pure JS / Wasm. Install only what you use.
+        Eight <code>@para/*</code> npm packages: <code>signals</code>, <code>parallel</code>, <code>arena</code>,
+        <code>simd</code>, <code>csv</code>, <code>arrow</code>, <code>rtp</code>, <code>mcp</code>. Pure JS / Wasm, no
+        native deps. Runs on Node, Bun, Deno, browsers, Cloudflare Workers — anywhere V8 or JSC runs.
       </p>
       <p class="lede">
-        Runs on Node, Bun, Deno, browsers, Cloudflare Workers — anywhere V8 or JSC runs. No native dependencies. The
-        optional <a href="/lang/"><code>.pts</code> syntax</a> compiles to JS calls into these libraries; the
-        <a href="/runtime/">Para Runtime (ParaBun)</a> bundles them and adds GPU / hardware modules.
+        The optional <a href="/lang/"><code>.pts</code> syntax</a> desugars to imports from these packages.
+        <a href="/runtime/">ParaBun</a> bundles them and adds GPU / hardware modules.
       </p>
 
       <h2 id="install">Install</h2>
@@ -109,7 +108,10 @@
 <span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">country</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">set</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">NO</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">                                          // 3 items · $28.75</span></span>
 <span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">items</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">update</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">arr</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> arr</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">slice</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64">1</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">                          // 2 items · $13.75</span></span>
 <span class="line"></span></code></pre>
-        <pre data-lang="parabun" hidden><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">signal</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> derived</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@para/signals</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+        <pre
+          data-lang="parabun"
+          hidden
+        ><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">signal</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> derived</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@para/signals</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">type</span><span style="--shiki-light:#6F42C1;--shiki-dark:#C0CAF5"> Item</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> name</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7"> string</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> price</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#0DB9D7"> number</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
 <span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">signal</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">  items</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> Item</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">[]</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> name</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">book</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> price</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 12</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> name</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">pen</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> price</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#1976D2;--shiki-dark:#FF9E64"> 3</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
@@ -203,9 +205,8 @@
 
       <h3>CSV + Arrow — turn a 5 GB orders.csv into a per-country Parquet</h3>
       <p>
-        Streaming ETL: <code>@para/csv</code> yields rows as it parses (no full-file load), the loop reduces to ~one
-        number per country, and <code>@para/arrow</code> materializes the small summary as Parquet for downstream
-        analytics tools to read. Two libraries doing the thing each is best at, with a tiny handoff.
+        <code>@para/csv</code> yields rows as it parses; the loop folds them into ~250 per-country totals;
+        <code>@para/arrow</code> writes those out as Parquet. The CSV never sits in memory.
       </p>
       <pre
         data-lang="ts"
@@ -226,11 +227,11 @@
 <span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic">await</span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> Bun</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">write</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">revenue-by-country.parquet</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#BB9AF7;--shiki-dark-font-style:italic"> await</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> toParquet</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">summary</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA"> compression</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">snappy</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
 <span class="line"></span></code></pre>
 
-      <h3>MCP — give an LLM real filesystem access in 6 lines</h3>
+      <h3>MCP — connect to a filesystem server, list tools, call them</h3>
       <p>
-        Connect to Anthropic's reference filesystem MCP server (sandboxed to a directory you pick), enumerate its tools,
-        and call them. The same client works against any MCP server — Slack, GitHub, Postgres, your own — with no
-        per-server adapter code, and <code>await using</code> tears the subprocess down on scope exit.
+        Spawns the reference filesystem MCP server over stdio, sandboxed to one directory. The same client connects to
+        any MCP server — Slack, GitHub, Postgres — without per-server adapter code. <code>await using</code> tears the
+        subprocess down on scope exit.
       </p>
       <pre
         data-lang="ts"
@@ -266,13 +267,11 @@
 
       <h2 id="related">Para Lang and Para Runtime</h2>
       <p>
-        <a href="/lang/">Para Lang</a> is an optional <code>.pts</code> syntax that desugars to imports from these
-        libraries. Use it when reactive code starts piling up parens; skip it if plain TS / JS works.
+        <a href="/lang/">Para Lang</a> — optional <code>.pts</code> syntax that desugars to imports from these packages.
       </p>
       <p>
-        <a href="/runtime/">Para Runtime (ParaBun)</a> is a Bun fork that bundles these libraries and adds native
-        modules for GPU, camera, audio, GPIO/I²C/SPI, and on-device LLM. Reach for it when you need hardware that
-        Node-class runtimes don't expose.
+        <a href="/runtime/">Para Runtime (ParaBun)</a> — Bun fork. Bundles these packages, parses <code>.pts</code>
+        natively, adds native modules for GPU, camera, audio, GPIO/I²C/SPI, and on-device LLM.
       </p>
 
       <footer>

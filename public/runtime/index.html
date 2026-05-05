@@ -89,8 +89,8 @@
         JavaScriptCore alone exceeds an MCU's flash budget.
       </p>
       <p class="lede">
-        Just want the libraries? <a href="/libs/">Para Lib</a> works on any JS runtime — install only what you use. Just
-        want the syntax? <a href="/lang/">Para Lang</a> compiles to JS that imports those libraries.
+        <a href="/libs/">Para Lib</a> — same packages, cross-runtime, zero native deps. <a href="/lang/">Para Lang</a> —
+        the <code>.pts</code> syntax, compiled to JS by any bundler.
       </p>
       <div class="install">
         <span class="prompt">$</span>curl -fsSL https://raw.githubusercontent.com/airgap/parabun/main/install.sh | bash
@@ -195,8 +195,9 @@
         <p class="footnote">
           Beyond <code>matVec</code> / <code>simdMap</code>, <span class="import">parabun:gpu</span> ships
           <code>conv2D</code>, <code>scan</code>, <code>reduce</code>, <code>argMin</code> / <code>argMax</code>,
-          <code>histogram</code>, and <code>median</code> / <code>quantile</code> — CPU correctness paths today, with
-          optional CUDA / Metal hooks on the same dispatch surface for follow-up device kernels.
+          <code>histogram</code>, <code>variance</code>, and <code>median</code> / <code>quantile</code>. CUDA device
+          kernels back all of these (bitonic-sort path for quantile, two-stage Hillis-Steele for scan, atomic-privatized
+          for histogram); CPU paths run when CUDA is unavailable. Metal mirror is the next batch.
         </p>
 
         <h3 id="bun-image"><span class="import">parabun:image</span></h3>
@@ -376,8 +377,8 @@
           Both <code>LLM</code> and <code>WhisperModel</code> instances expose reactive
           <span class="import">para:signals</span> Signals: <code>m.busy</code> (refcounted, flips while a
           <code>chat</code> / <code>generate</code> / <code>embed</code> / <code>transcribe</code> call is in flight)
-          and <code>m.device</code> (<code>"cuda" | "metal" | "cpu"</code>, stable for the life of the instance). Wire a
-          busy spinner or a backend badge with a one-liner <code>effect()</code>.
+          and <code>m.device</code> (<code>"cuda" | "metal" | "cpu"</code>, stable for the life of the instance). One
+          <code>effect()</code> reads them straight into UI state — no manual notify.
         </p>
 
         <h3 id="bun-vision"><span class="import">parabun:vision</span></h3>
@@ -387,12 +388,42 @@
           frames. yuyv, nv12, and rgb24 are converted inline; mjpeg requires the caller to pass
           <code>image.decode</code> from <span class="import">parabun:image</span> (cross-builtin imports between
           <code>bun:</code> modules aren't supported, so dependencies are passed in at the call site).
-          <code>vision.detectMotion</code> adds a downsampled-luma frame-diff estimator with temporal smoothing.
+          <code>vision.detectMotion</code> adds a downsampled-luma frame-diff estimator with temporal smoothing, plus
+          opt-in per-frame region segmentation: pass <code>{ regions: { minPixels } }</code> and each
+          <code>MotionFrame</code> carries a <code>regions</code> array of bounding boxes (4-connected, two-pass
+          union-find on the mask, scaled back to source-frame coordinates) so callers can route on <em>where</em> motion
+          is, not just whether.
         </p>
         <p>
-          <code>vision.detect</code> (YOLO / SSD / RT-DETR) and <code>vision.recognize</code> (Tesseract / EasyOCR) are
-          typed but throw — both need an ONNX runtime vendored before they can do anything. The interfaces are there so
-          callers can write against them now and have them work later.
+          <code>vision.recognize(frame, { engine: "tesseract", language: "eng" })</code> drives Tesseract through
+          libtesseract.so.5 FFI (system-installed — <code>apt install libtesseract-dev tesseract-ocr-eng</code> /
+          <code>brew install tesseract</code>), iterates word-level results, and returns one <code>Detection</code> per
+          word with confidence in [0, 1] and bbox in source-frame pixels. The <code>"easyocr"</code> engine is reserved.
+        </p>
+        <p>
+          <code>vision.onnx(modelPath)</code> returns an ONNX session bound to a system-installed libonnxruntime — the C
+          ABI doesn't export flat symbols, so the FFI dlopens <code>OrtGetApiBase()</code>, walks the resulting
+          <code>OrtApi</code> struct of ~150 function pointers at version-pinned offsets, and rebinds the ones we need
+          via <code>linkSymbols</code>. <code>session.run({ name: { data, shape } })</code> takes Float32Array tensors,
+          runs inference, and returns a <code>Map</code> of output tensors. Install:
+          <code>brew install onnxruntime</code> / <code>apt install libonnxruntime-dev</code>, or download a release
+          tarball and point <code>PARABUN_ONNX_LIB</code> at the <code>.so</code>.
+        </p>
+        <p>
+          <code>vision.detect(frame, { engine: "yolo", model })</code> drives YOLOv8/YOLOv11 ONNX models on top of
+          <code>vision.onnx</code>: bilinear-letterbox preprocess to 640×640 CHW float32 in [0, 1], one inference pass,
+          channel-major decode of the <code>[1, 4+nc, anchors]</code> output, greedy IoU NMS (same-class), and
+          coordinate unmapping back to source-frame pixels. Returns <code>Detection[]</code> with COCO labels by
+          default; pass <code>opts.classes</code> for custom-trained models. Session is LRU-cached per model path so
+          repeat calls skip the dominant ONNX load cost. SSD and RT-DETR engines are reserved.
+        </p>
+        <p>
+          <code>vision.track()</code> instantiates a stateful tracker that turns per-frame <code>Detection[]</code> into
+          stable <code>Track[]</code> across the stream — each contiguous occurrence of the same object keeps the same
+          monotonic <code>id</code> so callers can draw consistent labels, accumulate trajectories, and route effects
+          per-object instead of per-frame. SORT-style greedy IoU matching with same-class gating; tracks coast for
+          <code>maxFramesMissed</code> frames to ride out brief occlusions without yo-yoing ids;
+          <code>trajectoryLength</code> retains the last N bboxes per track when drawing trails.
         </p>
 
         <h3 id="bun-speech"><span class="import">parabun:speech</span></h3>
@@ -513,8 +544,8 @@
 
       <h2 id="composition">Composition examples</h2>
       <p>
-        Where signals and module composition pay off — wiring multiple <code>bun:*</code> modules into one program
-        without postMessage, child processes, or N-API bindings.
+        Programs that wire multiple <code>parabun:*</code> modules together in one process. No postMessage, no child
+        processes, no N-API bindings.
       </p>
 
       <h3 id="example-voice-tools">Voice → LLM → tool dispatch</h3>
@@ -644,18 +675,16 @@
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">}</span></span></code></pre>
       </figure>
       <p class="footnote">
-        Four modules, three signals, zero glue code. Barge-in is built into
-        <span class="import">parabun:assistant</span> now (rising edge on <code>vad.active</code> drops the queued TTS
-        via <code>spk.stop()</code> and stamps <code>turn.interrupted</code>); programmatic cancel is
-        <code>bot.interrupt()</code>.
+        Barge-in is implemented inside <span class="import">parabun:assistant</span>: a rising edge on
+        <code>vad.active</code> drops the queued TTS via <code>spk.stop()</code> and stamps
+        <code>turn.interrupted</code>. <code>bot.interrupt()</code> does the same programmatically.
       </p>
 
       <h3 id="example-underneath">What's underneath</h3>
       <p>
-        <code>parabun:assistant</code> isn't magic — it stitches the same five modules a user could call directly. The
-        version below is the loop the home-assistant facade performs for you. Useful when you want a non-default flow
-        (custom VAD threshold, separate transcribe + chat sessions, your own JSON dispatch). Routine smart-home or IoT
-        cases should still pick the <a href="#example-voice-tools">facade</a>; this one's longer.
+        The five-module loop <code>parabun:assistant</code> wraps, hand-written. Useful for a non-default flow — custom
+        VAD threshold, separate transcribe + chat sessions, custom JSON dispatch. Longer than the
+        <a href="#example-voice-tools">facade</a>.
       </p>
       <figure class="code lang-tabs">
         <div class="code-header">
@@ -803,20 +832,32 @@
             </td>
           </tr>
           <tr>
-            <td>partial</td>
+            <td>shipped</td>
             <td><span class="import">parabun:gpu</span> device kernels</td>
             <td>
-              CUDA <code>reduce</code> (sum / min / max) + atomic-privatized <code>histogram</code> shipped. Scan, Metal
-              mirror, and the rest of the secondary primitives still on CPU until wired.
+              CUDA: <code>reduce</code> (sum / min / max), atomic-privatized <code>histogram</code>, recursive
+              multi-level <code>scan</code> (Hillis-Steele leaf, no element-count cap), <code>argMin</code> /
+              <code>argMax</code>, <code>variance</code>, <code>conv2D</code>, bitonic-sort <code>median</code> /
+              <code>quantile</code>. Metal mirror complete: same set ported to MSL — simdgroup tree-reduce (<code
+                >simd_sum</code
+              >
+              / <code>simd_shuffle_xor</code>), 1024-bin atomic-privatized histogram, recursive Hillis-Steele scan,
+              two-pass variance, bitonic-step quantile. On-device validation pending mac-mini run; Linux probe stays
+              inert with CPU fallback.
             </td>
           </tr>
           <tr>
-            <td>partial</td>
+            <td>shipped</td>
             <td><span class="import">parabun:vision</span></td>
             <td>
-              Frame stream + frame-diff motion detection ship today (<code>vision.frames</code>,
-              <code>vision.detectMotion</code>). Detector (<code>detect</code>) and OCR (<code>recognize</code>) engines
-              stub until ONNX runtime is vendored.
+              Frame stream, frame-diff motion detection (<code>vision.frames</code>, <code>vision.detectMotion</code>),
+              per-frame connected-components region segmentation, OCR via <code>vision.recognize</code> (Tesseract /
+              libtesseract.so.5 FFI), generic ONNX inference via
+              <code>vision.onnx(modelPath).run({…})</code> (libonnxruntime FFI; struct-walked OrtApi), object detection
+              via <code>vision.detect</code> (YOLOv8/YOLOv11 — bilinear letterbox preprocess, channel-major decode, IoU
+              NMS, COCO 80-class default), and multi-frame tracking via <code>vision.track()</code>
+              (SORT-style greedy IoU matching with same-class gating + maxFramesMissed coasting → stable per-object ids
+              across the stream). SSD / RT-DETR engines stubbed for follow-up.
             </td>
           </tr>
           <tr>

@@ -19,7 +19,7 @@
      three-suns motif from Liu Cixin's three-body novel uses the same
      red/yellow/blue palette. */
   --star-lib: #6db4ff;
-  --star-lang: #ffd54a;
+  --star-lang: #10b981;
   --star-runtime: #ff5c4a;
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
   --sans: "Spectral", Georgia, "Times New Roman", serif;
@@ -56,88 +56,359 @@ body {
   overflow-x: hidden;
 }
 
-/* Starfield + three product nebulae are drawn into a fixed-position
-   canvas by /space.js. Canvas distribution + multi-stop radial
-   gradients avoid the hardcoded-tile + 8-bit-banding artifacts the
-   previous CSS pile had. */
+/* Starfield + three corner nebula tints are drawn into a fixed-
+   position canvas by /space.js. Static — renders once on init and
+   on resize. Brand-card hover effects are CSS-only (see
+   .brand-card:hover below). */
 
-/* Per-card nebulae — same hover-swoop pattern as script.dev's binary
-   splash, just three of them. */
-.nebula {
-  position: fixed;
-  left: 0;
-  right: 0;
-  pointer-events: none;
-  z-index: -1;
-  --y-scale: var(--nebula-y-scale, 1);
-  height: calc(100vh / var(--y-scale));
-  top: calc((100vh - 100vh / var(--y-scale)) / 2);
-  transform-origin: 50% 50%;
-  transform: scaleY(var(--y-scale));
+/* ─── Hero animation slot ─────────────────────────────────────────────
+   Holds the live `.pts → JS` transpile demo. Two-column code panel
+   sized to its content with a min-height floor — see /transpile.js
+   for the animation. */
+.hero-stage {
+  position: relative;
+  width: clamp(320px, 78vw, 880px);
+  margin: 0 auto;
+}
+.hero {
+  width: 100%;
+  display: block;
+}
+/* The longest snippet (pipeline → nested-call JS) is 9 output lines;
+   the trailing read-and-compare hold wants both panes fully visible.
+   A min-height floor protects narrow viewports where a width-driven
+   aspect would compress the panel below the content height. */
+.transpile {
+  min-height: 280px;
 }
 
-.nebula ellipse {
-  transform-box: view-box;
-  transform: scale(0);
+/* Mobile: side-by-side panes shrink to ~140px each on a narrow phone
+   — too narrow for any of the snippets. Stack vertically so each pane
+   gets the full viewport width and the divider rotates into a thin
+   horizontal arrow strip. Breakpoint pinned at 640px (typical phone
+   landscape and below). */
+@media (max-width: 640px) {
+  .hero-stage {
+    width: 100%;
+  }
+  .transpile {
+    flex-direction: column;
+    /* Stacked: total height ≈ 2× single-pane content + arrow. Each
+       pane covers up to 9 lines of code; budget ~160px per pane. */
+    min-height: 360px;
+  }
+}
+
+/* ─── Transpile panel ──────────────────────────────────────────────
+   Two-column code panel: .pts source on the left desugars to JS on
+   the right, with a small arrow between them. Headers identify each
+   side; titles announce what construct the current snippet is showing.
+   Animation lives in /transpile.js. */
+.transpile {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--star-lang) 22%, transparent);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 2px 30px color-mix(in srgb, var(--star-lang) 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--star-lang) 8%, transparent);
+}
+.transpile-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.transpile-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  background: color-mix(in srgb, var(--star-lang) 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.transpile-tag {
+  color: #6ee7b7;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.transpile-title {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 10px;
+  font-family: var(--sans);
+  letter-spacing: 0;
+}
+.transpile-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.4rem;
+  color: color-mix(in srgb, var(--star-lang) 65%, var(--text-dim));
+  font-family: var(--mono);
+  font-size: 18px;
+  background: color-mix(in srgb, var(--star-lang) 4%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+}
+@media (max-width: 640px) {
+  /* Stacked layout: arrow becomes a horizontal divider band with the
+     glyph rotated 90° to read as `↓` so the eye still tracks pts → js. */
+  .transpile-arrow {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+    padding: 0.25rem 0;
+  }
+  .transpile-arrow::before {
+    content: "";
+    display: inline-block;
+    /* Re-render the glyph rotated so we don't fight the `→` literal in
+       the HTML. The original character stays for desktop; mobile hides
+       it via font-size: 0 below. */
+  }
+  .transpile-arrow {
+    font-size: 0;
+  }
+  .transpile-arrow::after {
+    content: "↓";
+    font-size: 18px;
+  }
+}
+.transpile-code {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  font-family: var(--mono);
+  /* Slight font upper bound now that the panel is wider — gives the
+     longest snippets a fighting chance at staying on one line. */
+  font-size: clamp(10.5px, 1.05vw, 13px);
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre;
+  /* Horizontal overflow is preferable to clipping. The typing
+     animation never hits this in normal flow (snippets are tuned to
+     fit), but a long line — say a future snippet a contributor adds
+     — degrades to a scrollable pane instead of disappearing. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-height: 0;
+  /* Tab/space alignment + ligature-free so `..>` and `=>` stay readable
+     as their literal glyphs. */
+  font-variant-ligatures: none;
+}
+/* Token colors. Para operators are the star — they get the boldest
+   accent so first-time readers notice them. */
+.transpile .tk-op {
+  color: #fde68a; /* warm yellow — pops against emerald */
+  font-weight: 600;
+}
+.transpile .tk-kw {
+  color: #6ee7b7;
+  font-weight: 500;
+}
+.transpile .tk-str {
+  color: #c8e6a0;
+}
+.transpile .tk-num {
+  color: #ffc78c;
+}
+.transpile-caret {
+  display: inline-block;
+  width: 0.5em;
+  margin-left: 1px;
+  color: #6ee7b7;
+  animation: transpile-caret-blink 1s steps(2) infinite;
+}
+@keyframes transpile-caret-blink {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Progress dots (one per snippet) live in the right header. The
+   active dot is filled emerald and slightly enlarged. Hover/click
+   pause is announced via .transpile.paused → .transpile-paused-hint
+   becomes visible; .transpile.pinned just changes its color. */
+.transpile-progress {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  margin-left: auto;
+}
+.transpile-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--star-lang) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--star-lang) 35%, transparent);
+  transition:
+    background 240ms ease,
+    transform 240ms ease,
+    border-color 240ms ease;
+}
+.transpile-dot.active {
+  background: #6ee7b7;
+  border-color: #6ee7b7;
+  transform: scale(1.25);
+  box-shadow: 0 0 8px color-mix(in srgb, #6ee7b7 60%, transparent);
+}
+.transpile-paused-hint {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
   opacity: 0;
   transition:
-    transform 900ms cubic-bezier(0.2, 0.7, 0.25, 1),
-    opacity 280ms ease;
+    opacity 160ms ease,
+    color 160ms ease;
+  margin-left: 0.4rem;
 }
-
-.nebula ellipse:nth-of-type(1) {
-  transition-delay: 0ms;
-}
-.nebula ellipse:nth-of-type(2) {
-  transition-delay: 40ms;
-}
-.nebula ellipse:nth-of-type(3) {
-  transition-delay: 80ms;
-}
-.nebula ellipse:nth-of-type(4) {
-  transition-delay: 120ms;
-}
-.nebula ellipse:nth-of-type(5) {
-  transition-delay: 160ms;
-}
-.nebula ellipse:nth-of-type(6) {
-  transition-delay: 200ms;
-}
-.nebula ellipse:nth-of-type(7) {
-  transition-delay: 240ms;
-}
-
-body:has(.brand-card.lib:hover) .nebula-lib ellipse,
-body:has(.brand-card.lib:focus-visible) .nebula-lib ellipse {
-  transform: scale(1);
+.transpile.paused .transpile-paused-hint,
+.transpile.pinned .transpile-paused-hint {
   opacity: 1;
 }
-body:has(.brand-card.lang:hover) .nebula-lang ellipse,
-body:has(.brand-card.lang:focus-visible) .nebula-lang ellipse {
-  transform: scale(1);
-  opacity: 1;
-}
-body:has(.brand-card.runtime:hover) .nebula-runtime ellipse,
-body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
-  transform: scale(1);
-  opacity: 1;
+.transpile.pinned .transpile-paused-hint {
+  color: #fde68a;
 }
 
-/* ─── Three-body simulation ───────────────────────────────────────────
-   Canvas-rendered figure-8 orbit (Chenciner-Montgomery 1993 — the
-   only known stable periodic equal-mass 3-body solution where all
-   three bodies trace the same closed curve, a horizontal figure-8).
-   Initial conditions are tight enough that velocity Verlet
-   integration keeps the path stable for hours. See /threebody.js. */
-/* Canvas aspect matches the figure-8's natural bounding box (2.2
-   horizontal × 0.8 vertical = ~2.75 : 1) so the orbit fills the box
-   without big empty bands above and below. The JS scales
-   independently per axis to honor whatever ratio the CSS picks. */
-.three-body {
-  width: clamp(280px, 50vw, 540px);
-  aspect-ratio: 2.75 / 1;
+/* Right-side controls cluster: pause/play button next to progress
+   dots. Pushed right-aligned via margin-left: auto on the group. */
+.transpile-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.transpile-controls .transpile-progress {
+  margin-left: 0;
+}
+.transpile-pause-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--star-lang) 28%, transparent);
+  background: transparent;
+  border-radius: 50%;
+  color: #6ee7b7;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.transpile-pause-btn:hover {
+  background: color-mix(in srgb, var(--star-lang) 14%, transparent);
+  border-color: #6ee7b7;
+}
+.transpile-pause-btn:focus-visible {
+  outline: 1px solid #6ee7b7;
+  outline-offset: 2px;
+}
+/* Pause icon = two short bars; play icon = right-pointing triangle.
+   Drawn with pseudo-element + borders so they stay crisp at any DPR
+   without needing SVG. */
+.transpile-pause-btn::before {
+  content: "";
   display: block;
-  margin: 0 auto;
+  width: 6px;
+  height: 8px;
+  border-left: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  background: transparent;
+}
+.transpile-pause-btn[aria-pressed="true"]::before {
+  width: 0;
+  height: 0;
+  border: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid currentColor;
+  margin-left: 2px;
+}
+.transpile.pinned .transpile-pause-btn {
+  color: #fde68a;
+  border-color: color-mix(in srgb, #fde68a 60%, transparent);
+}
+/* Caret pause: when paused, halt the blink (steady block) so it
+   visibly signals "stopped here" instead of "still typing". */
+.transpile.paused .transpile-caret {
+  animation: none;
+  opacity: 1;
+  color: #fde68a;
+}
+
+/* ─── Timer bar (read-and-compare countdown) ───────────────────────
+   Thin strip pinned to the bottom edge of the panel. Fills left→right
+   over the hold duration; reaching the right edge = next snippet.
+   CSS-driven via `animation` so .paused freezes it via
+   animation-play-state — keeps in lockstep with the JS pausableSleep. */
+.transpile-timer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  overflow: hidden;
+}
+.transpile-timer-fill {
+  height: 100%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: color-mix(in srgb, var(--star-lang) 32%, transparent);
+}
+.transpile.timing .transpile-timer-fill {
+  animation: transpile-timer-fill linear forwards;
+  animation-duration: 6500ms; /* JS overrides per snippet */
+}
+@keyframes transpile-timer-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.transpile.paused .transpile-timer-fill {
+  animation-play-state: paused;
+}
+
+/* ─── Evaporative dissolve ─────────────────────────────────────────
+   Each non-whitespace glyph is wrapped in a span with --i (sequence
+   index, drives stagger) and --r (random 0..1, drives lateral
+   scatter). On .evaporating the spans fade up + blur + drift,
+   producing a "code burning off" feel rather than a hard wipe. */
+.transpile-code .evap {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+.transpile.evaporating .transpile-code .evap {
+  animation: transpile-evap 700ms ease-out forwards;
+  animation-delay: calc(var(--i, 0) * 4ms);
+}
+.transpile.paused .transpile-code .evap {
+  animation-play-state: paused;
+}
+@keyframes transpile-evap {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) translateX(calc((var(--r, 0.5) - 0.5) * 14px))
+      rotate(calc((var(--r, 0.5) - 0.5) * 18deg));
+    filter: blur(3px);
+  }
 }
 
 /* ─── Layout ──────────────────────────────────────────────────────── */
@@ -161,14 +432,35 @@ body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
 
 .splash-header h1 {
   font-family: var(--serif);
-  font-size: clamp(3.4rem, 7vw, 5rem);
-  font-weight: 600;
+  /* Pushed bigger — wordmark wants monumental scale to anchor the
+     starfield. */
+  font-size: clamp(4rem, 9vw, 7rem);
+  /* Heaviest loaded weight + Fraunces axes pushed to their chiseled
+     / display extremes:
+       opsz 144 — display optical size (sharper serifs, more contrast)
+       SOFT 0   — sharpest, most "carved" letter shapes (was 30 → now
+                   0 thanks to the wider SOFT range loaded above)
+       wght 700 — heaviest loaded
+       wonk 1   — Fraunces' alternate forms for a, g, etc.; gives the
+                   wordmark an idiosyncratic character that geometric
+                   sans-serifs literally can't reproduce
+     The result reads like a chiseled inscription on a monument
+     instead of a soft magazine headline. */
+  font-weight: 700;
   margin: 0 0 0.4rem;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.04em;
   color: var(--text);
   font-variation-settings:
     "opsz" 144,
-    "SOFT" 30;
+    "SOFT" 0,
+    "wght" 700,
+    "WONK" 1;
+  /* Subtle cosmic glow — the wordmark sits in front of a starfield;
+     a faint near-white halo gives it a sense of being lit from
+     within rather than printed flat on the dark bg. */
+  text-shadow:
+    0 0 32px color-mix(in srgb, var(--text) 22%, transparent),
+    0 0 80px color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .splash-header p {
@@ -198,6 +490,11 @@ body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
 }
 
 .brand-card {
+  /* Per-card trinity tint + a brighter "accent" used as a second
+     color in the mesh background so the glow feels lit rather than
+     uniformly washed. Set per-card below. */
+  --tint: var(--star-lib);
+  --tint-accent: white;
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto auto auto;
@@ -212,27 +509,66 @@ body:has(.brand-card.runtime:focus-visible) .nebula-runtime ellipse {
   color: var(--text);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  /* Cheap GPU-only transitions: transform, box-shadow, border. No
+     canvas, no JS, no compositor surprises. */
   transition:
-    border-color 200ms ease,
-    transform 200ms ease;
+    transform 220ms cubic-bezier(0.2, 0.7, 0.25, 1),
+    box-shadow 220ms cubic-bezier(0.2, 0.7, 0.25, 1),
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+.brand-card.lib {
+  --tint: var(--star-lib);
+  --tint-accent: #c8dfff; /* near-white blue — luminous accent */
+}
+.brand-card.lang {
+  --tint: var(--star-lang);
+  --tint-accent: #b6f5d8; /* pale luminous mint */
+}
+.brand-card.runtime {
+  --tint: var(--star-runtime);
+  --tint-accent: #ffc4b3; /* pale coral */
 }
 
 .brand-card:hover,
 .brand-card:focus-visible {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   outline: none;
-}
-.brand-card.lib:hover,
-.brand-card.lib:focus-visible {
-  border-color: color-mix(in srgb, var(--star-lib) 60%, transparent);
-}
-.brand-card.lang:hover,
-.brand-card.lang:focus-visible {
-  border-color: color-mix(in srgb, var(--star-lang) 60%, transparent);
-}
-.brand-card.runtime:hover,
-.brand-card.runtime:focus-visible {
-  border-color: color-mix(in srgb, var(--star-runtime) 60%, transparent);
+  border-color: color-mix(in srgb, var(--tint) 75%, transparent);
+  /* Mesh-style background: 4 offset radial gradients at different
+     positions and intensities, mixing the accent (luminous near-white
+     trinity color) with the base trinity color. Different spots feel
+     slightly different — like real light bouncing around the card
+     rather than one flat tint. (Earlier iteration had a conic-
+     gradient sweep too; dropped because conic always shows a
+     visible seam at the 0°↔360° wrap-around point.) */
+  background:
+    radial-gradient(
+      ellipse 160% 130% at 22% 12%,
+      color-mix(in srgb, var(--tint-accent) 18%, transparent),
+      transparent 85%
+    ),
+    radial-gradient(ellipse 150% 120% at 78% 28%, color-mix(in srgb, var(--tint) 14%, transparent), transparent 85%),
+    radial-gradient(ellipse 140% 150% at 65% 95%, color-mix(in srgb, var(--tint) 9%, transparent), transparent 88%),
+    radial-gradient(
+      ellipse 135% 140% at 8% 70%,
+      color-mix(in srgb, var(--tint-accent) 6%, transparent),
+      transparent 90%
+    ),
+    color-mix(in srgb, var(--bg-elev) 85%, transparent);
+  /* Asymmetric multi-color shadow stack: the upper-right glow uses
+     the brighter accent (specular-ish highlight), the lower-left
+     uses the base trinity (cooler shadow side), and the cast
+     downward drop is the deepest. Mixed warmth makes it feel lit
+     from a directional source rather than evenly haloed. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tint) 60%, transparent),
+    -10px 8px 28px -8px color-mix(in srgb, var(--tint) 38%, transparent),
+    14px -4px 32px -10px color-mix(in srgb, var(--tint-accent) 30%, transparent),
+    0 22px 60px -14px color-mix(in srgb, var(--tint) 32%, transparent),
+    0 36px 100px -28px color-mix(in srgb, var(--tint) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--tint-accent) 40%, transparent),
+    inset 0 -16px 36px -22px color-mix(in srgb, var(--tint) 35%, transparent);
 }
 
 .brand-dot {

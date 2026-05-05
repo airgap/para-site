@@ -1,5 +1,5 @@
 /* ─── Stellar Atlas, runtime tier — red star ──────────────────────────
-   /runtime is the red point of the trinity (Lib blue, Lang yellow,
+   /runtime is the red point of the trinity (Lib blue, Lang emerald,
    Runtime red). The dark bg is tinted warm so the page temperature
    matches the runtime star instead of the cooler blue used on /libs. */
 :root,
@@ -15,7 +15,7 @@
   /* Stellar-spectrum trinity. /runtime is the red star — matches
      the umbrella's Runtime card. */
   --star-lib: #6db4ff;
-  --star-lang: #ffd54a;
+  --star-lang: #10b981;
   --star-runtime: #ff5c4a;
   --accent: var(--star-runtime);
   --accent-dim: #ff8a78;
@@ -38,7 +38,7 @@
   --text-dim: #5e574a;
   --text-faint: #94897a;
   --star-lib: #1a4880;
-  --star-lang: #a07a18;
+  --star-lang: #047857;
   --star-runtime: #b94a1f;
   --accent: var(--star-runtime);
   --accent-dim: #8a3614;

@@ -22,28 +22,28 @@ Every public module on one row. `—` means "doesn't exist on that side."
 - Rows with `—` in npm → Parabun-only native module (no credible browser/Node equivalent).
 - Rows with `—` in runtime → pure-JS lib where native code wouldn't help.
 
-| Module | npm package | Runtime fast path | What it does |
-|---|---|---|---|
-| signals | `@para/signals` | — | Reactive state — Signal / Computed / Effect |
-| parallel | `@para/parallel` | `parabun:parallel` *(planned)* | Worker-pool primitives — pmap / preduce / psort + Mutex / Semaphore |
-| arena | `@para/arena` | `parabun:arena` ✓ | Buffer-pool free list + JSC-GC-deferring `scope()` |
-| simd | `@para/simd` | `parabun:simd` *(planned)* | SIMD over typed arrays — sum / dot / matVec / topK |
-| csv | `@para/csv` | `parabun:csv` *(planned)* | RFC 4180 parse / stringify; native = Highway SIMD parser |
-| arrow | `@para/arrow` | `parabun:arrow` *(planned)* | In-memory Arrow + IPC + Parquet; native = FlatBuffers + zstd |
-| rtp | `@para/rtp` | — | RFC 3550 RTP pack/parse + jitter buffer |
-| mcp | `@para/mcp` | — | Model Context Protocol client (stdio + WebSocket) |
-| image | — | `parabun:image` ✓ | JPEG / PNG / WebP / AVIF / HEIC / JPEG-XL decode + encode + filters |
-| video | — | `parabun:video` ✓ | H.264 / H.265 / VP9 / AV1 decode + encode + thumbnail + extractAudio (ffmpeg) |
-| audio | — | `parabun:audio` ✓ | WAV / MP3 / FLAC / AAC / OGG / Opus + FFT + filters + ALSA capture/playback |
-| llm | — | `parabun:llm` ✓ | LLM inference (Llama / Mistral / Whisper) on CUDA + Metal; OpenAI-compatible serve |
-| vision | — | `parabun:vision` ✓ | Frame + motion + YOLO + tesseract OCR + tracker + ONNX runtime |
-| speech | — | `parabun:speech` ✓ | VAD-gated utterance segmentation + Whisper STT + Piper TTS |
-| assistant | — | `parabun:assistant` ✓ | Bot harness composing speech + llm into a turn-taking agent |
-| gpu | — | `parabun:gpu` ✓ | CUDA + Metal kernels; matVec / matmul / conv2D / scan / reduce / quantile / variance / argmin/max / histogram / custom MSL+CUDA |
-| gpio | — | `parabun:gpio` ✓ | Linux uAPI v2 GPIO — digital in/out, edge events |
-| i2c | — | `parabun:i2c` ✓ | Linux i2c-dev with SMBus convenience methods |
-| spi | — | `parabun:spi` ✓ | Linux spidev with multi-segment transfers |
-| camera | — | `parabun:camera` ✓ | V4L2 frame capture |
+| Module | `@para/*` | `parabun:*` | What it does |
+|---|:---:|:---:|---|
+| signals | ✓ | — | Reactive state — Signal / Computed / Effect |
+| parallel | ✓ | planned | Worker-pool primitives — pmap / preduce / psort + Mutex / Semaphore |
+| arena | ✓ | ✓ | Buffer-pool free list + JSC-GC-deferring `scope()` |
+| simd | ✓ | planned | SIMD over typed arrays — sum / dot / matVec / topK |
+| csv | ✓ | planned | RFC 4180 parse / stringify; native = Highway SIMD parser |
+| arrow | ✓ | planned | In-memory Arrow + IPC + Parquet; native = FlatBuffers + zstd |
+| rtp | ✓ | — | RFC 3550 RTP pack/parse + jitter buffer |
+| mcp | ✓ | — | Model Context Protocol client (stdio + WebSocket) |
+| image | — | ✓ | JPEG / PNG / WebP / AVIF / HEIC / JPEG-XL decode + encode + filters |
+| video | — | ✓ | H.264 / H.265 / VP9 / AV1 decode + encode + thumbnail + extractAudio (ffmpeg) |
+| audio | — | ✓ | WAV / MP3 / FLAC / AAC / OGG / Opus + FFT + filters + ALSA capture/playback |
+| llm | — | ✓ | LLM inference (Llama / Mistral / Whisper) on CUDA + Metal; OpenAI-compatible serve |
+| vision | — | ✓ | Frame + motion + YOLO + tesseract OCR + tracker + ONNX runtime |
+| speech | — | ✓ | VAD-gated utterance segmentation + Whisper STT + Piper TTS |
+| assistant | — | ✓ | Bot harness composing speech + llm into a turn-taking agent |
+| gpu | — | ✓ | CUDA + Metal kernels; matVec / matmul / conv2D / scan / reduce / quantile / variance / argmin/max / histogram / custom MSL+CUDA |
+| gpio | — | ✓ | Linux uAPI v2 GPIO — digital in/out, edge events |
+| i2c | — | ✓ | Linux i2c-dev with SMBus convenience methods |
+| spi | — | ✓ | Linux spidev with multi-segment transfers |
+| camera | — | ✓ | V4L2 frame capture |
 
 Two more npm packages back Para language features (`|>` and `0.1d`) — present so `.pts` output has somewhere to import from, not pitched as standalone libraries:
 

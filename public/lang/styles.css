@@ -16,12 +16,12 @@
   --text-faint: #4a4d5a;
   /* Stellar-spectrum trinity. Each section landing picks its own
      accent below via body.page-libs / .page-lang / .page-runtime so
-     /libs reads as blue, /lang as yellow, /runtime as red — matching
+     /libs reads as blue, /lang as emerald, /runtime as red — matching
      the umbrella splash cards. The default (when no body class is
      set, e.g. on /docs/) is blue, since the libraries are the
      broadest-audience product. */
   --star-lib: #6db4ff;
-  --star-lang: #ffd54a;
+  --star-lang: #10b981;
   --star-runtime: #ff5c4a;
   /* Default accent (no section class) = blue. */
   --accent: var(--star-lib);
@@ -45,7 +45,7 @@
   --text-dim: #5e574a;
   --text-faint: #94897a;
   --star-lib: #1a4880;
-  --star-lang: #a07a18;
+  --star-lang: #047857;
   --star-runtime: #b94a1f;
   --accent: var(--star-lib);
   --accent-dim: #6db4ff;
@@ -67,17 +67,24 @@
   /* Defaults are already blue-tinted (cool dark + neutral text). */
 }
 :root:has(body.page-lang) {
-  --bg: #0a0905;
-  --bg-elev: #100e08;
-  --bg-code: #14110a;
-  --rule: #2a2614;
-  --rule-strong: #3d3722;
-  --text: #f0ecd8;
-  --text-dim: #a89e80;
-  --text-faint: #5c5538;
+  /* /lang is the emerald point of the trinity. Base palette is
+     emerald-tinted dark (mirrors how /runtime/ tints its base toward
+     warm-red instead of using the cool-blue /libs/ default). Earlier
+     attempts: warm-yellow tint slid through olive (mucus); cool-blue
+     tint left the page dominated by blue and the emerald accent felt
+     disconnected. Mid-tones are sage-gray (R≈G≈B with G slightly
+     higher) — no yellow-green slide because B stays close to G. */
+  --bg: #03110a;
+  --bg-elev: #061a10;
+  --bg-code: #082218;
+  --rule: #0d2c1e;
+  --rule-strong: #16442e;
+  --text: #dceee5;
+  --text-dim: #7d9b8a;
+  --text-faint: #455a4d;
   --accent: var(--star-lang);
-  --accent-dim: #ffe88a;
-  --accent-soft: #2a230a;
+  --accent-dim: #34d399;
+  --accent-soft: #082820;
 }
 :root[data-theme="light"] body.page-libs {
   --accent: var(--star-lib);
@@ -86,8 +93,8 @@
 }
 :root[data-theme="light"] body.page-lang {
   --accent: var(--star-lang);
-  --accent-dim: #d4a830;
-  --accent-soft: #f4ecd0;
+  --accent-dim: #34d399;
+  --accent-soft: #d1fae5;
 }
 
 * {
@@ -241,9 +248,9 @@ body::after {
    :has(body.page-lang) so they win over the default. */
 :root:has(body.page-lang)::before {
   background-image:
-    radial-gradient(ellipse 80vw 65vh at 78% 18%, rgba(255, 213, 74, 0.12), transparent 65%),
-    radial-gradient(ellipse 65vw 50vh at 12% 75%, rgba(255, 180, 80, 0.08), transparent 65%),
-    radial-gradient(ellipse 55vw 60vh at 55% 110%, rgba(220, 170, 60, 0.06), transparent 60%);
+    radial-gradient(ellipse 80vw 65vh at 78% 18%, rgba(16, 185, 129, 0.12), transparent 65%),
+    radial-gradient(ellipse 65vw 50vh at 12% 75%, rgba(110, 231, 183, 0.08), transparent 65%),
+    radial-gradient(ellipse 55vw 60vh at 55% 110%, rgba(16, 185, 129, 0.06), transparent 60%);
 }
 :root:has(body.page-lang) body::before {
   /* Repaint the dense starfield with a yellow accent instead of the
@@ -253,7 +260,7 @@ body::after {
     radial-gradient(2px 2px at 23% 76%, rgba(255, 255, 255, 0.8) 25%, rgba(255, 255, 255, 0.15) 55%, transparent 100%),
     radial-gradient(2px 2px at 67% 12%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
     radial-gradient(2px 2px at 23% 22%, rgba(255, 255, 255, 0.8) 25%, rgba(255, 255, 255, 0.15) 55%, transparent 100%),
-    radial-gradient(2px 2px at 49% 53%, rgba(255, 235, 180, 0.85) 25%, rgba(255, 213, 74, 0.18) 55%, transparent 100%),
+    radial-gradient(2px 2px at 49% 53%, rgba(167, 243, 208, 0.85) 25%, rgba(16, 185, 129, 0.18) 55%, transparent 100%),
     radial-gradient(2px 2px at 38% 4%, rgba(255, 255, 255, 0.75) 25%, rgba(255, 255, 255, 0.14) 55%, transparent 100%),
     radial-gradient(1px 1px at 14% 52%, rgba(255, 255, 255, 0.55) 50%, transparent 100%),
     radial-gradient(1px 1px at 35% 7%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
@@ -269,20 +276,20 @@ body::after {
     radial-gradient(1px 1px at 95% 28%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
     radial-gradient(1px 1px at 4% 84%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
     radial-gradient(1px 1px at 28% 92%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 41% 18%, rgba(255, 213, 74, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 87% 8%, rgba(255, 200, 100, 0.4) 50%, transparent 100%),
+    radial-gradient(1px 1px at 41% 18%, rgba(16, 185, 129, 0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 87% 8%, rgba(110, 231, 183, 0.4) 50%, transparent 100%),
     radial-gradient(1px 1px at 12% 5%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
     radial-gradient(1px 1px at 52% 96%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
   background-size: 100vw 160vh;
 }
 :root:has(body.page-lang) body::after {
   background-image:
-    radial-gradient(3px 3px at 88% 38%, rgba(255, 235, 180, 1) 16%, rgba(255, 213, 74, 0.45) 38%, transparent 90%),
+    radial-gradient(3px 3px at 88% 38%, rgba(167, 243, 208, 1) 16%, rgba(16, 185, 129, 0.45) 38%, transparent 90%),
     radial-gradient(4px 4px at 41% 31%, rgba(255, 255, 255, 1) 14%, rgba(255, 255, 255, 0.35) 38%, transparent 90%),
-    radial-gradient(3px 3px at 14% 78%, rgba(255, 230, 160, 0.95) 16%, rgba(255, 200, 100, 0.35) 38%, transparent 90%),
+    radial-gradient(3px 3px at 14% 78%, rgba(255, 230, 160, 0.95) 16%, rgba(110, 231, 183, 0.35) 38%, transparent 90%),
     radial-gradient(3px 3px at 71% 88%, rgba(255, 255, 255, 0.95) 16%, rgba(255, 255, 255, 0.3) 38%, transparent 90%),
-    radial-gradient(ellipse 35vw 28vh at 85% 8%, rgba(255, 213, 74, 0.07), transparent 70%),
-    radial-gradient(ellipse 30vw 25vh at 15% 92%, rgba(255, 200, 100, 0.05), transparent 70%);
+    radial-gradient(ellipse 35vw 28vh at 85% 8%, rgba(16, 185, 129, 0.07), transparent 70%),
+    radial-gradient(ellipse 30vw 25vh at 15% 92%, rgba(110, 231, 183, 0.05), transparent 70%);
 }
 
 /* ─── Parallax keyframes — slowest deepest, fastest closest ─────────── */

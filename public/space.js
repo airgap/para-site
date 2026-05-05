@@ -1,13 +1,13 @@
-// Full-viewport starfield + three nebulae for the umbrella splash —
-// one nebula per product (blue / yellow / red, matching the trinity).
-// Replaces the body::before CSS gradient pile with a single canvas
-// that's prettier (proper random distribution, gaussian falloff
-// without 8-bit Mach bands) and DPR-aware.
+// Static atmosphere for the umbrella splash:
+//   - one nebula per product (blue / emerald / red), corner-anchored
+//   - a starfield over the top
 //
-// Static — no scroll parallax — because the umbrella is a single-
-// screen splash. Only resize triggers a redraw.
+// Renders ONCE on init and again on resize. No animation loop, no
+// hover machinery, no per-frame work. The brand-card hover effects
+// live in CSS — see .brand-card:hover in styles.css. Canvas exists
+// only to provide the soft cosmic backdrop the page hierarchy sits on.
 (() => {
-  const SEED = 4242; // distinct from runtime's 1337
+  const SEED = 4242;
   const STAR_COUNT = 260;
 
   const canvas = document.createElement("canvas");
@@ -35,22 +35,17 @@
     };
   }
 
-  // Three nebulae, one per product. Sized large with a long, gentle
-  // alpha tail so they bleed into each other instead of showing
-  // visible "junction" lines where two nebulae meet. Positions push
-  // each color toward its own corner; the overlap is the tinted
-  // ambient in between.
+  // Three nebulae, one per product. Corner-anchored with a long
+  // gentle alpha tail so they bleed into each other instead of
+  // showing visible "junction" lines where two nebulae meet.
   const nebulae = [
-    // Lib (blue) — top-left
     { x: 0.05, y: 0.15, rx: 0.95, ry: 0.85, color: [109, 180, 255], alpha: 0.18 },
-    // Lang (yellow) — bottom-center
-    { x: 0.5, y: 1.05, rx: 0.85, ry: 0.8, color: [255, 213, 74], alpha: 0.13 },
-    // Runtime (red) — top-right
+    { x: 0.5, y: 1.05, rx: 0.85, ry: 0.8, color: [16, 185, 129], alpha: 0.13 },
     { x: 0.95, y: 0.12, rx: 0.95, ry: 0.85, color: [255, 92, 74], alpha: 0.17 },
   ];
 
-  // Stars. Three brightness tiers; color mostly warm-white with a
-  // sprinkle of trinity-tinted (blue / yellow / red) accents.
+  // Stars. Three brightness tiers; mostly warm-white with a sprinkle
+  // of trinity-tinted accents.
   const rng = makeRng(SEED);
   const stars = [];
   for (let i = 0; i < STAR_COUNT; i++) {
@@ -71,13 +66,10 @@
     }
     const ct = rng();
     let color;
-    if (ct > 0.96)
-      color = [109, 180, 255]; // blue accent
-    else if (ct > 0.93)
-      color = [255, 213, 74]; // yellow accent
-    else if (ct > 0.91)
-      color = [255, 92, 74]; // red accent
-    else color = [255, 250, 240]; // warm white default
+    if (ct > 0.96) color = [109, 180, 255];
+    else if (ct > 0.93) color = [16, 185, 129];
+    else if (ct > 0.91) color = [255, 92, 74];
+    else color = [255, 250, 240];
     stars.push({ x: rng(), y: rng(), radius, alpha, halo, color });
   }
 
@@ -100,14 +92,18 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-    // Nebulae first. Sized by vmin so their shape stays round (the
-    // ellipse rx/ry ratio governs aspect) regardless of viewport.
-    const vmin = Math.min(cssWidth, cssHeight);
+    // Sizing reference is `vmax` (larger of width/height) — vmin
+    // would shrink the nebulae to narrow color bands on widescreen
+    // displays.
+    const vmax = Math.max(cssWidth, cssHeight);
+
+    // Nebulae first. Sized so their shape stays round (the rx/ry
+    // ratio governs aspect) regardless of viewport.
     for (const n of nebulae) {
       const cx = n.x * cssWidth;
       const cy = n.y * cssHeight;
-      const rx = n.rx * vmin;
-      const ry = n.ry * vmin;
+      const rx = n.rx * vmax;
+      const ry = n.ry * vmax;
       const r = Math.max(rx, ry);
       ctx.save();
       ctx.translate(cx, cy);
@@ -138,8 +134,6 @@
       const y = s.y * cssHeight;
       const [cr, cg, cb] = s.color;
       if (s.halo) {
-        // 2× halo extent matches the static SVG-style glow without
-        // bloating the visible star size.
         const haloR = s.radius * 2;
         const grad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
         grad.addColorStop(0, `rgba(${cr},${cg},${cb},${s.alpha})`);
