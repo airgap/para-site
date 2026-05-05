@@ -1,91 +1,63 @@
-/* ─── Para: Stellar Atlas ─────────────────────────────────────────
-   Para and ParaBun are a binary star system — each shines on its
-   own (the language ships standalone, the runtime ships standalone), but
-   they orbit a shared center and combine into something brighter than
-   either alone. The site's two modes lean into different sides of that
-   metaphor:
+/* ─── Para — minimal Starlight customization ──────────────────────────
+ *
+ * Goal: lean on Starlight's default chrome for layout / scroll / nav,
+ * and use this file ONLY for palette + fonts + a couple of small
+ * markdown-content polish rules. Everything decorative (parallax,
+ * starfield, backdrop-filter, floating-pill nav, mobile-TOC reflow)
+ * was removed — those layers were flashy on desktop but unreliable
+ * on mobile and stylistically nonstandard for a docs site.
+ *
+ * Typography: Fraunces (display) + Spectral (body) + JetBrains Mono
+ * (code). All from Google Fonts; loaded once at the top of the file.
+ * ──────────────────────────────────────────────────────────────────── */
 
-     Dark (default) — Night Sky observation. Deep midnight bg, blue-white
-     primary star (Para), amber companion (ParaBun). Subtle starfield
-     under the content.
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap");
 
-     Light (alternate) — Atlas. Parchment paper, ink markings, vermillion
-     accents. The cosmos rendered as a hand-drawn celestial chart.
-
-   Typography: Fraunces (display) + Spectral (body) — both from Production
-   Type, designed to pair. Spectral is screen-optimized for long-form
-   reading; Fraunces has variable opsz + SOFT axes that we tune per
-   element. JetBrains Mono unchanged.
-   ───────────────────────────────────────────────────────────────────── */
-
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,400..700,30..50&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap");
-
-/* ─── Dark: Night Sky (default) ─────────────────────────────────────── */
+/* ─── Dark palette (default) ──────────────────────────────────────── */
 :root,
 :root[data-theme="dark"] {
   --pb-bg: #050811;
   --pb-bg-elev: #0c1020;
-  --pb-bg-code: #0d1224;
-  --pb-bg-inline-code: #131830;
   --pb-rule: #1a2240;
   --pb-rule-strong: #2a3458;
   --pb-text: #e8e6dd;
   --pb-text-dim: #8a8b94;
   --pb-text-faint: #4a4d5a;
 
-  /* Binary star colors — used both as accents and in the brand mark.
-     Primary = Para (this site's headline), Companion = ParaBun. */
-  --pb-star-primary: #6db4ff;
-  --pb-star-companion: #ffa855;
-
-  --pb-accent: var(--pb-star-primary);
+  --pb-accent: #6db4ff;
   --pb-accent-strong: #9fcdff;
   --pb-accent-soft: #1a2a44;
 
   --sl-color-text-invert: var(--pb-bg);
 }
 
-/* ─── Light: Atlas (alternate) ──────────────────────────────────────── */
+/* ─── Light palette ──────────────────────────────────────────────── */
 :root[data-theme="light"] {
   --pb-bg: #f3efe3;
   --pb-bg-elev: #f8f5ec;
-  --pb-bg-code: #ebe5d4;
-  --pb-bg-inline-code: #ebe2cc;
   --pb-rule: #d4cdba;
   --pb-rule-strong: #b8af9a;
   --pb-text: #1a1812;
   --pb-text-dim: #5e574a;
   --pb-text-faint: #94897a;
 
-  /* In Atlas mode the binary stars are rendered as ink markings —
-     deeper, less luminous, but still distinct as the two halves. */
-  --pb-star-primary: #1a4880;
-  --pb-star-companion: #b94a1f;
-
-  --pb-accent: var(--pb-star-companion);
-  --pb-accent-strong: #8a3614;
-  --pb-accent-soft: #f4d4cf;
+  --pb-accent: #1a4880;
+  --pb-accent-strong: #0c2c52;
+  --pb-accent-soft: #d6e0ee;
 
   --sl-color-text-invert: #ffffff;
 }
 
-/* ─── Starlight bindings (theme-agnostic, derive from pb-* above) ──── */
+/* ─── Bind palette to Starlight's variables ──────────────────────── */
 :root,
 :root[data-theme="light"],
 :root[data-theme="dark"] {
   --sl-color-bg: var(--pb-bg);
   --sl-color-bg-nav: var(--pb-bg);
   --sl-color-bg-sidebar: var(--pb-bg);
-  --sl-color-bg-inline-code: var(--pb-bg-inline-code);
-  --sl-color-bg-accent: var(--pb-accent);
 
   --sl-color-text: var(--pb-text);
   --sl-color-text-accent: var(--pb-accent);
-  /* --sl-color-white = the foreground / "text on dark" color
-     --sl-color-black = the background / "dark surface" color
-     Both were mapped to --pb-text (light), which made elements that
-     use bg: var(--sl-color-black) (e.g. the mobile-TOC toggle)
-     render with a white background. */
   --sl-color-white: var(--pb-text);
   --sl-color-black: var(--pb-bg);
 
@@ -110,402 +82,61 @@
 
   --sl-content-width: 50rem;
   --sl-line-height: 1.65;
-  --sl-line-height-headings: 1.12;
 }
 
-/* ─── Atmospheric backgrounds — three parallax layers ─────────────────
-   html::before (deepest, slowest) → body::before (mid) → body::after
-   (closest, fastest). Painted in tree order so html::before is behind
-   body::before, and body::after is on top of body::before. */
+/* ─── Markdown content polish ─────────────────────────────────────── */
 
-html::before,
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  /* Extend 60vh below viewport so when the layer translates up to -38vh
-     (max parallax) there's still content covering the viewport bottom. */
-  inset: 0 0 -60vh 0;
-  pointer-events: none;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
+.sl-markdown-content {
+  font-family: "Spectral", Georgia, serif;
+  font-size: 1rem;
 }
 
-/* Layer 1: deep nebulae — soft, slow. */
-:root[data-theme="dark"]::before,
-:root:not([data-theme="light"])::before {
-  z-index: 0;
-  background-image:
-    radial-gradient(ellipse 80vw 65vh at 78% 18%, rgba(109, 180, 255, 0.13), transparent 65%),
-    radial-gradient(ellipse 65vw 50vh at 12% 75%, rgba(255, 168, 85, 0.08), transparent 65%),
-    radial-gradient(ellipse 55vw 60vh at 55% 110%, rgba(180, 110, 220, 0.06), transparent 60%);
-  animation: layer-deep linear;
-  animation-timeline: scroll(root);
-}
-
-/* Layer 2: dense starfield — medium parallax. */
-:root[data-theme="dark"] body::before,
-:root:not([data-theme="light"]) body::before {
-  z-index: 0;
-  background-image:
-    radial-gradient(2px 2px at 8% 18%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 23% 76%, rgba(255, 255, 255, 0.8) 25%, rgba(255, 255, 255, 0.15) 55%, transparent 100%),
-    radial-gradient(2px 2px at 67% 12%, rgba(255, 255, 255, 0.85) 25%, rgba(255, 255, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 23% 22%, rgba(255, 255, 255, 0.8) 25%, rgba(255, 255, 255, 0.15) 55%, transparent 100%),
-    radial-gradient(2px 2px at 49% 53%, rgba(180, 210, 255, 0.85) 25%, rgba(109, 180, 255, 0.18) 55%, transparent 100%),
-    radial-gradient(2px 2px at 38% 4%, rgba(255, 255, 255, 0.75) 25%, rgba(255, 255, 255, 0.14) 55%, transparent 100%),
-    radial-gradient(1px 1px at 14% 52%, rgba(255, 255, 255, 0.55) 50%, transparent 100%),
-    radial-gradient(1px 1px at 35% 7%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 49% 88%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 73% 53%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 18% 38%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 31% 65%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 47% 28%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 58% 82%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 64% 38%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 76% 18%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 84% 62%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 95% 28%, rgba(255, 255, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 4% 84%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 28% 92%, rgba(255, 255, 255, 0.45) 50%, transparent 100%),
-    radial-gradient(1px 1px at 41% 18%, rgba(109, 180, 255, 0.5) 50%, transparent 100%),
-    radial-gradient(1px 1px at 87% 8%, rgba(255, 168, 85, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 12% 5%, rgba(255, 255, 255, 0.4) 50%, transparent 100%),
-    radial-gradient(1px 1px at 52% 96%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
-  background-size: 100vw 160vh;
-  animation: layer-mid linear;
-  animation-timeline: scroll(root);
-}
-
-/* Layer 3: foreground bright stars + near dust — fastest. */
-:root[data-theme="dark"] body::after,
-:root:not([data-theme="light"]) body::after {
-  z-index: 0;
-  background-image:
-    radial-gradient(3px 3px at 88% 38%, rgba(180, 210, 255, 1) 16%, rgba(109, 180, 255, 0.45) 38%, transparent 90%),
-    radial-gradient(4px 4px at 41% 31%, rgba(255, 255, 255, 1) 14%, rgba(255, 255, 255, 0.35) 38%, transparent 90%),
-    radial-gradient(3px 3px at 14% 78%, rgba(255, 220, 180, 0.95) 16%, rgba(255, 168, 85, 0.35) 38%, transparent 90%),
-    radial-gradient(3px 3px at 71% 88%, rgba(255, 255, 255, 0.95) 16%, rgba(255, 255, 255, 0.3) 38%, transparent 90%),
-    radial-gradient(ellipse 35vw 28vh at 85% 8%, rgba(109, 180, 255, 0.06), transparent 70%),
-    radial-gradient(ellipse 30vw 25vh at 15% 92%, rgba(255, 168, 85, 0.05), transparent 70%);
-  animation: layer-near linear;
-  animation-timeline: scroll(root);
-}
-
-/* Light mode: parchment dot-grid only on body::before; other layers off. */
-:root[data-theme="light"] body::before {
-  z-index: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(26, 24, 18, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-:root[data-theme="light"]::before,
-:root[data-theme="light"] body::after {
-  display: none;
-}
-
-@keyframes layer-deep {
-  to {
-    transform: translate3d(0, -6vh, 0);
-  }
-}
-@keyframes layer-mid {
-  to {
-    transform: translate3d(0, -22vh, 0);
-  }
-}
-@keyframes layer-near {
-  to {
-    transform: translate3d(0, -38vh, 0);
-  }
-}
-
-/* ─── Mobile reliability: drop heavyweight compositor work ────────────
- *
- * Two effects compete with iOS Safari's touch-scroll thread and
- * cause randomly-dying touch scroll on /docs/:
- *
- * 1. `animation-timeline: scroll(root)` driving three position:fixed
- *    full-viewport pseudo-elements (the parallax atmosphere). Heavy
- *    compositor work tied to scroll position; WebKit's mobile impl is
- *    young enough to stutter or lock under sustained gestures.
- *
- * 2. `backdrop-filter: blur(10px) saturate(150%)` on the fixed header
- *    and sidebar pane. Blur is recomputed on every scroll frame and
- *    pegged to the same compositor; on iOS in particular this can
- *    starve touch event delivery.
- *
- * Touch devices and reduced-motion users get static painted layers
- * with no scroll animation, no will-change, and no backdrop-filter.
- * Same visual structure, just no compositor pressure. Pointer-fine
- * devices keep the full effect. */
-@media (hover: none) and (pointer: coarse), (prefers-reduced-motion: reduce) {
-  html::before,
-  body::before,
-  body::after {
-    will-change: auto;
-    animation: none !important;
-    animation-timeline: auto !important;
-    transform: none;
-  }
-
-  header.header,
-  .sidebar-pane,
-  mobile-starlight-toc nav {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: var(--pb-bg) !important;
-  }
-}
-
-/* Lift content above the atmosphere layer. .sidebar-pane is
-   intentionally NOT in this list — Starlight gives it
-   `position: fixed` for the desktop side-by-side layout, and
-   overriding it to `position: relative` drops the sidebar into the
-   normal block flow so the main content stacks below it instead of
-   beside it. The sidebar's own backdrop-filter rule below already
-   gives it z-index above the body::before atmosphere. */
-.sl-container,
-header.header,
-main {
-  position: relative;
-  z-index: 1;
-}
-
-/* ─── Headings: Fraunces ────────────────────────────────────────────── */
 .sl-markdown-content h1,
 .sl-markdown-content h2,
-.sl-markdown-content h3,
-h1.content-panel,
-.hero h1 {
+.sl-markdown-content h3 {
   font-family: "Fraunces", Georgia, serif;
-  font-weight: 500;
   letter-spacing: -0.018em;
   color: var(--pb-text);
-  font-variation-settings:
-    "opsz" 144,
-    "SOFT" 30;
 }
 
 .sl-markdown-content h1 {
-  font-size: clamp(2.4rem, 1.85rem + 2.2vw, 3.5rem);
   font-weight: 600;
-  margin-block-end: 0.35em;
 }
+
 .sl-markdown-content h2 {
-  font-size: clamp(1.6rem, 1.4rem + 0.8vw, 2.05rem);
   font-weight: 500;
   margin-block-start: 2.4em;
-  margin-block-end: 0.55em;
   padding-block-end: 0.4em;
   border-block-end: 1px solid var(--pb-rule);
 }
+
 .sl-markdown-content h3 {
-  font-size: 1.32rem;
   font-weight: 600;
-  margin-block-start: 1.8em;
-  font-variation-settings:
-    "opsz" 36,
-    "SOFT" 50;
-}
-.sl-markdown-content h4 {
-  font-family: "Spectral", serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--pb-text-faint);
-  margin-block-start: 1.6em;
 }
 
-.sl-markdown-content {
-  font-size: 1rem;
-  font-family: "Spectral", Georgia, serif;
-}
-.sl-markdown-content p,
-.sl-markdown-content li {
-  color: var(--pb-text);
-}
-
-/* Lede — Fraunces italic, optical size 36, soft. The first paragraph
-   feels like a sub-headline in a journal article. */
+/* Lede — first paragraph after H1, italic in display face. */
 .sl-markdown-content > h1 + p {
   font-family: "Fraunces", Georgia, serif;
-  font-weight: 400;
   font-style: italic;
-  font-size: 1.32rem;
-  line-height: 1.45;
-  letter-spacing: -0.005em;
+  font-size: 1.2rem;
   color: var(--pb-text-dim);
-  margin-block-end: 1.8em;
-  font-variation-settings:
-    "opsz" 36,
-    "SOFT" 50;
 }
-
-.sl-markdown-content a {
-  color: var(--pb-accent);
-  text-decoration: none;
-  border-block-end: 1px solid var(--pb-accent-soft);
-  transition: border-color 120ms ease;
-}
-.sl-markdown-content a:hover {
-  border-block-end-color: var(--pb-accent);
-}
-
-/* ─── Code ──────────────────────────────────────────────────────────── */
 
 .sl-markdown-content code:not(pre code) {
-  font-family: var(--sl-font-mono);
-  font-size: 0.86em;
-  background: var(--pb-bg-inline-code);
+  background: var(--pb-bg-elev);
+  border: 1px solid var(--pb-rule);
   padding: 0.1em 0.4em;
   border-radius: 3px;
-  border: 1px solid var(--pb-rule);
-  color: var(--pb-text);
+  font-size: 0.86em;
 }
 
-.expressive-code {
-  margin-block: 1.5rem !important;
-}
-.expressive-code pre {
-  border: 1px solid var(--pb-rule) !important;
-  border-radius: 6px !important;
-  background: var(--pb-bg-code) !important;
-}
-
-/* ─── Sidebar / nav chrome ──────────────────────────────────────────── */
-
-.sl-link-card,
-.card {
-  border: 1px solid var(--pb-rule);
-  background: var(--pb-bg-elev);
-}
-
-/* Active sidebar item: accent-colored text + bold. Starlight's
-   default also paints `background-color: var(--sl-color-text-accent)`
-   on top — same value as our text color override here, so the pill
-   fill covered the text completely. Cancel the bg fill so only the
-   text-color highlight remains. */
-.sidebar-pane [aria-current="page"],
-.sidebar-content [aria-current="page"] {
-  color: var(--pb-accent) !important;
-  background-color: transparent !important;
-  font-weight: 600;
-}
-
-.sidebar-pane summary span,
-.sidebar-pane h2,
-.sidebar-content > ul > li > span {
-  font-family: "Spectral", serif;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--pb-text-faint);
-  font-weight: 600;
-}
-
-/* Site title — Fraunces with the binary star mark inline. */
-.site-title,
-header a.site-title,
-[data-has-hero] header a.site-title {
-  font-family: "Fraunces", Georgia, serif !important;
-  font-weight: 700 !important;
-  font-size: 1.2rem !important;
-  letter-spacing: -0.012em;
-  color: var(--pb-text) !important;
-  font-variation-settings:
-    "opsz" 144,
-    "SOFT" 30 !important;
-}
-
-/* Floating-pill nav: header and sidebar both inset 14px from viewport
-   edges with 14px corners and backdrop-filter blur. Smaller surfaces
-   (vs full-width nav) keep the blur cost bounded; nebulae underneath
-   sit on a GPU compositor layer so re-rasterization is cheaper than
-   it would be on a fresh paint surface. */
-header.header {
-  margin: 14px 14px 0 14px;
-  border: 1px solid var(--pb-rule);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--pb-bg) 55%, transparent);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-}
-
-.sidebar-pane {
-  margin: 14px 0 14px 14px;
-  border: 1px solid var(--pb-rule);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--pb-bg) 45%, transparent);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-}
-
-/* The mobile "On this page" TOC bar is position:fixed against
-   --sl-nav-height with inset-inline:0, but the floating header above
-   has a 14px margin all around. Without this override the TOC bar
-   floats behind the header and runs edge-to-edge instead of being
-   inset to match. Push it down by 14px (nav height + the gap below
-   the header) and inset it 14px on each side.
-
-   The component is hidden at lg (64rem+) by Starlight, but stays
-   visible alongside the sidebar between 50rem and 64rem — so the
-   desktop range needs its left edge moved past the sidebar to
-   prevent overlap. Mirrors Starlight's own @50rem rule. */
-mobile-starlight-toc nav {
-  top: calc(var(--sl-nav-height) + 14px);
-  inset-inline: 14px;
-  border: 1px solid var(--pb-rule);
-  border-top: 1px solid var(--pb-rule);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--pb-bg) 55%, transparent);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-}
-@media (min-width: 50rem) {
-  mobile-starlight-toc nav {
-    inset-inline-start: var(--sl-content-inline-start, 14px);
-    inset-inline-end: 14px;
-  }
-}
-
-/* ─── Tables, blockquotes ───────────────────────────────────────────── */
 .sl-markdown-content blockquote {
   border-inline-start: 3px solid var(--pb-accent);
-  background: transparent;
   padding-inline-start: 1.1rem;
   color: var(--pb-text-dim);
   font-style: italic;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.08rem;
 }
 
-.sl-markdown-content table {
-  border-collapse: collapse;
-}
-.sl-markdown-content th,
-.sl-markdown-content td {
-  border-block-end: 1px solid var(--pb-rule);
-  padding: 0.55rem 0.8rem;
-  text-align: start;
-}
-.sl-markdown-content th {
-  font-family: "Spectral", serif;
-  font-weight: 600;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--pb-text-dim);
-  border-block-end-color: var(--pb-rule-strong);
-}
-
-.sl-markdown-content hr {
-  border: 0;
-  border-block-start: 1px dashed var(--pb-rule-strong);
-  margin-block: 2.5rem;
-}
-
-/* ─── Selection — uses primary star color, mode-aware ──────────────── */
 ::selection {
   background: var(--pb-accent-soft);
   color: var(--pb-text);
