@@ -21,6 +21,7 @@ const guides = [
   { label: "Install (libs)", link: `${docsRoot}/install-libs/` },
   { label: "Install (runtime)", link: `${docsRoot}/install-runtime/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
+  { label: "Architecture", link: `${docsRoot}/architecture/` },
 ];
 const examples = [
   { label: "Overview", link: `${docsRoot}/examples/` },
