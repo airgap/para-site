@@ -219,6 +219,44 @@ body::after {
   }
 }
 
+/* ─── Mobile reliability: drop heavyweight compositor work ────────────
+ *
+ * Two effects compete with iOS Safari's touch-scroll thread and
+ * cause randomly-dying touch scroll on /docs/:
+ *
+ * 1. `animation-timeline: scroll(root)` driving three position:fixed
+ *    full-viewport pseudo-elements (the parallax atmosphere). Heavy
+ *    compositor work tied to scroll position; WebKit's mobile impl is
+ *    young enough to stutter or lock under sustained gestures.
+ *
+ * 2. `backdrop-filter: blur(10px) saturate(150%)` on the fixed header
+ *    and sidebar pane. Blur is recomputed on every scroll frame and
+ *    pegged to the same compositor; on iOS in particular this can
+ *    starve touch event delivery.
+ *
+ * Touch devices and reduced-motion users get static painted layers
+ * with no scroll animation, no will-change, and no backdrop-filter.
+ * Same visual structure, just no compositor pressure. Pointer-fine
+ * devices keep the full effect. */
+@media (hover: none) and (pointer: coarse), (prefers-reduced-motion: reduce) {
+  html::before,
+  body::before,
+  body::after {
+    will-change: auto;
+    animation: none !important;
+    animation-timeline: auto !important;
+    transform: none;
+  }
+
+  header.header,
+  .sidebar-pane,
+  mobile-starlight-toc nav {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--pb-bg) !important;
+  }
+}
+
 /* Lift content above the atmosphere layer. .sidebar-pane is
    intentionally NOT in this list — Starlight gives it
    `position: fixed` for the desktop side-by-side layout, and
