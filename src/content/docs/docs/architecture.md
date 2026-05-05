@@ -19,8 +19,8 @@ The split is deliberate: `parabun:*` modules can't run elsewhere by design (they
 Every public module on one row. `—` means "doesn't exist on that side."
 
 - Rows with **both** columns filled → cross-runtime library with optional native acceleration on Parabun.
-- Rows with `—` in npm → Parabun-only native module (no credible browser/Node equivalent).
-- Rows with `—` in runtime → pure-JS lib where native code wouldn't help.
+- Rows with `—` in `@para/*` → Parabun-only native module (no credible browser/Node equivalent).
+- Rows with `—` in `parabun:*` → pure-JS lib where native code wouldn't help.
 
 | Module | `@para/*` | `parabun:*` | What it does |
 |---|:---:|:---:|---|
