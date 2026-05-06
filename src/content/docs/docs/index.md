@@ -10,6 +10,8 @@ Para is two things:
 
 You can use the libraries from plain TypeScript or JavaScript without ever touching `.pts`. The syntax is there if you want fewer parens around reactive code.
 
+Try `.pts` in the browser at the **[Playground](/playground/)** — no install needed.
+
 ## Sections
 
 - **[Install (libs)](/docs/install-libs/)** — `@para/*` packages, plus the parabun build step if you use `.pts` files. **[Install (runtime)](/docs/install-runtime/)** — install ParaBun itself for the GPU / hardware modules.

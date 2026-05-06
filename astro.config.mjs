@@ -17,12 +17,15 @@ import parabunInjectGrammar from "./src/grammars/parabun-inject.tmLanguage.json"
 const docsRoot = "/docs";
 const guides = [
   { label: "Para docs", link: `${docsRoot}/` },
-  { label: "Playground", link: "/playground" },
   { label: "Install (libs)", link: `${docsRoot}/install-libs/` },
   { label: "Install (runtime)", link: `${docsRoot}/install-runtime/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
   { label: "Architecture", link: `${docsRoot}/architecture/` },
 ];
+// /playground is a standalone page, not a doc — keeping it in the
+// docs sidebar made Starlight's prev/next nav from /docs/ point at
+// the playground (out of the docs flow). Linked from /docs/ inline
+// instead, and surface it via the social/header slot.
 const examples = [
   { label: "Overview", link: `${docsRoot}/examples/` },
   { label: "Frontend (DOM)", link: `${docsRoot}/examples/frontend/` },
