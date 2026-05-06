@@ -20,95 +20,50 @@ import gpio from "parabun:gpio";
 import i2c from "parabun:i2c";
 import signals from "@para/signals";
 
-interface Plant {
-  name: string;
-  channel: number;       // ADS1115 input (0..2)
-  pumpPin: number;       // BCM number on the RP1
-  dryAt: number;         // moisture < this → water
-  pumpMs: number;        // pump pulse duration
-  cooldownMs: number;    // anti-drown gap between pulses
-}
-
-const PLANTS: Plant[] = [
-  { name: "basil",     channel: 0, pumpPin: 17, dryAt: 0.35, pumpMs: 1500, cooldownMs: 60_000 },
-  { name: "fern",      channel: 1, pumpPin: 27, dryAt: 0.40, pumpMs: 2000, cooldownMs: 90_000 },
-  { name: "succulent", channel: 2, pumpPin: 22, dryAt: 0.18, pumpMs: 800,  cooldownMs: 120_000 },
+const PLANTS = [
+  { name: "basil",     ch: 0, pin: 17, dryAt: 0.35, pumpMs: 1500, cooldownMs: 60_000 },
+  { name: "fern",      ch: 1, pin: 27, dryAt: 0.40, pumpMs: 2000, cooldownMs: 90_000 },
+  { name: "succulent", ch: 2, pin: 22, dryAt: 0.18, pumpMs: 800,  cooldownMs: 120_000 },
 ];
-const TANK_CHANNEL = 3;
-const TANK_EMPTY_AT = 0.05;
-const TANK_LOW_AT = 0.20;
+const TANK_CH = 3;
 
-// ─── hardware: ADC + GPIO ───────────────────────────────────────────
+const ads = i2c.ads1115("/dev/i2c-1");
+const chip = gpio.openDefaultChip();
+const pumps = new Map(PLANTS.map(p => [p.pin, chip.line(p.pin, { mode: "out", initial: 0 })]));
 
-const ads = i2c.ads1115("/dev/i2c-1");                    // 0x48 default; ±4.096V PGA default
-const chip = gpio.openDefaultChip();                       // RP1 on Pi 5, gpiochip0 elsewhere
-const pumps = new Map(
-  PLANTS.map(p => [p.pumpPin, chip.line(p.pumpPin, { mode: "out", initial: 0 })]),
-);
+// Capacitive moisture sensor: raw 26000 ≈ dry, 10000 ≈ wet. Calibrate yours.
+const moisture = (raw: number) => Math.max(0, Math.min(1, (26000 - raw) / 16000));
 
-// Capacitive moisture sensors are typically wet≈10000 / dry≈26000
-// raw — calibrate yours and adjust.
-async function readChannel(ch: number): Promise<number> {
-  const raw = await ads.read(ch as 0 | 1 | 2 | 3);
-  return Math.max(0, Math.min(1, (26000 - raw) / (26000 - 10000)));
-}
+// Tank state — three derived predicates and three edge-triggered alerts.
+const tankRaw = signals.fromInterval(() => ads.read(TANK_CH), 1000);
+derived tankLevel = moisture(tankRaw.signal.get() ?? 26000);
+derived tankEmpty = tankLevel < 0.05;
 
-const notify = (msg: string) => console.error(`[notify] ${msg}`);
+when tankEmpty     { console.error("⚠️  tank EMPTY — pausing watering"); }
+when not tankEmpty { console.error("✓  tank back above empty"); }
 
-// ─── tank: signal → derived → when (the reactive win) ───────────────
-
-const tankRaw = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
-derived tankLevel = tankRaw.signal.get() ?? 1.0;
-derived tankEmpty = tankLevel < TANK_EMPTY_AT;
-derived tankLow   = tankLevel < TANK_LOW_AT;
-
-when tankEmpty     { notify("⚠️  tank EMPTY — pausing all watering"); }
-when not tankEmpty { notify("✓  tank back above empty — resuming watering"); }
-when tankLow       { notify(`⚠ tank low — ${(tankLevel * 100).toFixed(0)}% remaining`); }
-
-// ─── per-plant pump driver, rate-limited per-plant by cooldown ──────
-
+// Per-plant pump, rate-limited by signals.cooldown.
 const water = signals.cooldown(
-  async (p: Plant) => {
-    console.log(`💧 ${p.name}: pump ON for ${p.pumpMs}ms`);
-    pumps.get(p.pumpPin)!.write(1);
+  async (p: typeof PLANTS[number]) => {
+    pumps.get(p.pin)!.write(1);
     await Bun.sleep(p.pumpMs);
-    pumps.get(p.pumpPin)!.write(0);
-    console.log(`✓  ${p.name}: pump OFF`);
+    pumps.get(p.pin)!.write(0);
   },
   { key: p => p.name, coolingMs: p => p.cooldownMs },
 );
 
-// ─── tick: read every plant, water the dry ones if conditions allow
-
-const tick = signals.fromInterval(async () => {
-  const empty = tankEmpty;
-  const cells: string[] = [];
+// Once a second: read every plant; water any dry ones if the tank has water.
+signals.fromInterval(async () => {
+  if (tankEmpty) return;
   for (const p of PLANTS) {
-    const m = await readChannel(p.channel);
-    let action = "";
-    if (m < p.dryAt && !empty) {
-      const fired = await water(p);
-      action = fired ? " → water" : " → wait";  // wait = in cooldown
-    } else if (m < p.dryAt && empty) {
-      action = " → SKIP (tank empty)";
-    }
-    const tag = m < p.dryAt ? "dry " : "ok  ";
-    cells.push(`${p.name.padEnd(10)} ${(m * 100).toFixed(0).padStart(3)}%  ${tag}${action}`);
+    if (moisture(await ads.read(p.ch)) < p.dryAt) await water(p);
   }
-  return `[tank ${(tankLevel * 100).toFixed(0).padStart(3)}%] ${cells.join(" │ ")}`;
 }, 1000);
 
-effect {
-  const row = tick.signal.get();
-  if (row !== undefined) console.log(row);
-}
-
-console.log(`watering ${PLANTS.length} plants — Ctrl-C to stop\n`);
 await new Promise(() => {});
 ```
 
-The shipped demo wraps this with a `--simulate` flag and a `--demo-empty` switch for dev-box testing — see [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) on GitHub.
+That's the whole thing — ~30 lines of actual logic. The [shipped demo](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) wraps it with a status-row formatter (so you can watch it work), a `--simulate` flag for dev-box testing, and a `--demo-empty` switch that drains the simulated tank fast so the alert cycle fires within seconds.
 
 ## What's reactive and what isn't
 
@@ -137,23 +92,19 @@ On the Pi with hardware wired up:
 parabun src/main.pjs
 ```
 
-That's it — the script auto-discovers the RP1 GPIO chip and opens the ADS1115 on `/dev/i2c-1`. It logs a status row at 1 Hz and notifies on the tank transitions:
+The script auto-discovers the RP1 GPIO chip and opens the ADS1115 on `/dev/i2c-1`. It runs silently until the tank crosses an alert edge:
 
 ```
-[tank  84%] basil 45% ok  │ fern 68% ok  │ succulent 15% rest
-[notify] ⚠ tank low — 12% remaining
-[notify] ⚠️  tank EMPTY — pausing all watering
-[tank   3%] basil 74% ok  │ fern 40% dry → SKIP (tank empty) │ succulent 0% rest
-[notify] ✓  tank back above empty — resuming watering
-💧 fern: pump ON for 2000ms
+⚠️  tank EMPTY — pausing watering
+✓  tank back above empty
 ```
 
 ### Without hardware
 
-`--simulate` swaps the I²C reads for a deterministic oscillator + a slowly-draining tank, so the demo also runs on a dev box. Pair with `--demo-empty` to drive the simulated tank to zero in ~12s instead of ~100s — useful for actually seeing the `when` block edges fire:
+The shipped demo at [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) wraps the same core with a status-row formatter and two flags for dev-box testing — `--simulate` swaps the I²C reads for a deterministic oscillator + slowly-draining tank, `--demo-empty` drains the tank fast (~12s to zero) so you can actually watch the `when` block edges fire:
 
 ```bash
-parabun src/main.pjs --simulate --demo-empty --seconds 14
+parabun demos/iot-waterer.pts --simulate --demo-empty --seconds 14
 ```
 
 ## Next steps
