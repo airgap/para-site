@@ -22,6 +22,12 @@ const PLANTS = [
 const TANK_CHANNEL = 3;
 const TANK_EMPTY_AT = 0.05;
 
+// readChannel(ch) returns the analog 0..1 reading from the ADS1115
+// (or the deterministic simulator under --simulate). runPump(plant)
+// flips the GPIO line on/off for plant.pumpMs and updates a
+// per-plant FSM. Both are plain functions defined in the full source
+// — elided here so the reactive shape stays readable.
+
 // ─── tank: signal → derived → when (the win) ─────────────────────
 const tankRaw    = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
 derived tankLevel = tankRaw.signal.get() ?? 1.0;
@@ -30,12 +36,12 @@ derived tankEmpty = tankLevel < TANK_EMPTY_AT;
 when tankEmpty       { notify("⚠️  tank EMPTY — pausing all watering"); }
 when not tankEmpty   { notify(`✓  tank refilled to ${(tankLevel * 100).toFixed(0)}% — resuming`); }
 
-// ─── per-plant FSM: drives pumps, gated by tankEmpty ─────────────
+// ─── per-plant FSM: dry & no cooldown & tank-not-empty → water ───
 const tick = signals.fromInterval(async () => {
   const empty = tankEmpty;
   for (const p of PLANTS) {
     const m = await readChannel(p.channel);
-    if (s.fsm === "ok" && m < p.dryAt && !empty) runPump(p);
+    if (canWater(p) && m < p.dryAt && !empty) runPump(p);
   }
 }, 1000);
 ```
