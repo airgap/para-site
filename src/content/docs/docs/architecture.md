@@ -45,11 +45,11 @@ Every public module on one row. `—` means "doesn't exist on that side."
 | spi | — | ✓ | Linux spidev with multi-segment transfers |
 | camera | — | ✓ | V4L2 frame capture |
 
-Two more npm packages back Para language features (`|>` and `0.1d`) — present so `.pts` output has somewhere to import from, not pitched as standalone libraries:
+Two npm packages back Para language features:
 
 | Package | Backs which feature |
 |---|---|
-| `@para/pipeline` | `\|>` runtime helpers + affine-chain `compile()` |
+| `@para/pipeline` | `\|>` operator runtime + affine-chain `compile()` |
 | `@para/decimal` | Exact-decimal arithmetic for `0.1d` literals |
 
 ## How the routing shim works
