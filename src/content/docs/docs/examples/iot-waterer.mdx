@@ -34,7 +34,7 @@ derived tankLevel = tankRaw.signal.get() ?? 1.0;
 derived tankEmpty = tankLevel < TANK_EMPTY_AT;
 
 when tankEmpty       { notify("⚠️  tank EMPTY — pausing all watering"); }
-when not tankEmpty   { notify(`✓  tank refilled to ${(tankLevel * 100).toFixed(0)}% — resuming`); }
+when not tankEmpty   { notify("✓  tank back above empty — resuming watering"); }
 
 // ─── per-plant FSM: dry & no cooldown & tank-not-empty → water ───
 const tick = signals.fromInterval(async () => {
