@@ -1,0 +1,89 @@
+---
+title: Multi-plant auto waterer
+description: Per-plant moisture signals + pump pulses with cooldown FSM, plus a tank-level sensor that pauses all watering when empty and uses `when` blocks for edge-triggered alerts on the empty / refilled / low-water transitions.
+---
+
+A real-shaped IoT controller: three potted plants with capacitive moisture sensors on an ADS1115 ADC, three pumps on GPIO relays, and a fourth ADC channel for a reservoir-level sensor. Each plant has a per-plant ok → watering → cooldown FSM; the tank coordinates all of them through `when` blocks that fire once on each empty/refilled transition rather than every tick.
+
+This is the example that earns Para's reactive primitives — multiple sensors feeding multiple actuators with cross-cutting safety state (the tank). The same code as plain JS would be either a pile of `prevX` flag tracking or an over-eager event bus.
+
+## src/main.pjs
+
+```pjs
+import gpio from "parabun:gpio";
+import i2c from "parabun:i2c";
+import signals from "@para/signals";
+
+const PLANTS = [
+  { name: "basil",     channel: 0, pumpPin: 17, dryAt: 0.35, pumpMs: 1500, cooldownMs: 60_000 },
+  { name: "fern",      channel: 1, pumpPin: 27, dryAt: 0.40, pumpMs: 2000, cooldownMs: 90_000 },
+  { name: "succulent", channel: 2, pumpPin: 22, dryAt: 0.18, pumpMs: 800,  cooldownMs: 120_000 },
+];
+const TANK_CHANNEL = 3;
+const TANK_EMPTY_AT = 0.05;
+
+// ─── tank: signal → derived → when (the win) ─────────────────────
+const tankRaw    = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
+derived tankLevel = tankRaw.signal.get() ?? 1.0;
+derived tankEmpty = tankLevel < TANK_EMPTY_AT;
+
+when tankEmpty       { notify("⚠️  tank EMPTY — pausing all watering"); }
+when not tankEmpty   { notify(`✓  tank refilled to ${(tankLevel * 100).toFixed(0)}% — resuming`); }
+
+// ─── per-plant FSM: drives pumps, gated by tankEmpty ─────────────
+const tick = signals.fromInterval(async () => {
+  const empty = tankEmpty;
+  for (const p of PLANTS) {
+    const m = await readChannel(p.channel);
+    if (s.fsm === "ok" && m < p.dryAt && !empty) runPump(p);
+  }
+}, 1000);
+```
+
+Full source (with the ADS1115 SMBus reads, the simulator fallback, and the cooldown FSM bookkeeping) is in [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) — under 250 lines.
+
+## What's reactive and what isn't
+
+- **`signal tankRaw`** — periodic ADC read at 1 Hz. The only mutable cell in the tank chain.
+- **`derived tankLevel`** + **`derived tankEmpty`** — read-only computations. `tankEmpty` recomputes every time `tankLevel` changes; nothing else has to track it.
+- **`when tankEmpty { ... }`** + **`when not tankEmpty { ... }`** — fire once per false→true and true→false transition. The empty notification doesn't repeat every second the tank stays empty; the refilled notification fires only on the actual refill. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking `wasEmpty` and `if (empty && !wasEmpty)`.
+- **Per-plant FSM is plain JS.** A `Map<string, PlantState>` and an `if/else` ladder. The FSM doesn't have multiple readers; reactivity wouldn't add anything.
+
+## Run it
+
+```bash
+# Simulator mode — works on any host, no hardware needed.
+parabun build src/main.pjs --outfile dist/main.js
+node dist/main.js --simulate --demo-empty --seconds 14
+```
+
+`--demo-empty` drains the simulated tank fast (8%/sec) so the empty/refill cycle fires within 14 seconds — useful for seeing the `when` block edges.
+
+```
+[tank  92%] basil 42% ok  │ fern 69% ok  │ succulent 18% PUMP → water
+[tank  84%] basil 45% ok  │ fern 68% ok  │ succulent 15% rest
+…
+[notify] ⚠ tank low — 12% remaining
+[notify] ⚠️  tank EMPTY — pausing all watering
+[tank   0%] basil 74% ok  │ fern 40% dry → SKIP (tank empty) │ succulent 0% rest
+[notify] ✓  tank refilled to 100% — resuming watering
+💧 fern: pump ON for 2000ms
+```
+
+## Real hardware
+
+```
+I²C bus 1 → ADS1115 @ 0x48
+  ch 0..2 → capacitive moisture sensors (one per plant)
+  ch 3    → analog tank-level sensor
+GPIO chip pinctrl-rp1 (RP1)
+  BCM 17 / 27 / 22 → relay drivers for the three pumps
+```
+
+`--i2c 1` switches to real ADS1115 reads. The default capacitive-moisture calibration assumes dry≈26000 / wet≈10000 raw; you'll want to dunk + dry your sensors and adjust.
+
+## Next steps
+
+- [`parabun:gpio`](/docs/gpio/) and [`parabun:i2c`](/docs/i2c/) — the hardware primitives
+- [`@para/signals`](/docs/signals/) — `signal` / `derived` / `when` / `effect`
+- [Edge example](/docs/examples/edge/) — the same `when` shape in a Cloudflare Durable Object

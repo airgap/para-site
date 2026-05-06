@@ -28,6 +28,12 @@ const examples = [
   { label: "Frontend (DOM)", link: `${docsRoot}/examples/frontend/` },
   { label: "Backend (Node)", link: `${docsRoot}/examples/backend/` },
   { label: "Edge (Workers)", link: `${docsRoot}/examples/edge/` },
+  { label: "Multi-plant waterer", link: `${docsRoot}/examples/iot-waterer/` },
+  { label: "GPIO over HTTP + SSE", link: `${docsRoot}/examples/iot-http-state/` },
+  { label: "Voice assistant", link: `${docsRoot}/examples/voice-assistant/` },
+  { label: "Smart camera", link: `${docsRoot}/examples/camera-motion/` },
+  { label: "Streaming ETL", link: `${docsRoot}/examples/streaming-etl/` },
+  { label: "Parquet ETL", link: `${docsRoot}/examples/parquet-etl/` },
 ];
 // pipeline is the runtime backing the |> operator (Para Lang internal),
 // not pitched as a user-facing library — its function-call API is ugly

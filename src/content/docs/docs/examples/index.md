@@ -1,29 +1,49 @@
 ---
 title: Examples
-description: Three worked Para projects, one per host environment — frontend (DOM), backend (Node), edge (Cloudflare Workers).
+description: Worked Para projects across host environments and use cases — frontend, backend, edge, IoT, voice, data engineering, vision.
 ---
 
-Three worked projects. Each is a complete project: file layout, source, build commands, deploy notes.
+Each example is a complete project with file layout, source, build commands, and run notes. Pick one near your problem shape; every page links to the relevant module docs at the bottom.
+
+## By host environment
 
 - **[Frontend](/docs/examples/frontend/)** — todo list with reactive DOM updates. Vite + vanilla DOM. Output is static.
 - **[Backend](/docs/examples/backend/)** — WebSocket server with per-connection signals and an SSE stats endpoint. Node 18+.
-- **[Edge](/docs/examples/edge/)** — HTTP handler with per-request signal scope and a Durable Object rate limiter. Cloudflare Workers.
+- **[Edge](/docs/examples/edge/)** — Durable Object rate limiter with `when` blocks for once-per-window alerts. Cloudflare Workers.
 
-## Common setup
+## IoT and hardware
 
-All three projects use the same setup:
+- **[Multi-plant auto waterer](/docs/examples/iot-waterer/)** — moisture sensors + pumps + tank-level sensor with `when`-block edge alerts. Real ADS1115 + Pi GPIO, plus a simulator that runs on any host.
+- **[GPIO state over HTTP + SSE](/docs/examples/iot-http-state/)** — button + LED exposed as a live web surface. One `effect { }` block writes the LED AND broadcasts to every SSE client.
+
+## Voice and ML
+
+- **[Voice assistant](/docs/examples/voice-assistant/)** — wake-word → STT → LLM → TTS → speaker, with grammar-constrained tool dispatch. ~30 lines.
+- **[Smart camera](/docs/examples/camera-motion/)** — V4L2 capture → motion detector → save a JPEG snapshot whenever motion fires. Three Parabun modules glued by an async iterator.
+
+## Data engineering
+
+- **[Streaming ETL](/docs/examples/streaming-etl/)** — 10M-element `|>` pipeline with SIMD primitives. ~5-6× over `.map().reduce()`. Cross-runtime.
+- **[Parquet ETL](/docs/examples/parquet-etl/)** — synthesize 50K events, write Parquet with bloom filters, demonstrate row-group skip on targeted queries. Cross-runtime.
+
+## Setup
 
 ```bash
 # Install the @para/* packages your code uses, e.g.:
-npm install @para/signals @para/parallel @para/pipeline
+npm install @para/signals @para/parallel @para/arrow
+
+# .pts / .pjs files compile with parabun build:
+parabun build src/main.pts --outfile dist/main.js
 ```
 
-…plus a one-line bundler alias mapping `para:*` to `@para/*` (see the [install guide](/docs/install-libs/) for the per-bundler snippets), and `parabun build` to transpile `.pts` files.
+Compiled output is standard JavaScript with `import "@para/foo"` statements — bundlers resolve those through `node_modules` with no additional config.
 
 ## Build targets
 
-| Project | `parabun build` target | Bundler |
+| Project | `parabun build` target | Runner |
 | --- | --- | --- |
-| Frontend | `--target browser` | Vite |
-| Backend | `--target node` | (`parabun build` alone) |
-| Edge | `--target browser` | Wrangler |
+| Frontend / browser | `--target browser` | Vite, esbuild, etc. |
+| Backend / Node | `--target node` | `node dist/...` |
+| Edge / Workers | `--target browser` | Wrangler |
+| IoT / voice / vision | (Parabun-only) | `parabun src/...` |
+| Data ETL | any target | any host |

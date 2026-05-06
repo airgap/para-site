@@ -1,0 +1,95 @@
+---
+title: GPIO state over HTTP + SSE
+description: Live GPIO state over HTTP. One `effect { }` block writes the LED based on the button AND broadcasts to SSE subscribers. POST endpoints support manual override.
+---
+
+A button-and-LED control surface exposed over HTTP. `Bun.serve` provides three endpoints — `GET /state` (snapshot JSON), `GET /events` (server-sent events stream), `POST /led/{0,1,auto}` (manual override) — and one `effect { }` block does double duty: writes the LED based on the current button state AND pushes the new state into every connected SSE client.
+
+This is the demo for "reactivity across the wire." Adding another sensor or another sink (logging, MQTT, websockets) is one more line in the effect.
+
+## src/server.pjs
+
+```pjs
+import gpio from "parabun:gpio";
+import signals from "@para/signals";
+
+await using chip = gpio.open(chipPath);
+await using button = chip.line(27, { mode: "in", pull: "up", pollHz: 50 });
+await using led = chip.line(17, { mode: "out", initial: 0 });
+
+signal ledOverride = null;             // null = follow button; 0/1 = pin
+const sseClients = new Set();
+
+// One effect: writes the LED AND broadcasts to every SSE client.
+// Adding another sink (MQTT publish, Discord webhook, OLED draw) is one more line.
+effect {
+  const pressed = button.value.get() === 0;
+  const value = ledOverride !== null ? ledOverride : pressed ? 1 : 0;
+  led.write(value);
+
+  const payload = JSON.stringify({ button: button.value.get(), led: value, override: ledOverride });
+  for (const send of sseClients) send(payload);
+}
+
+const server = Bun.serve({
+  port: 3000,
+  async fetch(req) {
+    const url = new URL(req.url);
+
+    if (url.pathname === "/state") {
+      return Response.json({ button: button.value.get(), led: led.value.get(), override: ledOverride });
+    }
+
+    if (url.pathname === "/events") {
+      const stream = new ReadableStream({ start(controller) {
+        const send = p => { try { controller.enqueue(`data: ${p}\n\n`); } catch {} };
+        sseClients.add(send);
+        send(JSON.stringify({ button: button.value.get(), led: led.value.get(), override: ledOverride }));
+        req.signal.addEventListener("abort", () => sseClients.delete(send));
+      } });
+      return new Response(stream, { headers: { "content-type": "text/event-stream" } });
+    }
+
+    if (url.pathname === "/led/0" && req.method === "POST") { ledOverride = 0; return Response.json({ override: 0 }); }
+    if (url.pathname === "/led/1" && req.method === "POST") { ledOverride = 1; return Response.json({ override: 1 }); }
+    if (url.pathname === "/led/auto" && req.method === "POST") { ledOverride = null; return Response.json({ override: null }); }
+  },
+});
+```
+
+Full source (with the chip-discovery boilerplate, all four route handlers, and clean SIGINT shutdown) is in [`demos/iot-http-state.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-http-state.pts) — about 140 lines.
+
+## What's reactive and what isn't
+
+- **`button.value`** is a `Signal<0 | 1>` driven by `parabun:gpio`'s built-in poll loop (`pollHz: 50`). The kernel-event read is hidden inside the gpio module; from JS this looks like any other reactive cell.
+- **`signal ledOverride`** is a plain mutable cell — the HTTP handlers write to it; the effect reads it.
+- **The `effect { }` block** tracks both `button.value` and `ledOverride`. It re-runs whenever either changes, which means: (a) the LED follows the button automatically, (b) the override flips it on demand, (c) every SSE client sees the new state on the same tick. One block, three behaviors, no event-bus plumbing.
+- **The HTTP fetch handler is plain Bun.serve.** Each request is one short branch; nothing reactive about a request-response shape.
+
+## Try it
+
+```bash
+parabun src/server.pjs
+```
+
+```bash
+# In another terminal:
+curl localhost:3000/state                         # snapshot
+curl -N localhost:3000/events                     # SSE — receives every change
+curl -X POST localhost:3000/led/1                 # force LED on
+curl -X POST localhost:3000/led/auto              # back to following the button
+```
+
+The SSE stream emits one event per state change — no polling, no client-side timer.
+
+## Hardware
+
+- Linux SBC with GPIO (Raspberry Pi 5 used for development)
+- BCM 27 → button to ground (internal pull-up enabled in code)
+- BCM 17 → LED with current-limiting resistor
+
+## Next steps
+
+- [`parabun:gpio`](/docs/gpio/) — line / chip / event APIs
+- [`@para/signals`](/docs/signals/) — `effect { }`, `~>`, derived signals
+- [Multi-plant waterer](/docs/examples/iot-waterer/) — same shape with more sensors

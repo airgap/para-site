@@ -1,0 +1,75 @@
+---
+title: Smart camera with motion detection
+description: V4L2 capture → motion detector → save a JPEG snapshot whenever motion fires. ~30 lines for a real surveillance feature, three Parabun runtime modules glued together.
+---
+
+A complete smart-camera surveillance loop in 30 lines. `parabun:camera` opens a USB cam over V4L2, `parabun:vision` runs frame differencing on the stream, `parabun:image` re-encodes the trigger frame as JPEG. Three Parabun modules cooperating as one async-iterator pipeline.
+
+This is the example for "Parabun composes its native modules cleanly" — there's no glue code shuffling buffers between modules; vision consumes camera's frames, image encodes vision's triggered frame.
+
+## src/cam.ts
+
+```ts
+import camera from "parabun:camera";
+import vision from "parabun:vision";
+import image from "parabun:image";
+import { mkdirSync } from "node:fs";
+
+const devicePath = process.argv[2] ?? "/dev/video0";
+const outDir = process.argv[3] ?? "./motion-snaps";
+const W = Number(process.env.W ?? 1280);
+const H = Number(process.env.H ?? 720);
+const thresholdRatio = Number(process.env.MOTION_THRESHOLD ?? 0.02);
+
+mkdirSync(outDir, { recursive: true });
+
+await using cam = await camera.open(devicePath, { format: "mjpg", width: W, height: H, fps: 30 });
+
+const rgba = vision.frames(cam.frames(), { decodeMjpg: image.decode });
+const motion = vision.detectMotion(rgba, { thresholdRatio });
+
+let snapCount = 0;
+for await (const event of motion) {
+  if (!event.detected) continue;
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `${outDir}/motion-${ts}.jpg`;
+  const jpg = image.encode(event.frame, { format: "jpeg", quality: 85 });
+  await Bun.write(filename, jpg);
+  snapCount++;
+  console.log(`[motion ${snapCount}] score=${event.score.toFixed(3)} → ${filename}`);
+}
+```
+
+## What's reactive and what isn't
+
+This example deliberately doesn't use signals — `vision.detectMotion` returns an `AsyncIterable<MotionEvent>` that you iterate with `for await`, and that's the natural shape for a frame-by-frame stream where every frame matters.
+
+`vision` does also expose two reactive `Signal`s on the iterator (`motion.detected`, `motion.score`) for cases where you want to bind motion state into a UI or a control loop without iterating yourself — see [`parabun:vision`](/docs/vision/) for that pattern. For the "save a JPEG when something moves" use case, the iterator is more direct.
+
+## Run it
+
+```bash
+parabun src/cam.ts /dev/video0 ./snaps
+```
+
+Tunables via env:
+
+```bash
+MOTION_THRESHOLD=0.005 \    # 0.5% of frame pixels changed (more sensitive)
+W=640 H=480 \               # smaller frame for faster diffs
+FORMAT=yuyv \               # raw YUYV instead of MJPEG
+parabun src/cam.ts /dev/video0 ./snaps
+```
+
+`mjpg` is the fastest format on most cams (capture-side compression); `yuyv` skips the decode step at the cost of 2× the bandwidth on the V4L2 buffer.
+
+## Hardware
+
+- Linux + V4L2 (`/dev/video0`). USB webcams are the easy case; CSI cameras work too if libcamera is configured.
+- Tested with the OBSBOT Tiny, Logitech C920, and a generic UVC cam.
+
+## Next steps
+
+- [`parabun:camera`](/docs/camera/) — V4L2 capture with format / resolution / fps controls
+- [`parabun:vision`](/docs/vision/) — motion + YOLO + OCR + tracker + ONNX
+- [`parabun:image`](/docs/image/) — encode / decode / filters across JPEG / PNG / WebP / AVIF / HEIC / JPEG-XL

@@ -1,0 +1,64 @@
+---
+title: Voice assistant
+description: Wake-word → STT → LLM → TTS → speaker, with grammar-constrained tool dispatch and a reactive bot.state signal driving a live status line. ~30 lines.
+---
+
+A turn-taking voice agent over `parabun:assistant`. One factory call wires the whole pipeline (mic → VAD → Whisper STT → Llama with tool-grammar → Piper TTS → speaker), and one reactive call-binding pipes the live state ("idle" / "listening" / "thinking" / "speaking") into a status line.
+
+This is the Parabun-only end of the spectrum — everything substantial is native (Whisper, Llama on GPU, ALSA capture/playback). Para's contribution is the reactive `state` signal exposed by the bot and the `tools` dispatch table.
+
+## src/agent.pjs
+
+```pjs
+import assistant from "parabun:assistant";
+
+await using bot = await assistant.create({
+  llm: process.env.ASSISTANT_LLM,   // path to Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  stt: process.env.ASSISTANT_STT,   // path to ggml-tiny.en.bin
+  tts: process.env.ASSISTANT_TTS,   // path to en_US-lessac-medium.onnx
+  system: "You are a concise voice assistant. Answer in one or two sentences.",
+  tools: {
+    setLight:  ({ room, on, brightness }) =>
+      console.log(`\n[tool] light ${room} ${on ? "on" : "off"} @ ${brightness ?? 100}`),
+    playMusic: ({ track }) =>
+      console.log(`\n[tool] play ${track}`),
+  },
+});
+
+// Live status line — `->` re-calls process.stdout.write whenever bot.state changes.
+`\r[${bot.state.get().padEnd(10)}]` -> process.stdout.write;
+
+await bot.run();
+```
+
+## What's reactive and what isn't
+
+- **`bot.state`** is a `Signal<"idle" | "listening" | "thinking" | "speaking">` — the bot updates it as it moves through the loop. You can read it directly (`.get()`), bind it to a UI sink, or build derived state on top of it.
+- **`A -> fn`** is the reactive call-binding operator. Every time the LHS expression changes (because `bot.state` updated), `fn` is re-called with the new value. Here it writes the current state to stdout, padded for alignment so the line redraws cleanly. The same pattern would feed an OLED screen, an MQTT topic, or a server-sent-events channel.
+- **`tools` is a plain object**. The bot calls into your handlers when the LLM emits a constrained tool-call. No reactivity needed — these are one-shot side effects.
+
+## Run it
+
+You need three model files locally — the assistant doesn't bundle them:
+
+```bash
+ASSISTANT_LLM=$HOME/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
+ASSISTANT_STT=$HOME/models/ggml-tiny.en.bin \
+ASSISTANT_TTS=$HOME/models/en_US-lessac-medium.onnx \
+  parabun src/agent.pjs
+```
+
+Speak after the status line shows `[listening ]`. Voice activity detection segments your utterance, Whisper transcribes it, the LLM responds (with a grammar that restricts output to one of your declared tools or plain text), Piper synthesizes the response, ALSA plays it.
+
+## Hardware
+
+- Linux + ALSA for capture/playback (default device works; pass `audio: { input: "hw:1,0" }` to override)
+- NVIDIA GPU with CUDA for the LLM. Whisper + Piper run on CPU.
+- A microphone and speakers. USB conference mics work well.
+
+## Next steps
+
+- [`parabun:assistant`](/docs/assistant/) — the bot harness
+- [`parabun:speech`](/docs/speech/) — the underlying STT / TTS layer
+- [`parabun:llm`](/docs/llm/) — direct LLM inference if you want a non-voice loop
+- [`@para/signals`](/docs/signals/) — `signal` / `derived` / `effect` / `~>` / `->`
