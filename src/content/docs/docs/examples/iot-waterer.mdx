@@ -7,44 +7,128 @@ A real-shaped IoT controller: three potted plants with capacitive moisture senso
 
 This is the example that earns Para's reactive primitives — multiple sensors feeding multiple actuators with cross-cutting safety state (the tank). The same code as plain JS would be either a pile of `prevX` flag tracking or an over-eager event bus.
 
-## src/main.pjs
+## src/main.pts
 
-The headline reactive shape — tank level → derived predicates → edge-triggered notifications — is what's worth seeing. Helpers (`readChannel`, `runPump`, etc.) are stubbed here so the snippet runs as-is; the [full source](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) ties them to the real ADS1115 + GPIO under 250 lines.
+The full source. `parabun:i2c` opens the ADS1115; `parabun:gpio` opens the pump relays; `@para/signals` provides the reactive cells, `derived`, and `when` blocks. ~190 lines including the per-plant cooldown bookkeeping and the I²C lexer for the ADS1115 config register — read top-to-bottom, no elision.
 
-```pjs
+```pts
+import gpio from "parabun:gpio";
+import i2c from "parabun:i2c";
 import signals from "@para/signals";
 
-const PLANTS = [
+interface Plant {
+  name: string;
+  channel: number;       // ADS1115 input (0..2)
+  pumpPin: number;       // BCM number on the RP1
+  dryAt: number;         // moisture < this → water
+  pumpMs: number;        // pump pulse duration
+  cooldownMs: number;    // anti-drown gap between pulses
+}
+
+const PLANTS: Plant[] = [
   { name: "basil",     channel: 0, pumpPin: 17, dryAt: 0.35, pumpMs: 1500, cooldownMs: 60_000 },
   { name: "fern",      channel: 1, pumpPin: 27, dryAt: 0.40, pumpMs: 2000, cooldownMs: 90_000 },
   { name: "succulent", channel: 2, pumpPin: 22, dryAt: 0.18, pumpMs: 800,  cooldownMs: 120_000 },
 ];
 const TANK_CHANNEL = 3;
 const TANK_EMPTY_AT = 0.05;
+const TANK_LOW_AT = 0.20;
 
-// Stubs — the full source replaces these with ADS1115 reads + GPIO writes:
-const readChannel = async (ch) => Math.random();    // analog 0..1 from ADC
-const runPump     = async (p)  => {};                // pulses GPIO for p.pumpMs
-const canWater    = (p) => true;                     // cooldown gate
-const notify      = (msg) => console.error(`[notify] ${msg}`);
+// ─── ADS1115 single-shot read on /dev/i2c-1 ─────────────────────────
+//
+// Write the config register (mux + PGA + mode + data-rate), wait for
+// the conversion at 128 SPS (~8ms), read the conversion register.
+// Capacitive moisture sensors are typically wet≈10000 / dry≈26000
+// raw — calibrate yours and adjust.
 
-// ─── tank: signal → derived → when (the win) ─────────────────────
-const tankRaw     = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
+const ADS1115_ADDR = 0x48;
+const swapBytes = (v: number) => ((v & 0xff) << 8) | ((v >> 8) & 0xff);
+
+const bus = i2c.open("/dev/i2c-1");
+async function readChannel(ch: number): Promise<number> {
+  const mux = 0b100 | (ch & 0b011);
+  const cfg = 0x8000 | (mux << 12) | (1 << 9) | (1 << 8) | (4 << 5) | 0x0003;
+  await bus.smbus.writeWordData(ADS1115_ADDR, 0x01, swapBytes(cfg));
+  await Bun.sleep(8);
+  const raw = swapBytes(await bus.smbus.readWordData(ADS1115_ADDR, 0x00));
+  const signed = (raw << 16) >> 16;
+  return Math.max(0, Math.min(1, (26000 - signed) / (26000 - 10000)));
+}
+
+// ─── GPIO pump lines on the RP1 chip ────────────────────────────────
+
+const chips = gpio.chips();
+const chipPath = chips.find(c => c.label === "pinctrl-rp1")?.path ?? "/dev/gpiochip0";
+const chip = gpio.open(chipPath);
+const pumps = new Map(
+  PLANTS.map(p => [p.pumpPin, chip.line(p.pumpPin, { mode: "out", initial: 0 })]),
+);
+
+function notify(msg: string) {
+  console.error(`[notify] ${msg}`);
+}
+
+// ─── tank: signal → derived → when (the reactive win) ───────────────
+
+const tankRaw = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
 derived tankLevel = tankRaw.signal.get() ?? 1.0;
 derived tankEmpty = tankLevel < TANK_EMPTY_AT;
+derived tankLow   = tankLevel < TANK_LOW_AT;
 
 when tankEmpty     { notify("⚠️  tank EMPTY — pausing all watering"); }
 when not tankEmpty { notify("✓  tank back above empty — resuming watering"); }
+when tankLow       { notify(`⚠ tank low — ${(tankLevel * 100).toFixed(0)}% remaining`); }
 
-// ─── per-plant tick: dry & no cooldown & tank-not-empty → water ───
+// ─── per-plant cooldown state ───────────────────────────────────────
+
+type PumpState = "ok" | "watering" | "cooldown";
+const state = new Map<string, { phase: PumpState; lastWateredAt: number }>(
+  PLANTS.map(p => [p.name, { phase: "ok", lastWateredAt: 0 }]),
+);
+
+async function runPump(p: Plant) {
+  const s = state.get(p.name)!;
+  s.phase = "watering";
+  console.log(`💧 ${p.name}: pump ON for ${p.pumpMs}ms`);
+  pumps.get(p.pumpPin)!.write(1);
+  await Bun.sleep(p.pumpMs);
+  pumps.get(p.pumpPin)!.write(0);
+  s.lastWateredAt = Date.now();
+  s.phase = "cooldown";
+  console.log(`✓  ${p.name}: pump OFF — cooldown ${(p.cooldownMs / 1000).toFixed(0)}s`);
+}
+
+// ─── tick: read every plant, water the dry ones if conditions allow
+
 const tick = signals.fromInterval(async () => {
+  const now = Date.now();
   const empty = tankEmpty;
+  const cells: string[] = [];
   for (const p of PLANTS) {
     const m = await readChannel(p.channel);
-    if (canWater(p) && m < p.dryAt && !empty) runPump(p);
+    const s = state.get(p.name)!;
+    if (s.phase === "cooldown" && now - s.lastWateredAt >= p.cooldownMs) s.phase = "ok";
+
+    let action = "";
+    if (s.phase === "ok" && m < p.dryAt && !empty)       { action = " → water";              runPump(p); }
+    else if (s.phase === "ok" && m < p.dryAt && empty)   { action = " → SKIP (tank empty)"; }
+
+    const tag = s.phase === "watering" ? "PUMP" : s.phase === "cooldown" ? "rest" : m < p.dryAt ? "dry " : "ok  ";
+    cells.push(`${p.name.padEnd(10)} ${(m * 100).toFixed(0).padStart(3)}%  ${tag}${action}`);
   }
+  return `[tank ${(tankLevel * 100).toFixed(0).padStart(3)}%] ${cells.join(" │ ")}`;
 }, 1000);
+
+effect {
+  const row = tick.signal.get();
+  if (row !== undefined) console.log(row);
+}
+
+console.log(`watering ${PLANTS.length} plants — Ctrl-C to stop\n`);
+await new Promise(() => {});
 ```
+
+The shipped demo wraps this with a `--simulate` flag and a `--demo-empty` switch for dev-box testing — see [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) on GitHub for those branches.
 
 ## What's reactive and what isn't
 
