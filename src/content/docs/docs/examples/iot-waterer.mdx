@@ -50,7 +50,7 @@ const water = signals.cooldown(
     await Bun.sleep(p.pumpMs);
     pumps.get(p.pin)!.write(0);
   },
-  { key: p => p.name, coolingMs: p => p.cooldownMs },
+  { key: .name, coolingMs: .cooldownMs },   // .name is shorthand for `p => p.name`
 );
 
 // Once a second: read every plant; water any dry ones if the tank has water.
