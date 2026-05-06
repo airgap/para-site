@@ -1,80 +1,86 @@
 ---
-title: Architecture — package layout
-description: Two namespaces (parabun:* native modules, @para/* cross-runtime libraries), and which libraries route to which runtime modules when running on Parabun.
+title: Architecture
+description: How Para and Parabun fit together — what the @para/* libraries give you, what the parabun:* runtime modules add, and which ones you reach for when.
 ---
 
-Para and Parabun ship code in two namespaces, each with a different distribution model and audience. This page is the reference for which package lives where and which packages depend on which.
+Para is two products that work together.
 
-## Two namespaces
+- **`@para/*`** — eight cross-runtime libraries on npm. Pure JS / Wasm, no native dependencies. They run anywhere JS does — Node, Deno, Bun, browsers, Parabun.
+- **`parabun:*`** — twelve native runtime modules that ship with Parabun. They wrap codec stacks, GPU compute, and hardware I/O — work that pure JS can't match.
 
-| Namespace | What | Distribution | Where it runs |
-|---|---|---|---|
-| **`parabun:*`** | Native runtime modules. FFI to system libraries, GPU compute, hardware I/O, codec stacks. | Built into the Parabun binary. No npm publish. | Parabun runtime only — Linux / macOS / Windows. |
-| **`@para/*`** | Cross-runtime libraries. Pure JS or Wasm. No native deps. | Published independently to npm. | Any JS runtime: Node, Deno, Bun, Parabun, browsers. |
+Both share the same import shape, so you don't have to think about which side you're on:
 
-The split is deliberate: `parabun:*` modules can't run elsewhere by design (they wrap `dlopen`'d codec libraries, V4L2 ioctls, CUDA kernels, etc.); `@para/*` libraries are built to be portable. Code that works in Node should keep working in Node, with Parabun as a perf-and-feature upgrade path — not a dependency.
+```ts
+import signals from "@para/signals";   // anywhere
+import image   from "parabun:image";   // Parabun
+```
 
-## All modules at a glance
+When you're on Parabun, `@para/*` libraries quietly use their `parabun:*` counterparts under the hood — where one exists. Same import, faster impl, no code change to opt in.
 
-Every public module on one row. `—` means "doesn't exist on that side."
+## What's in the box
 
-- Rows with **both** columns filled → cross-runtime library with optional native acceleration on Parabun.
-- Rows with `—` in `@para/*` → Parabun-only native module (no credible browser/Node equivalent).
-- Rows with `—` in `parabun:*` → pure-JS lib where native code wouldn't help.
+Twenty modules. `✓` means it's available on that side; `—` means it isn't.
 
 | Module | `@para/*` | `parabun:*` | What it does |
 |---|:---:|:---:|---|
 | signals | ✓ | — | Reactive state — Signal / Computed / Effect |
-| parallel | ✓ | planned | Worker-pool primitives — pmap / preduce / psort + Mutex / Semaphore |
-| arena | ✓ | ✓ | Buffer-pool free list + JSC-GC-deferring `scope()` |
-| simd | ✓ | planned | SIMD over typed arrays — sum / dot / matVec / topK |
-| csv | ✓ | planned | RFC 4180 parse / stringify; native = Highway SIMD parser |
-| arrow | ✓ | planned | In-memory Arrow + IPC + Parquet; native = FlatBuffers + zstd |
-| rtp | ✓ | — | RFC 3550 RTP pack/parse + jitter buffer |
+| parallel | ✓ | planned | Worker pool — pmap / preduce / psort + Mutex / Semaphore |
+| arena | ✓ | ✓ | Buffer pool + JSC-GC-deferring `scope()` |
+| simd | ✓ | planned | SIMD over typed arrays — sum, dot, matVec, topK |
+| csv | ✓ | planned | RFC 4180 parse / stringify |
+| arrow | ✓ | planned | In-memory Arrow + IPC + Parquet |
+| rtp | ✓ | — | RFC 3550 RTP packets + jitter buffer |
 | mcp | ✓ | — | Model Context Protocol client (stdio + WebSocket) |
-| image | — | ✓ | JPEG / PNG / WebP / AVIF / HEIC / JPEG-XL decode + encode + filters |
-| video | — | ✓ | H.264 / H.265 / VP9 / AV1 decode + encode + thumbnail + extractAudio (ffmpeg) |
-| audio | — | ✓ | WAV / MP3 / FLAC / AAC / OGG / Opus + FFT + filters + ALSA capture/playback |
-| llm | — | ✓ | LLM inference (Llama / Mistral / Whisper) on CUDA + Metal; OpenAI-compatible serve |
-| vision | — | ✓ | Frame + motion + YOLO + tesseract OCR + tracker + ONNX runtime |
-| speech | — | ✓ | VAD-gated utterance segmentation + Whisper STT + Piper TTS |
-| assistant | — | ✓ | Bot harness composing speech + llm into a turn-taking agent |
-| gpu | — | ✓ | CUDA + Metal kernels; matVec / matmul / conv2D / scan / reduce / quantile / variance / argmin/max / histogram / custom MSL+CUDA |
-| gpio | — | ✓ | Linux uAPI v2 GPIO — digital in/out, edge events |
-| i2c | — | ✓ | Linux i2c-dev with SMBus convenience methods |
-| spi | — | ✓ | Linux spidev with multi-segment transfers |
+| image | — | ✓ | JPEG / PNG / WebP / AVIF / HEIC / JPEG-XL — decode, encode, filters |
+| video | — | ✓ | H.264 / H.265 / VP9 / AV1 — decode, encode, thumbnails, extract audio |
+| audio | — | ✓ | WAV / MP3 / FLAC / AAC / OGG / Opus + ALSA capture / playback |
+| llm | — | ✓ | Llama / Mistral / Whisper inference on CUDA + Metal |
+| vision | — | ✓ | Frame analysis — motion, YOLO, OCR, ONNX runtime |
+| speech | — | ✓ | Voice activity detection + Whisper STT + Piper TTS |
+| assistant | — | ✓ | Turn-taking voice agent over speech + llm |
+| gpu | — | ✓ | CUDA + Metal compute — matVec, conv2D, scan, reduce, histogram |
+| gpio | — | ✓ | Linux GPIO — digital in/out, edge events |
+| i2c | — | ✓ | Linux I²C with SMBus convenience |
+| spi | — | ✓ | Linux SPI with multi-segment transfers |
 | camera | — | ✓ | V4L2 frame capture |
 
-Two npm packages back Para language features:
+How to read it at a glance:
+
+- **Both columns filled** → portable library that gets faster on Parabun.
+- **— in `@para/*`** → Parabun-only. System codecs, GPU, and kernel drivers don't have a credible browser/Node equivalent.
+- **— in `parabun:*`** → pure JS is already as fast as native here, so we don't ship one.
+- **`planned`** → on the roadmap. The `@para/*` library works today; the native fast path is tracked but not yet shipped.
+
+Two more npm packages back Para language features:
 
 | Package | Backs which feature |
 |---|---|
 | `@para/pipeline` | `\|>` operator runtime + affine-chain `compile()` |
 | `@para/decimal` | Exact-decimal arithmetic for `0.1d` literals |
 
-## How the routing shim works
+## What you can build
 
-Each `@para/*` library that has a runtime fast path tries to import its `parabun:*` counterpart at module load and falls back to its bundled JS when the import throws (Node, Deno, browsers, or just Parabun without that native module yet):
+These modules compose. A few realistic shapes:
 
-```ts
-// inside @para/csv (paraphrased)
-let impl;
-try { impl = await import("parabun:csv"); }       // Parabun → native, fastest
-catch { impl = await import("./impl-js.ts"); }    // everywhere else → bundled JS
-export const { parseStream, /* … */ } = impl;
-```
+- **Streaming ETL** — `@para/csv` + `@para/arrow` parse a multi-GB CSV and write per-country Parquet without loading the file into memory. Works in Node today; faster on Parabun once the native CSV parser lands.
+- **Voice assistants** — `parabun:speech` + `parabun:llm` + `parabun:audio` give you a wake-word → STT → LLM → TTS loop in 30 lines. Parabun-only because the engines need GPU.
+- **IoT control loops** — `parabun:gpio` + `@para/signals` make a reactive sensor → threshold → relay loop on a Raspberry Pi. The same `@para/signals` powers the React dashboard you serve from the device.
+- **In-browser data tools** — `@para/arrow` + `@para/parallel` slice a Parquet file and run worker-pooled aggregates on the user's machine, no server round-trip.
 
-The native fast paths are opt-in upgrades, not requirements. Library consumers don't have to know which side they're on — same import, best available impl.
+See [Examples](/docs/examples/) for runnable code.
 
-## Why two namespaces and not just one
+## Why two namespaces
 
-You could imagine collapsing this to a single `@para/*` namespace where some packages are pure JS and some are FFI wrappers. We don't, for two reasons:
+Two namespaces, two distribution stories:
 
-1. **Distribution boundary.** `parabun:*` modules can't be `npm install`ed — they need a Linux/macOS/Windows binary linked against system codec libraries, CUDA, V4L2 headers, etc. Putting them in npm would mean shipping a half-broken package most environments can't actually use. The namespace name carries that "this only works under Parabun" warning.
-2. **Routing clarity.** With both namespaces visible, a developer reading code can tell at a glance whether a given import is portable (`@para/`) or runtime-locked (`parabun:`). Collapsed into one namespace, the same line would mean either thing depending on the package, and the cross-runtime story would erode.
+- `@para/*` ships on npm and is meant to be portable. You can install one of them in a Node project that's never heard of Parabun, and everything works.
+- `parabun:*` ships inside the Parabun binary and links against system libraries (codecs, CUDA, V4L2, SPI). It can't be `npm install`ed because most environments don't have what it needs.
 
-## Convention recap
+Keeping them in separate namespaces means a developer reading code can tell at a glance which side an import is on — `parabun:` is the "you need Parabun for this" tell, `@para/` is the "this works anywhere" tell. The cross-runtime promise stays unambiguous.
 
-- See `parabun:` → native, Parabun-only. Never on npm.
-- See `@para/` → cross-runtime npm package. Routes to `parabun:` internally when available.
-- Don't see `para:` (legacy) → that import form is being retired in favor of `@para/*` everywhere.
+## Next steps
+
+- [Install the libraries](/docs/install-libs/) — `npm install @para/<package>`.
+- [Install Parabun](/docs/install-runtime/) — single curl install, includes everything.
+- [Examples](/docs/examples/) — runnable code across frontend / backend / edge.
+- Module deep-dives: [`@para/signals`](/docs/signals/), [`@para/csv`](/docs/csv/), [`parabun:llm`](/docs/llm/), [`parabun:gpu`](/docs/gpu/), and the [full list in the sidebar](/docs/).
