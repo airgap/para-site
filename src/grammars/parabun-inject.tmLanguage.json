@@ -134,22 +134,11 @@
       }
     },
     {
-      "comment": "whenever EXPR { ... } / whenever not EXPR { ... } — initial-truthy + edge",
-      "match": "\\b(whenever)\\s+(not)\\b",
+      "comment": "trailing `start` modifier on a when block — initial-truthy + edge. Only highlighted when followed by `{`.",
+      "match": "\\b(start)\\b(?=\\s*\\{)",
       "captures": {
         "1": {
-          "name": "keyword.control.whenever.parabun"
-        },
-        "2": {
-          "name": "keyword.control.whenever.not.parabun"
-        }
-      }
-    },
-    {
-      "match": "\\b(whenever)\\b(?=\\s+[!A-Za-z_$])",
-      "captures": {
-        "1": {
-          "name": "keyword.control.whenever.parabun"
+          "name": "keyword.control.when.start.parabun"
         }
       }
     },

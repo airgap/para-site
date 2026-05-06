@@ -216,22 +216,22 @@ Returns a disposer with the same semantics as `effect()`.
 
 Common patterns: button-press detection, arrival/departure handlers, threshold crossings, "fire once when condition becomes true" without manual `wasX = false` flag bookkeeping.
 
-## `whenever(source, fn)`
+## `whenStart(source, fn)`
 
-Same as `when` but **also fires once at registration if `source` is initially truthy**. Use it for "the dangerous state is the noteworthy one" alerts where you don't want to silently miss a boot already in the bad state — `when tankEmpty` would stay quiet on a startup that begins with the tank empty; `whenever tankEmpty` notifies right away.
+Same as `when` but **also fires once at registration if `source` is initially truthy**. Use it for "the dangerous state is the noteworthy one" alerts where you don't want to silently miss a boot already in the bad state. The `.pts` keyword form is `when EXPR start { … }` — the trailing `start` modifier is the visible opt-in for the initial-truthy fire; `signals.whenStart(...)` is the direct call for `.ts` users.
 
 ```ts
 import signals from "@para/signals";
 
 // Boot-already-empty tank? Notify now AND on every empty event.
-signals.whenever(tankEmpty, () => alert("tank EMPTY"));
+signals.whenStart(tankEmpty, () => alert("tank EMPTY"));
 
 // Boot with a healthy tank? `when not tankEmpty` skips the boot
 // observation so you don't get a fake "back above empty" message.
 signals.when(() => !tankEmpty.get(), () => log("tank refilled"));
 ```
 
-Pick `when` for "user pressed button" / "page loaded" / anything where faking the event at startup would be wrong, and `whenever` for safety, health, and connectivity alerts where missing the boot-bad case is worse than firing one extra time.
+Pick plain `when` (or `signals.when`) for "user pressed button" / "page loaded" — anywhere faking the event at startup would be wrong. Reach for `start` / `whenStart` for safety, health, and connectivity alerts where missing the boot-bad case is worse than firing one extra time.
 
 ## `resource(setup)` — explicit lifecycles
 

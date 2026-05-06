@@ -46,7 +46,7 @@ memo async fetchProfile(id: string) { return await db.users.get(id); }
 
 `when EXPR { BODY }` is a statement-level **edge-triggered** block. It fires `BODY` once each time `EXPR` transitions false → true. The dual `when not EXPR { BODY }` fires on the true → false edge. Both desugar to `signals.when(() => EXPR, () => { BODY })` — the `not` form pushes the negation into the predicate (`() => !(EXPR)`), since the falling edge is just the rising edge of the inverse. Distinct from suffix `when`: position disambiguates — suffix is every-truthy guard, block is edge-triggered.
 
-`whenever EXPR { BODY }` (and `whenever not EXPR { BODY }`) is the same shape but with one extra fire: if the predicate is **already truthy at registration**, `BODY` runs once immediately. Useful for "the dangerous state is the noteworthy one" alerts where you don't want to silently miss a boot already in the bad state — `when tankEmpty` would stay quiet on a startup that begins with the tank empty; `whenever tankEmpty` notifies right away. Lowers to `signals.whenever(() => EXPR, () => { BODY })`. Pick `when` for "user pressed button" (don't fake a press at boot) and `whenever` for safety/health alerts.
+`when EXPR start { BODY }` (and `when not EXPR start { BODY }`) is the same shape but with one extra fire: if the predicate is **already truthy at registration**, `BODY` runs once immediately. The trailing `start` modifier is the visible opt-in for that semantic — silent typo into the wrong direction is what the explicit modifier prevents. Useful for "the dangerous state is the noteworthy one" alerts where you don't want to silently miss a boot already in the bad state: bare `when tankEmpty` stays quiet on a startup that begins with the tank empty; `when tankEmpty start` notifies right away. Lowers to `signals.whenStart(() => EXPR, () => { BODY })`. Default `when` is right for "user pressed button" / "page loaded" semantics (don't fake the event at boot); the trailing `start` is right for safety/health alerts.
 
 ```parabun
 signal  count   = 0;
@@ -72,24 +72,24 @@ signal motionPresent = false;
 when motionPresent && enabled { console.log("greet"); }
 when not enabled { console.log("disabled"); }
 
-// `whenever` ALSO fires once at registration if the predicate
-// is already truthy. Use it for safety alerts where missing a
-// boot-already-bad state would be wrong.
+// Trailing `start` modifier ALSO fires once at registration if the
+// predicate is already truthy. Use it for safety alerts where
+// missing a boot-already-bad state would be wrong.
 signal tankEmpty = true;
-whenever tankEmpty { console.error("tank EMPTY"); }   // fires immediately
+when tankEmpty start { console.error("tank EMPTY"); }   // fires immediately
 
-// paired form — bare `when not { ... }` adjacent to a `when` or
-// `whenever` block shares its predicate and fires the inverse edge.
-// The bare arm is ALWAYS strict-edge `when`, even after `whenever` —
-// so a tank-empty alert fires on boot-already-empty (whenever) but
-// the recovery doesn't fake a fire on healthy boot.
+// paired form — bare `when not { ... }` adjacent to a `when` block
+// (with or without `start`) shares its predicate and fires the
+// inverse edge. The bare arm is ALWAYS strict-edge — so a tank-empty
+// alert fires on boot-already-empty (because of `start`) but the
+// recovery doesn't fake a fire on healthy boot.
 signal connected = false;
 when connected { showOnlineBanner(); }
 when not       { showOfflineBanner(); }
 
 signal tankEmpty = true;
-whenever tankEmpty { console.error("EMPTY"); }     // boot-true → fires
-when not           { console.log("recovered"); }   // strict-edge — fires only on actual recovery
+when tankEmpty start { console.error("EMPTY"); }     // boot-true → fires
+when not             { console.log("recovered"); }   // strict-edge — fires only on actual recovery
 ```
 
 ## `|>`, `..>`, `..!`, `..&`, `..` / `..=`
