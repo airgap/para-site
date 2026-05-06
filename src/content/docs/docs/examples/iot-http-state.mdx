@@ -13,6 +13,12 @@ This is the demo for "reactivity across the wire." Adding another sensor or anot
 import gpio from "parabun:gpio";
 import signals from "@para/signals";
 
+// Pick the RP1 GPIO chip on Pi 5, or fall through to gpiochip0 / GPIO_CHIP env.
+const chips = gpio.chips();
+const chipPath = process.env.GPIO_CHIP
+  ?? chips.find(c => c.label === "pinctrl-rp1")?.path
+  ?? chips[0].path;
+
 await using chip = gpio.open(chipPath);
 await using button = chip.line(27, { mode: "in", pull: "up", pollHz: 50 });
 await using led = chip.line(17, { mode: "out", initial: 0 });
