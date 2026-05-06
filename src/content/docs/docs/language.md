@@ -46,6 +46,8 @@ memo async fetchProfile(id: string) { return await db.users.get(id); }
 
 `when EXPR { BODY }` is a statement-level **edge-triggered** block. It fires `BODY` once each time `EXPR` transitions false → true. The dual `when not EXPR { BODY }` fires on the true → false edge. Both desugar to `signals.when(() => EXPR, () => { BODY })` — the `not` form pushes the negation into the predicate (`() => !(EXPR)`), since the falling edge is just the rising edge of the inverse. Distinct from suffix `when`: position disambiguates — suffix is every-truthy guard, block is edge-triggered.
 
+`whenever EXPR { BODY }` (and `whenever not EXPR { BODY }`) is the same shape but with one extra fire: if the predicate is **already truthy at registration**, `BODY` runs once immediately. Useful for "the dangerous state is the noteworthy one" alerts where you don't want to silently miss a boot already in the bad state — `when tankEmpty` would stay quiet on a startup that begins with the tank empty; `whenever tankEmpty` notifies right away. Lowers to `signals.whenever(() => EXPR, () => { BODY })`. Pick `when` for "user pressed button" (don't fake a press at boot) and `whenever` for safety/health alerts.
+
 ```parabun
 signal  count   = 0;
 derived doubled = count * 2;   // explicit form — same lowering as auto-promote
@@ -65,10 +67,16 @@ signal enabled = true;
 doubled ~> el.innerHTML when enabled;
 enabled = false;              // future doubled changes don't reach el
 
-// edge-triggered handler — fires once per false→true transition
+// edge-triggered handler — fires once per false→true transition.
 signal motionPresent = false;
 when motionPresent && enabled { console.log("greet"); }
 when not enabled { console.log("disabled"); }
+
+// `whenever` ALSO fires once at registration if the predicate
+// is already truthy. Use it for safety alerts where missing a
+// boot-already-bad state would be wrong.
+signal tankEmpty = true;
+whenever tankEmpty { console.error("tank EMPTY"); }   // fires immediately
 
 // paired form — bare `when not { ... }` adjacent to a `when EXPR` block
 // shares its predicate and fires the inverse edge.

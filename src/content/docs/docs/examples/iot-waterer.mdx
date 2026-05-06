@@ -40,7 +40,10 @@ const tankRaw = signals.fromInterval(() => ads.read(TANK_CH), 1000);
 derived tankLevel = moisture(tankRaw.signal.get() ?? 26000);
 derived tankEmpty = tankLevel < 0.05;
 
-when tankEmpty     { console.error("⚠️  tank EMPTY — pausing watering"); }
+// `whenever` (initial-truthy + edge) catches a boot-already-empty tank.
+// `when` (strict edge) skips the boot-false case so a healthy startup
+// doesn't fake a "back above empty" alert.
+whenever tankEmpty { console.error("⚠️  tank EMPTY — pausing watering"); }
 when not tankEmpty { console.error("✓  tank back above empty"); }
 
 // Per-plant pump, rate-limited by signals.cooldown.
@@ -75,7 +78,7 @@ That's the whole thing — ~30 lines of actual logic. The [shipped demo](https:/
 
 - **`signal tankRaw`** — periodic ADC read at 1 Hz. The only mutable cell in the tank chain.
 - **`derived tankLevel`** + **`derived tankEmpty`** — read-only computations. `tankEmpty` recomputes every time `tankLevel` changes; nothing else has to track it.
-- **`when tankEmpty { ... }`** + **`when not tankEmpty { ... }`** — fire once per false→true and true→false transition. The empty notification doesn't repeat every second the tank stays empty; the refilled notification fires only on the actual refill. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking `wasEmpty` and `if (empty && !wasEmpty)`.
+- **`whenever tankEmpty { ... }`** + **`when not tankEmpty { ... }`** — `whenever` fires once on registration if the predicate is initially truthy AND on each false→true rise; `when` is strict-edge (no initial-truthy fire). Picking the right one matters for ops alerts: if you boot with the tank already empty, `whenever` notifies immediately; `when not tankEmpty` only fires on actual refills (no fake "back above empty" alert on a healthy boot). The runtime handles the edge tracking — the alternative is hand-rolling `wasEmpty` plus `if (empty && !wasEmpty)`.
 - **`signals.cooldown(runPump, { key, coolingMs })`** — wraps the pump action so concurrent calls AND calls within `cooldownMs` of the previous run are silently dropped. Returns `Promise<boolean>` — true if it fired, false if it was suppressed. The `key` partitions the cooldown per-plant; `coolingMs` can be a number or a function of the call arguments. Replaces the per-plant `Map<name, { phase, lastWateredAt }>` you'd otherwise hand-write.
 
 ## Hardware
