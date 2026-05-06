@@ -40,11 +40,11 @@ const tankRaw = signals.fromInterval(() => ads.read(TANK_CH), 1000);
 derived tankLevel = moisture(tankRaw.signal.get() ?? 26000);
 derived tankEmpty = tankLevel < 0.05;
 
-// `whenever` (initial-truthy + edge) catches a boot-already-empty tank.
-// `when` (strict edge) skips the boot-false case so a healthy startup
-// doesn't fake a "back above empty" alert.
+// Paired form: `whenever` catches boot-already-empty + each new empty
+// event; bare `when not { }` is the inverse-edge arm (always strict-
+// edge, so a healthy boot doesn't fake a recovery alert).
 whenever tankEmpty { console.error("⚠️  tank EMPTY — pausing watering"); }
-when not tankEmpty { console.error("✓  tank back above empty"); }
+when not           { console.error("✓  tank back above empty"); }
 
 // Per-plant pump, rate-limited by signals.cooldown.
 const water = signals.cooldown(

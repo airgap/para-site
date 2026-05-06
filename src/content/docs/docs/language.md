@@ -78,11 +78,18 @@ when not enabled { console.log("disabled"); }
 signal tankEmpty = true;
 whenever tankEmpty { console.error("tank EMPTY"); }   // fires immediately
 
-// paired form — bare `when not { ... }` adjacent to a `when EXPR` block
-// shares its predicate and fires the inverse edge.
+// paired form — bare `when not { ... }` adjacent to a `when` or
+// `whenever` block shares its predicate and fires the inverse edge.
+// The bare arm is ALWAYS strict-edge `when`, even after `whenever` —
+// so a tank-empty alert fires on boot-already-empty (whenever) but
+// the recovery doesn't fake a fire on healthy boot.
 signal connected = false;
 when connected { showOnlineBanner(); }
 when not       { showOfflineBanner(); }
+
+signal tankEmpty = true;
+whenever tankEmpty { console.error("EMPTY"); }     // boot-true → fires
+when not           { console.log("recovered"); }   // strict-edge — fires only on actual recovery
 ```
 
 ## `|>`, `..>`, `..!`, `..&`, `..` / `..=`
