@@ -60,7 +60,9 @@ signals.fromInterval(async () => {
   }
 }, 1000);
 
-await new Promise(() => {});
+// fromInterval's timer is .unref()'d so a bare interval doesn't pin
+// the event loop. Block here so the script stays alive; Ctrl-C exits.
+await Bun.sleep(Infinity);
 ```
 
 That's the whole thing — ~30 lines of actual logic. The [shipped demo](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) wraps it with a status-row formatter (so you can watch it work), a `--simulate` flag for dev-box testing, and a `--demo-empty` switch that drains the simulated tank fast so the alert cycle fires within seconds.
