@@ -9,7 +9,11 @@ This is the example that earns Para's reactive primitives — multiple sensors f
 
 ## src/main.pts
 
-The full source. `parabun:i2c` opens the ADS1115; `parabun:gpio` opens the pump relays; `@para/signals` provides the reactive cells, `derived`, and `when` blocks. ~190 lines including the per-plant cooldown bookkeeping and the I²C lexer for the ADS1115 config register — read top-to-bottom, no elision.
+The full source. Three Parabun helpers do the heavy lifting:
+
+- **`gpio.openDefaultChip()`** — opens RP1 on Pi 5 / falls through to gpiochip0 elsewhere; one line, no chip-discovery boilerplate.
+- **`i2c.ads1115("/dev/i2c-1")`** — opens the bus, binds the address (0x48 default), exposes `read(channel)` that hides the config-register write/wait/read dance.
+- **`signals.cooldown(fn, { key, coolingMs })`** — wraps the pump action so concurrent calls AND calls within `cooldownMs` of the previous run are silently dropped. Replaces the per-plant ok/watering/cooldown phase tracking entirely.
 
 ```pts
 import gpio from "parabun:gpio";
@@ -34,39 +38,22 @@ const TANK_CHANNEL = 3;
 const TANK_EMPTY_AT = 0.05;
 const TANK_LOW_AT = 0.20;
 
-// ─── ADS1115 single-shot read on /dev/i2c-1 ─────────────────────────
-//
-// Write the config register (mux + PGA + mode + data-rate), wait for
-// the conversion at 128 SPS (~8ms), read the conversion register.
-// Capacitive moisture sensors are typically wet≈10000 / dry≈26000
-// raw — calibrate yours and adjust.
+// ─── hardware: ADC + GPIO ───────────────────────────────────────────
 
-const ADS1115_ADDR = 0x48;
-const swapBytes = (v: number) => ((v & 0xff) << 8) | ((v >> 8) & 0xff);
-
-const bus = i2c.open("/dev/i2c-1");
-async function readChannel(ch: number): Promise<number> {
-  const mux = 0b100 | (ch & 0b011);
-  const cfg = 0x8000 | (mux << 12) | (1 << 9) | (1 << 8) | (4 << 5) | 0x0003;
-  await bus.smbus.writeWordData(ADS1115_ADDR, 0x01, swapBytes(cfg));
-  await Bun.sleep(8);
-  const raw = swapBytes(await bus.smbus.readWordData(ADS1115_ADDR, 0x00));
-  const signed = (raw << 16) >> 16;
-  return Math.max(0, Math.min(1, (26000 - signed) / (26000 - 10000)));
-}
-
-// ─── GPIO pump lines on the RP1 chip ────────────────────────────────
-
-const chips = gpio.chips();
-const chipPath = chips.find(c => c.label === "pinctrl-rp1")?.path ?? "/dev/gpiochip0";
-const chip = gpio.open(chipPath);
+const ads = i2c.ads1115("/dev/i2c-1");                    // 0x48 default; ±4.096V PGA default
+const chip = gpio.openDefaultChip();                       // RP1 on Pi 5, gpiochip0 elsewhere
 const pumps = new Map(
   PLANTS.map(p => [p.pumpPin, chip.line(p.pumpPin, { mode: "out", initial: 0 })]),
 );
 
-function notify(msg: string) {
-  console.error(`[notify] ${msg}`);
+// Capacitive moisture sensors are typically wet≈10000 / dry≈26000
+// raw — calibrate yours and adjust.
+async function readChannel(ch: number): Promise<number> {
+  const raw = await ads.read(ch as 0 | 1 | 2 | 3);
+  return Math.max(0, Math.min(1, (26000 - raw) / (26000 - 10000)));
 }
+
+const notify = (msg: string) => console.error(`[notify] ${msg}`);
 
 // ─── tank: signal → derived → when (the reactive win) ───────────────
 
@@ -79,41 +66,34 @@ when tankEmpty     { notify("⚠️  tank EMPTY — pausing all watering"); }
 when not tankEmpty { notify("✓  tank back above empty — resuming watering"); }
 when tankLow       { notify(`⚠ tank low — ${(tankLevel * 100).toFixed(0)}% remaining`); }
 
-// ─── per-plant cooldown state ───────────────────────────────────────
+// ─── per-plant pump driver, rate-limited per-plant by cooldown ──────
 
-type PumpState = "ok" | "watering" | "cooldown";
-const state = new Map<string, { phase: PumpState; lastWateredAt: number }>(
-  PLANTS.map(p => [p.name, { phase: "ok", lastWateredAt: 0 }]),
+const water = signals.cooldown(
+  async (p: Plant) => {
+    console.log(`💧 ${p.name}: pump ON for ${p.pumpMs}ms`);
+    pumps.get(p.pumpPin)!.write(1);
+    await Bun.sleep(p.pumpMs);
+    pumps.get(p.pumpPin)!.write(0);
+    console.log(`✓  ${p.name}: pump OFF`);
+  },
+  { key: p => p.name, coolingMs: p => p.cooldownMs },
 );
-
-async function runPump(p: Plant) {
-  const s = state.get(p.name)!;
-  s.phase = "watering";
-  console.log(`💧 ${p.name}: pump ON for ${p.pumpMs}ms`);
-  pumps.get(p.pumpPin)!.write(1);
-  await Bun.sleep(p.pumpMs);
-  pumps.get(p.pumpPin)!.write(0);
-  s.lastWateredAt = Date.now();
-  s.phase = "cooldown";
-  console.log(`✓  ${p.name}: pump OFF — cooldown ${(p.cooldownMs / 1000).toFixed(0)}s`);
-}
 
 // ─── tick: read every plant, water the dry ones if conditions allow
 
 const tick = signals.fromInterval(async () => {
-  const now = Date.now();
   const empty = tankEmpty;
   const cells: string[] = [];
   for (const p of PLANTS) {
     const m = await readChannel(p.channel);
-    const s = state.get(p.name)!;
-    if (s.phase === "cooldown" && now - s.lastWateredAt >= p.cooldownMs) s.phase = "ok";
-
     let action = "";
-    if (s.phase === "ok" && m < p.dryAt && !empty)       { action = " → water";              runPump(p); }
-    else if (s.phase === "ok" && m < p.dryAt && empty)   { action = " → SKIP (tank empty)"; }
-
-    const tag = s.phase === "watering" ? "PUMP" : s.phase === "cooldown" ? "rest" : m < p.dryAt ? "dry " : "ok  ";
+    if (m < p.dryAt && !empty) {
+      const fired = await water(p);
+      action = fired ? " → water" : " → wait";  // wait = in cooldown
+    } else if (m < p.dryAt && empty) {
+      action = " → SKIP (tank empty)";
+    }
+    const tag = m < p.dryAt ? "dry " : "ok  ";
     cells.push(`${p.name.padEnd(10)} ${(m * 100).toFixed(0).padStart(3)}%  ${tag}${action}`);
   }
   return `[tank ${(tankLevel * 100).toFixed(0).padStart(3)}%] ${cells.join(" │ ")}`;
@@ -128,14 +108,14 @@ console.log(`watering ${PLANTS.length} plants — Ctrl-C to stop\n`);
 await new Promise(() => {});
 ```
 
-The shipped demo wraps this with a `--simulate` flag and a `--demo-empty` switch for dev-box testing — see [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) on GitHub for those branches.
+The shipped demo wraps this with a `--simulate` flag and a `--demo-empty` switch for dev-box testing — see [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) on GitHub.
 
 ## What's reactive and what isn't
 
 - **`signal tankRaw`** — periodic ADC read at 1 Hz. The only mutable cell in the tank chain.
 - **`derived tankLevel`** + **`derived tankEmpty`** — read-only computations. `tankEmpty` recomputes every time `tankLevel` changes; nothing else has to track it.
 - **`when tankEmpty { ... }`** + **`when not tankEmpty { ... }`** — fire once per false→true and true→false transition. The empty notification doesn't repeat every second the tank stays empty; the refilled notification fires only on the actual refill. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking `wasEmpty` and `if (empty && !wasEmpty)`.
-- **The per-plant state machine is plain JS.** A `Map<string, PlantState>` and an `if/else` ladder. It doesn't have multiple readers, so reactivity wouldn't add anything.
+- **`signals.cooldown(runPump, { key, coolingMs })`** — wraps the pump action so concurrent calls AND calls within `cooldownMs` of the previous run are silently dropped. Returns `Promise<boolean>` — true if it fired, false if it was suppressed. The `key` partitions the cooldown per-plant; `coolingMs` can be a number or a function of the call arguments. Replaces the per-plant `Map<name, { phase, lastWateredAt }>` you'd otherwise hand-write.
 
 ## Hardware
 
