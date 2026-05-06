@@ -9,9 +9,9 @@ This is the example that earns Para's reactive primitives — multiple sensors f
 
 ## src/main.pjs
 
+The headline reactive shape — tank level → derived predicates → edge-triggered notifications — is what's worth seeing. Helpers (`readChannel`, `runPump`, etc.) are stubbed here so the snippet runs as-is; the [full source](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) ties them to the real ADS1115 + GPIO under 250 lines.
+
 ```pjs
-import gpio from "parabun:gpio";
-import i2c from "parabun:i2c";
 import signals from "@para/signals";
 
 const PLANTS = [
@@ -22,22 +22,21 @@ const PLANTS = [
 const TANK_CHANNEL = 3;
 const TANK_EMPTY_AT = 0.05;
 
-// readChannel(ch) returns the analog 0..1 reading from the ADS1115
-// (or the deterministic simulator under --simulate). runPump(plant)
-// flips the GPIO line on/off for plant.pumpMs and updates a
-// per-plant state machine. Both are plain functions defined in the
-// full source
-// — elided here so the reactive shape stays readable.
+// Stubs — the full source replaces these with ADS1115 reads + GPIO writes:
+const readChannel = async (ch) => Math.random();    // analog 0..1 from ADC
+const runPump     = async (p)  => {};                // pulses GPIO for p.pumpMs
+const canWater    = (p) => true;                     // cooldown gate
+const notify      = (msg) => console.error(`[notify] ${msg}`);
 
 // ─── tank: signal → derived → when (the win) ─────────────────────
-const tankRaw    = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
+const tankRaw     = signals.fromInterval(() => readChannel(TANK_CHANNEL), 1000);
 derived tankLevel = tankRaw.signal.get() ?? 1.0;
 derived tankEmpty = tankLevel < TANK_EMPTY_AT;
 
-when tankEmpty       { notify("⚠️  tank EMPTY — pausing all watering"); }
-when not tankEmpty   { notify("✓  tank back above empty — resuming watering"); }
+when tankEmpty     { notify("⚠️  tank EMPTY — pausing all watering"); }
+when not tankEmpty { notify("✓  tank back above empty — resuming watering"); }
 
-// ─── per-plant state machine: dry & no cooldown & tank-not-empty → water
+// ─── per-plant tick: dry & no cooldown & tank-not-empty → water ───
 const tick = signals.fromInterval(async () => {
   const empty = tankEmpty;
   for (const p of PLANTS) {
@@ -46,8 +45,6 @@ const tick = signals.fromInterval(async () => {
   }
 }, 1000);
 ```
-
-Full source (with the ADS1115 SMBus reads, the simulator fallback, and the cooldown bookkeeping) is in [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) — under 250 lines.
 
 ## What's reactive and what isn't
 
