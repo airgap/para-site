@@ -26,6 +26,7 @@ When you're on Parabun, `@para/*` libraries quietly use their `parabun:*` counte
 | signals | ✓ | — | Reactive state — Signal / Computed / Effect |
 | parallel | ✓ | planned | Worker pool — pmap / preduce / psort + Mutex / Semaphore |
 | arena | ✓ | ✓ | Buffer pool + JSC-GC-deferring `scope()` |
+| lifecycle | ✓ | — | Process-state coordination — `keepAlive` with SIGINT/SIGTERM + onShutdown hook |
 | simd | ✓ | planned | SIMD over typed arrays — sum, dot, matVec, topK |
 | csv | ✓ | planned | RFC 4180 parse / stringify |
 | arrow | ✓ | planned | In-memory Arrow + IPC + Parquet |

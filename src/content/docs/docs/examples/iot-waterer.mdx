@@ -19,6 +19,7 @@ The full source. Three Parabun helpers do the heavy lifting:
 import gpio from "parabun:gpio";
 import i2c from "parabun:i2c";
 import signals from "@para/signals";
+import lifecycle from "@para/lifecycle";
 
 const PLANTS = [
   { name: "basil",     ch: 0, pin: 17, dryAt: 0.35, pumpMs: 1500, cooldownMs: 60_000 },
@@ -60,9 +61,12 @@ signals.fromInterval(async () => {
   }
 }, 1000);
 
-// fromInterval's timer is .unref()'d so a bare interval doesn't pin
-// the event loop. Block here so the script stays alive; Ctrl-C exits.
-await Bun.sleep(Infinity);
+// Block until SIGINT/SIGTERM, then run any cleanup before exit.
+// (fromInterval's timer is .unref()'d so without an explicit hold
+// the script would exit immediately.)
+await lifecycle.keepAlive({
+  onShutdown: () => { chip.close(); ads.close(); },
+});
 ```
 
 That's the whole thing — ~30 lines of actual logic. The [shipped demo](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) wraps it with a status-row formatter (so you can watch it work), a `--simulate` flag for dev-box testing, and a `--demo-empty` switch that drains the simulated tank fast so the alert cycle fires within seconds.
