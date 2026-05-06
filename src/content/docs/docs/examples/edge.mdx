@@ -1,11 +1,11 @@
 ---
 title: Edge example
-description: A Cloudflare Worker in Para with per-request signal scope, a derived Cache-Control header, and a Durable Object rate limiter using a `when` block for once-per-window alerting.
+description: A Cloudflare Worker in Para. The fetch handler is plain JS — request → response, nothing reactive earns its keep there. The Durable Object holds long-lived per-IP signals and uses a `when` block to log the first request that crosses the rate limit.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-A Cloudflare Worker with per-request signal scope. Includes a derived `Cache-Control` header, and a Durable Object rate limiter that uses a `when` block to log the first time a window crosses the threshold.
+A Cloudflare Worker rate-limited by a Durable Object. The `fetch` handler is plain JavaScript — there's nothing reactive to do in a request-response handler that runs once and returns. The Durable Object is where Para earns its keep: long-lived per-IP signals and a `when` block that logs the first request to cross the limit (not every subsequent request).
 
 The same code shape works on Vercel Edge Functions, Deno Deploy, and AWS Lambda@Edge — anywhere V8 runs without Node APIs.
 
@@ -47,17 +47,15 @@ export interface Env {
   RATE_LIMIT: DurableObjectNamespace;
 }
 
+const cacheControlFor = (kind: "asset" | "json" | "error") =>
+  kind === "asset" ? "public, max-age=31536000, immutable"
+  : kind === "error" ? "public, max-age=10"
+  : "no-store";
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
-
-    signal status = 200;
-    signal bodyKind: "asset" | "json" | "error" = "json";
-    signal cacheControl =
-      bodyKind === "asset" ? "public, max-age=31536000, immutable" :
-      bodyKind === "error" ? "public, max-age=10" :
-                             "no-store";
 
     const id = env.RATE_LIMIT.idFromName(ip);
     const stub = env.RATE_LIMIT.get(id);
@@ -65,23 +63,20 @@ export default {
     const { allowed, remaining } = await limitRes.json<{ allowed: boolean; remaining: number }>();
 
     if (!allowed) {
-      status = 429;
-      bodyKind = "error";
       return new Response("rate limited", {
-        status,
-        headers: { "Cache-Control": cacheControl, "Retry-After": "60" },
+        status: 429,
+        headers: { "Cache-Control": cacheControlFor("error"), "Retry-After": "60" },
       });
     }
 
-    bodyKind = url.pathname.startsWith("/api/") ? "json" : "asset";
-
+    const kind = url.pathname.startsWith("/api/") ? "json" : "asset";
     return new Response(
       JSON.stringify({ ok: true, path: url.pathname, remaining }),
       {
-        status,
+        status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": cacheControl,
+          "Cache-Control": cacheControlFor(kind),
           "X-RateLimit-Remaining": String(remaining),
         },
       },
@@ -92,7 +87,7 @@ export default {
 export class RateLimiter {
   signal count = 0;
   signal windowStart = Date.now();
-  signal overLimit = count > 100;
+  derived overLimit = count > 100;
 
   state: DurableObjectState;
 
@@ -122,17 +117,15 @@ export class RateLimiter {
 <TabItem label=".pjs">
 
 ```pjs
+const cacheControlFor = kind =>
+  kind === "asset" ? "public, max-age=31536000, immutable"
+  : kind === "error" ? "public, max-age=10"
+  : "no-store";
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
-
-    signal status = 200;
-    signal bodyKind = "json";
-    signal cacheControl =
-      bodyKind === "asset" ? "public, max-age=31536000, immutable" :
-      bodyKind === "error" ? "public, max-age=10" :
-                             "no-store";
 
     const id = env.RATE_LIMIT.idFromName(ip);
     const stub = env.RATE_LIMIT.get(id);
@@ -140,23 +133,20 @@ export default {
     const { allowed, remaining } = await limitRes.json();
 
     if (!allowed) {
-      status = 429;
-      bodyKind = "error";
       return new Response("rate limited", {
-        status,
-        headers: { "Cache-Control": cacheControl, "Retry-After": "60" },
+        status: 429,
+        headers: { "Cache-Control": cacheControlFor("error"), "Retry-After": "60" },
       });
     }
 
-    bodyKind = url.pathname.startsWith("/api/") ? "json" : "asset";
-
+    const kind = url.pathname.startsWith("/api/") ? "json" : "asset";
     return new Response(
       JSON.stringify({ ok: true, path: url.pathname, remaining }),
       {
-        status,
+        status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": cacheControl,
+          "Cache-Control": cacheControlFor(kind),
           "X-RateLimit-Remaining": String(remaining),
         },
       },
@@ -167,7 +157,7 @@ export default {
 export class RateLimiter {
   signal count = 0;
   signal windowStart = Date.now();
-  signal overLimit = count > 100;
+  derived overLimit = count > 100;
 
   constructor(state) {
     this.state = state;
@@ -196,9 +186,9 @@ export class RateLimiter {
 
 ### Notes on the source
 
-- Signals declared inside `fetch` are scoped to one request. They go out of scope when the response is returned.
-- `signal cacheControl = ...` is a derived signal; the RHS reads `bodyKind`. The header value reflects whatever `bodyKind` last was at the point it's read.
-- The `RateLimiter` Durable Object holds long-lived per-IP signals. The `when overLimit { ... }` block fires once per false→true transition of the predicate, which corresponds to the first request of a window that crosses the threshold. Subsequent over-limit requests do not re-fire the body until `count` drops back below 100 and rises again.
+- The `fetch` handler is plain JavaScript. Workers run it once per request and then exit, so there's no long-lived state for signals to track and no UI for effects to drive — reactive primitives would be ceremony without a payoff.
+- The `RateLimiter` Durable Object is the opposite story: it's a single instance per IP that lives across many requests, which is exactly the shape `signal` / `derived` / `when` are built for. `count` and `windowStart` are mutable state cells; `overLimit` is `derived` from `count` so the read-only intent is explicit.
+- `when overLimit { ... }` fires once per false→true transition of the predicate — the first request of a window that crosses the threshold, not every subsequent over-limit request. The block won't re-fire until `count` drops back below 100 and rises again.
 
 ## wrangler.jsonc
 
