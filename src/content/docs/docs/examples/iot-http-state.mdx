@@ -12,14 +12,9 @@ This is the demo for "reactivity across the wire." Adding another sensor or anot
 ```pjs
 import gpio from "parabun:gpio";
 import signals from "@para/signals";
+import lifecycle from "@para/lifecycle";
 
-// Pick the RP1 GPIO chip on Pi 5, or fall through to gpiochip0 / GPIO_CHIP env.
-const chips = gpio.chips();
-const chipPath = process.env.GPIO_CHIP
-  ?? chips.find(c => c.label === "pinctrl-rp1")?.path
-  ?? chips[0].path;
-
-await using chip = gpio.open(chipPath);
+await using chip = gpio.openDefaultChip();    // RP1 on Pi 5; gpiochip0 elsewhere
 await using button = chip.line(27, { mode: "in", pull: "up", pollHz: 50 });
 await using led = chip.line(17, { mode: "out", initial: 0 });
 
@@ -56,14 +51,17 @@ const server = Bun.serve({
       return new Response(stream, { headers: { "content-type": "text/event-stream" } });
     }
 
-    if (url.pathname === "/led/0" && req.method === "POST") { ledOverride = 0; return Response.json({ override: 0 }); }
-    if (url.pathname === "/led/1" && req.method === "POST") { ledOverride = 1; return Response.json({ override: 1 }); }
+    if (url.pathname === "/led/0"    && req.method === "POST") { ledOverride = 0;    return Response.json({ override: 0 }); }
+    if (url.pathname === "/led/1"    && req.method === "POST") { ledOverride = 1;    return Response.json({ override: 1 }); }
     if (url.pathname === "/led/auto" && req.method === "POST") { ledOverride = null; return Response.json({ override: null }); }
   },
 });
+
+// Block until SIGINT/SIGTERM, stop the server, then dispose.
+await lifecycle.keepAlive({ onShutdown: () => server.stop() });
 ```
 
-Full source (with the chip-discovery boilerplate, all four route handlers, and clean SIGINT shutdown) is in [`demos/iot-http-state.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-http-state.pts) — about 140 lines.
+Full source in [`demos/iot-http-state.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-http-state.pts) — about 110 lines.
 
 ## What's reactive and what isn't
 
