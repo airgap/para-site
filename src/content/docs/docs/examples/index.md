@@ -19,7 +19,7 @@ Each example is a complete project with file layout, source, build commands, and
 ## Voice and ML
 
 - **[Voice assistant](/docs/examples/voice-assistant/)** — wake-word → STT → LLM → TTS → speaker, with one grammar-constrained tool that flips a real GPIO LED. ~35 lines.
-- **[Voice assistant + MCP](/docs/examples/voice-assistant-mcp/)** — same loop, but the tool catalog comes from any MCP server (stdio or WebSocket). One `mcp.connect()` call flattens every tool into the bot.
+- **[Voice assistant + MCP](/docs/examples/voice-assistant-mcp/)** — same loop, bridged to a real MCP server (Context7 for live library docs, plus the official memory server for persistent recall). One `mcp.connect()` flattens every tool into the bot.
 - **[Smart camera](/docs/examples/camera-motion/)** — V4L2 capture → motion detector → save a JPEG snapshot whenever motion fires. Three Parabun modules glued by an async iterator.
 
 ## Data engineering

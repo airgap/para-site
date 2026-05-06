@@ -1,45 +1,73 @@
 ---
 title: Voice assistant + MCP
-description: Same voice loop as the headline example, but the tool catalog comes from an MCP server. One mcp.connect() call flattens every tool the server exposes into the bot.
+description: Voice loop bridged into a real Model Context Protocol server. One mcp.connect() call flattens every tool the server exposes into the bot — demoed against Context7 (live library docs) and the official memory server.
 ---
 
-The [headline voice assistant](/docs/examples/voice-assistant/) declares a single inline tool and wires it to a GPIO pin. That works when *you* own the action. When the action lives behind a tool surface someone else maintains — a Home Assistant bridge, a notes daemon, a CLI wrapper, anything that speaks the [Model Context Protocol](https://modelcontextprotocol.io/) — bridging it into the bot is one line.
+The [headline voice assistant](/docs/examples/voice-assistant/) declares one inline tool wired to a GPIO pin. That works when *you* own the action. When the action lives behind a tool surface someone else maintains — anything that speaks the [Model Context Protocol](https://modelcontextprotocol.io/) — bridging it into the bot is one line.
 
 `assistant.create({ tools })` accepts a structural type with `.tools: ToolDescriptor[]` and `.call(name, args)`. `@para/mcp` connection objects fit that shape natively, so dropping a connection into `tools: [...]` flattens every tool the server exposes into the bot's catalog. The grammar-constrained generation, JSON dispatch, and round-tripped result are identical to inline tools.
 
-## src/agent.pts
+## src/agent.pts — voice + Context7
+
+[Context7](https://context7.com) is an MCP server from Upstash that fetches up-to-date library and framework docs by ID. Pair it with the voice loop and you have an assistant that can answer "how do I set a Cloudflare Workers KV key with a TTL?" using the *current* docs, not whatever its base model trained on a year ago.
 
 ```parabun
 import assistant from "parabun:assistant";
 import mcp       from "@para/mcp";
 
-// Spawn the MCP server as a subprocess and speak JSON-RPC over its stdin/stdout.
-// Replace the command with whatever MCP server you want to bridge.
-await using home = await mcp.connect("stdio", "home-assistant-mcp", {
-  args: ["--config", "/etc/home-assistant/mcp.toml"],
-  env: { ...process.env, HASS_TOKEN: process.env.HASS_TOKEN },
+// Spawn Context7 as a subprocess; @para/mcp speaks JSON-RPC over its stdio.
+// CONTEXT7_API_KEY is optional (raises rate limits); works without one.
+await using docs = await mcp.connect("stdio", "npx", {
+  args: ["-y", "@upstash/context7-mcp"],
+  env: { ...process.env, CONTEXT7_API_KEY: process.env.CONTEXT7_API_KEY ?? "" },
 });
 
 await using bot = await assistant.create({
   llm: process.env.ASSISTANT_LLM,
   stt: process.env.ASSISTANT_STT,
   tts: process.env.ASSISTANT_TTS,
-  system: "You are a concise smart-home assistant. Use tools to act.",
-  tools: [home],                        // ← every home.* tool is now reachable
+  system: `You answer programming questions out loud. When the user mentions a library,
+           framework, or API, call resolve-library-id to find its Context7 ID and then
+           query-docs to fetch current documentation. Quote sparingly — the user is listening,
+           not reading. One or two sentences per answer.`,
+  tools: [docs],                        // ← every Context7 tool is now reachable
 });
 
-// Live status line, plus a count of how many tools are available.
+// Live status line, plus a count of how many tools the bot can see.
 derived header = `\r[${bot.state.get().padEnd(10)}] (${bot.tools.length} tools)`;
 header -> process.stdout.write;
 
 await bot.run();
 ```
 
+Speak after `[listening ]` shows up. Try "how do I cache a fetch response in Hono for five minutes?" — the LLM emits a constrained `resolve-library-id({ libraryName: "hono" })` call, then `query-docs({ context7CompatibleLibraryID, query: "cache fetch 5 minutes" })`, gets fresh docs back, and synthesizes a one-sentence spoken answer.
+
 ## What this gets you
 
-- **`home.tools`** is populated during the `initialize` handshake — the bot snapshots it and includes every entry in the JSON-schema-constrained generation grammar. Tool-call requests route through `home.call(name, args)`; the JSON result is fed back to the model so the spoken response reflects what actually happened.
-- **`home.alive`** is a `Signal<boolean>` — false when the subprocess exits or the WebSocket drops. Bind it to a status indicator or wrap your bot's `run()` in `effect { if (home.alive.get()) … }` for auto-reconnect.
+- **`docs.tools`** is populated during the `initialize` handshake — the bot snapshots it and includes every entry in the JSON-schema-constrained generation grammar. Tool-call requests route through `docs.call(name, args)`; the JSON result is fed back to the model so the spoken response reflects what actually happened.
+- **`docs.alive`** is a `Signal<boolean>` — false when the subprocess exits or the WebSocket drops. Bind it to a status indicator or wrap `bot.run()` in `effect { if (docs.alive.get()) … }` for auto-reconnect.
 - **`bot.tools`** is the flattened catalog (inline + MCP). Each entry carries `source: "inline" | "mcp"` so a UI can render where each came from.
+
+## Or use the memory server for persistent recall
+
+Context7 is one option. The official [`@modelcontextprotocol/server-memory`](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) gives the bot a knowledge graph it writes to and reads from across sessions — say "remember that my dog Biscuit is allergic to chicken" and the assistant will surface that fact months later when you ask "what can I feed Biscuit?".
+
+```parabun
+await using mem = await mcp.connect("stdio", "npx", {
+  args: ["-y", "@modelcontextprotocol/server-memory"],
+  env: { ...process.env, MEMORY_FILE_PATH: `${process.env.HOME}/.assistant-memory.jsonl` },
+});
+
+await using bot = await assistant.create({
+  llm, stt, tts,
+  system: `You are a personal assistant with persistent memory. Use create_entities and
+           add_observations to remember facts the user shares. Use search_nodes before
+           answering personal questions. Speak in one or two sentences.`,
+  tools: [mem],
+});
+```
+
+Zero configuration, zero API keys — `MEMORY_FILE_PATH` is the only optional setting and defaults to a file next to the server.
 
 ## Mixing inline and MCP tools
 
@@ -52,7 +80,8 @@ await using led  = chip.line(17, { mode: "out", initial: 0 });
 await using bot = await assistant.create({
   llm, stt, tts,
   tools: [
-    home,                                                                    // every MCP tool
+    docs,                                                                    // every Context7 tool
+    mem,                                                                     // every memory tool
     {
       name: "setLight",
       description: "Toggle the local LED wired to BCM 17.",
@@ -63,15 +92,15 @@ await using bot = await assistant.create({
 });
 ```
 
-The bot sees one merged catalog; the LLM picks among them at each turn.
+The bot sees one merged catalog; the LLM picks among them at each turn — answer a docs question, recall a fact, flip a pin.
 
 ## WebSocket transport
 
-`mcp.connect("ws", url)` is the same surface for servers that speak MCP over a WebSocket text frame:
+`mcp.connect("ws", url)` is the same surface for servers that speak MCP over WebSocket text frames:
 
 ```parabun
-await using hub = await mcp.connect("ws", "ws://hub.local:8080/mcp", {
-  headers: { authorization: `Bearer ${process.env.HUB_TOKEN}` },
+await using hub = await mcp.connect("ws", "wss://mcp.context7.com/mcp", {
+  headers: { authorization: `Bearer ${process.env.CONTEXT7_API_KEY}` },
 });
 ```
 
@@ -83,11 +112,11 @@ Either transport works in `tools: [...]`.
 ASSISTANT_LLM=$HOME/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
 ASSISTANT_STT=$HOME/models/ggml-tiny.en.bin \
 ASSISTANT_TTS=$HOME/models/en_US-lessac-medium.onnx \
-HASS_TOKEN=… \
+CONTEXT7_API_KEY=…  # optional — raises Context7's rate limit. \
   parabun src/agent.pts
 ```
 
-The status line will show `(N tools)` once the MCP handshake completes; speak after `[listening ]` shows up. The LLM is constrained to call one of those N tools or reply in plain text — no malformed JSON, no hallucinated tool names.
+The status line will show `(N tools)` once the MCP handshake completes; speak after `[listening ]`. The LLM is constrained to call one of those N tools or reply in plain text — no malformed JSON, no hallucinated tool names.
 
 ## Hardware
 
@@ -99,3 +128,4 @@ Same as the [headline voice assistant](/docs/examples/voice-assistant/#hardware)
 - [`@para/mcp`](/docs/mcp/) — connect and serve transports, structural integration
 - [`parabun:assistant`](/docs/assistant/) — the bot harness
 - [`parabun:llm`](/docs/llm/) — grammar-constrained generation if you want to drive tool dispatch yourself
+- [Context7](https://context7.com) and [official MCP servers](https://github.com/modelcontextprotocol/servers) — more catalogs to bridge in
