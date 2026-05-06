@@ -3,7 +3,7 @@ title: Multi-plant auto waterer
 description: Per-plant moisture signals + pump pulses with a cooldown state machine, plus a tank-level sensor that pauses all watering when empty and uses `when` blocks for edge-triggered alerts on the empty / refilled / low-water transitions.
 ---
 
-A real-shaped IoT controller: three potted plants with capacitive moisture sensors on an ADS1115 ADC, three pumps on GPIO relays, and a fourth ADC channel for a reservoir-level sensor. Each plant has its own three-state machine (ok → watering → cooldown → ok); the tank coordinates all of them through `when` blocks that fire once on each empty/refilled transition rather than every tick.
+A real-shaped IoT controller: three potted plants with capacitive moisture sensors on an ADS1115 ADC, three pumps on GPIO relays, and a fourth ADC channel for a reservoir-level sensor. Each plant has its own state machine — ok → watering → cooldown → ok — and the tank coordinates all of them through `when` blocks that fire once on each empty/refilled transition rather than every tick.
 
 This is the example that earns Para's reactive primitives — multiple sensors feeding multiple actuators with cross-cutting safety state (the tank). The same code as plain JS would be either a pile of `prevX` flag tracking or an over-eager event bus.
 
