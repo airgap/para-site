@@ -143,6 +143,18 @@
       }
     },
     {
+      "comment": "bare `when stop { }` paired-form arm — fires on falling edge of the preceding `when` block's predicate.",
+      "match": "\\b(when)\\s+(stop)\\b(?=\\s*\\{)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.when.parabun"
+        },
+        "2": {
+          "name": "keyword.control.when.stop.parabun"
+        }
+      }
+    },
+    {
       "match": "\\b(arena)\\b(?=\\s*\\{)",
       "captures": {
         "1": {

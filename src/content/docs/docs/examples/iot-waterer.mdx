@@ -41,10 +41,10 @@ derived tankLevel = moisture(tankRaw.signal.get() ?? 26000);
 derived tankEmpty = tankLevel < 0.05;
 
 // Paired form: trailing `start` catches boot-already-empty + each new
-// empty event; bare `when not { }` is the inverse-edge arm (always
+// empty event; bare `when stop { }` is the inverse-edge arm (always
 // strict-edge, so a healthy boot doesn't fake a recovery alert).
 when tankEmpty start { console.error("⚠️  tank EMPTY — pausing watering"); }
-when not             { console.error("✓  tank back above empty"); }
+when stop            { console.error("✓  tank back above empty"); }
 
 // Per-plant pump, rate-limited by signals.cooldown.
 const water = signals.cooldown(
@@ -78,7 +78,7 @@ That's the whole thing — ~30 lines of actual logic. The [shipped demo](https:/
 
 - **`signal tankRaw`** — periodic ADC read at 1 Hz. The only mutable cell in the tank chain.
 - **`derived tankLevel`** + **`derived tankEmpty`** — read-only computations. `tankEmpty` recomputes every time `tankLevel` changes; nothing else has to track it.
-- **`when tankEmpty start { ... }`** + **bare `when not { ... }`** — the trailing `start` modifier on the first arm fires once at registration if the predicate is initially truthy AND on each false→true rise; the bare-paired arm is always strict-edge (no initial-truthy fire). Picking the right one matters for ops alerts: if you boot with the tank already empty, `when tankEmpty start` notifies immediately; the bare paired `when not { }` only fires on actual refills (no fake "back above empty" alert on a healthy boot). The runtime handles the edge tracking — the alternative is hand-rolling `wasEmpty` plus `if (empty && !wasEmpty)`.
+- **`when tankEmpty start { ... }`** + **bare `when stop { ... }`** — the trailing `start` modifier on the first arm fires once at registration if the predicate is initially truthy AND on each false→true rise; the paired `when stop { }` arm is always strict-edge falling (no initial-truthy fire). Picking the right one matters for ops alerts: if you boot with the tank already empty, `when tankEmpty start` notifies immediately; the bare-paired `when stop { }` only fires on actual refills (no fake "back above empty" alert on a healthy boot). `start` and `stop` are symmetric — fire when the predicate starts being true / stops being true. The runtime handles the edge tracking — the alternative is hand-rolling `wasEmpty` plus `if (empty && !wasEmpty)`.
 - **`signals.cooldown(runPump, { key, coolingMs })`** — wraps the pump action so concurrent calls AND calls within `cooldownMs` of the previous run are silently dropped. Returns `Promise<boolean>` — true if it fired, false if it was suppressed. The `key` partitions the cooldown per-plant; `coolingMs` can be a number or a function of the call arguments. Replaces the per-plant `Map<name, { phase, lastWateredAt }>` you'd otherwise hand-write.
 
 ## Hardware

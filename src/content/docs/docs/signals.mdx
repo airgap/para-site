@@ -190,7 +190,7 @@ The signal must be a writable one (returned by `signal(...)`); passing a `derive
 
 ## `when(source, fn)`
 
-Edge-detection helper. `when` calls `fn` once each time `source` transitions from falsy to truthy (boolean-coerced). The falling edge is the rising edge of the negated predicate, so a single helper covers both directions: `when(() => !s.get(), fn)` fires on true→false. The block syntax `when not EXPR { … }` rewrites to that form automatically.
+Edge-detection helper. `when` calls `fn` once each time `source` transitions from falsy to truthy (boolean-coerced). The falling edge is the rising edge of the negated predicate, so a single helper covers both directions: `when(() => !s.get(), fn)` fires on true→false. The block syntaxes `when not EXPR { … }` and the bare-paired `when stop { … }` rewrite to that form automatically.
 
 `source` can be **either** a `Signal<T>` (a `signal(...)` cell, a `derived(...)`, or any driver-handle signal) **or** a predicate function — passing `() => a.get() && b.get() === "x"` skips the explicit `derived(...)` wrapper. Reads inside the predicate are tracked the same way they would be inside an `effect`.
 

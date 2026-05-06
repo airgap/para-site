@@ -78,18 +78,20 @@ when not enabled { console.log("disabled"); }
 signal tankEmpty = true;
 when tankEmpty start { console.error("tank EMPTY"); }   // fires immediately
 
-// paired form — bare `when not { ... }` adjacent to a `when` block
+// paired form — bare `when stop { ... }` adjacent to a `when` block
 // (with or without `start`) shares its predicate and fires the
-// inverse edge. The bare arm is ALWAYS strict-edge — so a tank-empty
-// alert fires on boot-already-empty (because of `start`) but the
-// recovery doesn't fake a fire on healthy boot.
+// inverse edge. `stop` pairs with `start` symmetrically: fire when
+// the predicate starts being true / stops being true. The paired
+// arm is ALWAYS strict-edge — so a tank-empty alert fires on
+// boot-already-empty (because of `start`) but the recovery doesn't
+// fake a fire on healthy boot.
 signal connected = false;
 when connected { showOnlineBanner(); }
-when not       { showOfflineBanner(); }
+when stop      { showOfflineBanner(); }
 
 signal tankEmpty = true;
 when tankEmpty start { console.error("EMPTY"); }     // boot-true → fires
-when not             { console.log("recovered"); }   // strict-edge — fires only on actual recovery
+when stop            { console.log("recovered"); }   // strict-edge — fires only on actual recovery
 ```
 
 ## `|>`, `..>`, `..!`, `..&`, `..` / `..=`
