@@ -55,38 +55,44 @@ Full source (with the ADS1115 SMBus reads, the simulator fallback, and the coold
 - **`when tankEmpty { ... }`** + **`when not tankEmpty { ... }`** — fire once per false→true and true→false transition. The empty notification doesn't repeat every second the tank stays empty; the refilled notification fires only on the actual refill. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking `wasEmpty` and `if (empty && !wasEmpty)`.
 - **Per-plant FSM is plain JS.** A `Map<string, PlantState>` and an `if/else` ladder. The FSM doesn't have multiple readers; reactivity wouldn't add anything.
 
-## Run it
-
-```bash
-# Simulator mode — works on any host, no hardware needed.
-parabun build src/main.pjs --outfile dist/main.js
-node dist/main.js --simulate --demo-empty --seconds 14
-```
-
-`--demo-empty` drains the simulated tank fast (8%/sec) so the empty/refill cycle fires within 14 seconds — useful for seeing the `when` block edges.
-
-```
-[tank  92%] basil 42% ok  │ fern 69% ok  │ succulent 18% PUMP → water
-[tank  84%] basil 45% ok  │ fern 68% ok  │ succulent 15% rest
-…
-[notify] ⚠ tank low — 12% remaining
-[notify] ⚠️  tank EMPTY — pausing all watering
-[tank   0%] basil 74% ok  │ fern 40% dry → SKIP (tank empty) │ succulent 0% rest
-[notify] ✓  tank refilled to 100% — resuming watering
-💧 fern: pump ON for 2000ms
-```
-
-## Real hardware
+## Hardware
 
 ```
 I²C bus 1 → ADS1115 @ 0x48
   ch 0..2 → capacitive moisture sensors (one per plant)
   ch 3    → analog tank-level sensor
-GPIO chip pinctrl-rp1 (RP1)
+GPIO chip pinctrl-rp1 (RP1, on Pi 5)
   BCM 17 / 27 / 22 → relay drivers for the three pumps
 ```
 
-`--i2c 1` switches to real ADS1115 reads. The default capacitive-moisture calibration assumes dry≈26000 / wet≈10000 raw; you'll want to dunk + dry your sensors and adjust.
+The default capacitive-moisture calibration assumes dry≈26000 / wet≈10000 raw; dunk + dry your sensors and adjust to taste. Use `--i2c <bus>` to override the default I²C bus number if your ADS1115 lives on something other than `/dev/i2c-1`.
+
+## Run it
+
+On the Pi with hardware wired up:
+
+```bash
+parabun src/main.pjs
+```
+
+That's it — the script auto-discovers the RP1 GPIO chip and opens the ADS1115 on `/dev/i2c-1`. It logs a status row at 1 Hz and notifies on the tank transitions:
+
+```
+[tank  84%] basil 45% ok  │ fern 68% ok  │ succulent 15% rest
+[notify] ⚠ tank low — 12% remaining
+[notify] ⚠️  tank EMPTY — pausing all watering
+[tank   3%] basil 74% ok  │ fern 40% dry → SKIP (tank empty) │ succulent 0% rest
+[notify] ✓  tank back above empty — resuming watering
+💧 fern: pump ON for 2000ms
+```
+
+### Without hardware
+
+`--simulate` swaps the I²C reads for a deterministic oscillator + a slowly-draining tank, so the demo also runs on a dev box. Pair with `--demo-empty` to drive the simulated tank to zero in ~12s instead of ~100s — useful for actually seeing the `when` block edges fire:
+
+```bash
+parabun src/main.pjs --simulate --demo-empty --seconds 14
+```
 
 ## Next steps
 
