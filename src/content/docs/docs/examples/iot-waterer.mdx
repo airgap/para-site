@@ -1,9 +1,9 @@
 ---
 title: Multi-plant auto waterer
-description: Per-plant moisture signals + pump pulses with cooldown FSM, plus a tank-level sensor that pauses all watering when empty and uses `when` blocks for edge-triggered alerts on the empty / refilled / low-water transitions.
+description: Per-plant moisture signals + pump pulses with a cooldown state machine, plus a tank-level sensor that pauses all watering when empty and uses `when` blocks for edge-triggered alerts on the empty / refilled / low-water transitions.
 ---
 
-A real-shaped IoT controller: three potted plants with capacitive moisture sensors on an ADS1115 ADC, three pumps on GPIO relays, and a fourth ADC channel for a reservoir-level sensor. Each plant has a per-plant ok → watering → cooldown FSM; the tank coordinates all of them through `when` blocks that fire once on each empty/refilled transition rather than every tick.
+A real-shaped IoT controller: three potted plants with capacitive moisture sensors on an ADS1115 ADC, three pumps on GPIO relays, and a fourth ADC channel for a reservoir-level sensor. Each plant has its own three-state machine (ok → watering → cooldown → ok); the tank coordinates all of them through `when` blocks that fire once on each empty/refilled transition rather than every tick.
 
 This is the example that earns Para's reactive primitives — multiple sensors feeding multiple actuators with cross-cutting safety state (the tank). The same code as plain JS would be either a pile of `prevX` flag tracking or an over-eager event bus.
 
@@ -25,7 +25,8 @@ const TANK_EMPTY_AT = 0.05;
 // readChannel(ch) returns the analog 0..1 reading from the ADS1115
 // (or the deterministic simulator under --simulate). runPump(plant)
 // flips the GPIO line on/off for plant.pumpMs and updates a
-// per-plant FSM. Both are plain functions defined in the full source
+// per-plant state machine. Both are plain functions defined in the
+// full source
 // — elided here so the reactive shape stays readable.
 
 // ─── tank: signal → derived → when (the win) ─────────────────────
@@ -36,7 +37,7 @@ derived tankEmpty = tankLevel < TANK_EMPTY_AT;
 when tankEmpty       { notify("⚠️  tank EMPTY — pausing all watering"); }
 when not tankEmpty   { notify("✓  tank back above empty — resuming watering"); }
 
-// ─── per-plant FSM: dry & no cooldown & tank-not-empty → water ───
+// ─── per-plant state machine: dry & no cooldown & tank-not-empty → water
 const tick = signals.fromInterval(async () => {
   const empty = tankEmpty;
   for (const p of PLANTS) {
@@ -46,14 +47,14 @@ const tick = signals.fromInterval(async () => {
 }, 1000);
 ```
 
-Full source (with the ADS1115 SMBus reads, the simulator fallback, and the cooldown FSM bookkeeping) is in [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) — under 250 lines.
+Full source (with the ADS1115 SMBus reads, the simulator fallback, and the cooldown bookkeeping) is in [`demos/iot-waterer.pts`](https://github.com/airgap/parabun/blob/main/demos/iot-waterer.pts) — under 250 lines.
 
 ## What's reactive and what isn't
 
 - **`signal tankRaw`** — periodic ADC read at 1 Hz. The only mutable cell in the tank chain.
 - **`derived tankLevel`** + **`derived tankEmpty`** — read-only computations. `tankEmpty` recomputes every time `tankLevel` changes; nothing else has to track it.
 - **`when tankEmpty { ... }`** + **`when not tankEmpty { ... }`** — fire once per false→true and true→false transition. The empty notification doesn't repeat every second the tank stays empty; the refilled notification fires only on the actual refill. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking `wasEmpty` and `if (empty && !wasEmpty)`.
-- **Per-plant FSM is plain JS.** A `Map<string, PlantState>` and an `if/else` ladder. The FSM doesn't have multiple readers; reactivity wouldn't add anything.
+- **The per-plant state machine is plain JS.** A `Map<string, PlantState>` and an `if/else` ladder. It doesn't have multiple readers, so reactivity wouldn't add anything.
 
 ## Hardware
 
