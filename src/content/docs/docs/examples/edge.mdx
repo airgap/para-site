@@ -1,159 +1,15 @@
 ---
 title: Edge example
-description: A Cloudflare Worker in Para. The fetch handler is plain JS — request → response, nothing reactive earns its keep there. The Durable Object holds long-lived per-IP signals and uses a `when` block to log the first request that crosses the rate limit.
+description: A Cloudflare Durable Object rate limiter in Para. Long-lived per-IP signals + a `when` block that logs the first request to cross the threshold (not every subsequent over-limit request).
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components";
+Cloudflare Workers' `fetch` handlers are stateless — request → response, no long-lived state, no UI. There's no reactive work for Para to do there, and forcing it would just be ceremony. Where Para earns its keep on the edge is the **Durable Object**: a single instance per IP that lives across many requests, holding state Para's signals are built for.
 
-A Cloudflare Worker rate-limited by a Durable Object. The `fetch` handler is plain JavaScript — there's nothing reactive to do in a request-response handler that runs once and returns. The Durable Object is where Para earns its keep: long-lived per-IP signals and a `when` block that logs the first request to cross the limit (not every subsequent request).
+This page shows that Durable Object — the actual rate limiter logic. The `fetch` handler that calls into it is plain Workers code; a one-liner version is at the bottom for completeness, but it isn't where the Para syntax lives.
 
-The same code shape works on Vercel Edge Functions, Deno Deploy, and AWS Lambda@Edge — anywhere V8 runs without Node APIs.
-
-You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript superset). Both compile to identical output. The tabs below sync — pick one and the rest of the page follows.
-
-## Project layout
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```
-my-worker/
-├── src/index.pts
-├── wrangler.jsonc
-├── package.json
-└── tsconfig.json
-```
-
-</TabItem>
-<TabItem label=".pjs">
-
-```
-my-worker/
-├── src/index.pjs
-├── wrangler.jsonc
-└── package.json
-```
-
-</TabItem>
-</Tabs>
-
-## Source
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```pts
-export interface Env {
-  RATE_LIMIT: DurableObjectNamespace;
-}
-
-const cacheControlFor = (kind: "asset" | "json" | "error") =>
-  kind === "asset" ? "public, max-age=31536000, immutable"
-  : kind === "error" ? "public, max-age=10"
-  : "no-store";
-
-export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
-    const url = new URL(req.url);
-    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
-
-    const id = env.RATE_LIMIT.idFromName(ip);
-    const stub = env.RATE_LIMIT.get(id);
-    const limitRes = await stub.fetch("https://internal/check");
-    const { allowed, remaining } = await limitRes.json<{ allowed: boolean; remaining: number }>();
-
-    if (!allowed) {
-      return new Response("rate limited", {
-        status: 429,
-        headers: { "Cache-Control": cacheControlFor("error"), "Retry-After": "60" },
-      });
-    }
-
-    const kind = url.pathname.startsWith("/api/") ? "json" : "asset";
-    return new Response(
-      JSON.stringify({ ok: true, path: url.pathname, remaining }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": cacheControlFor(kind),
-          "X-RateLimit-Remaining": String(remaining),
-        },
-      },
-    );
-  },
-};
-
-export class RateLimiter {
-  signal count = 0;
-  signal windowStart = Date.now();
-  derived overLimit = count > 100;
-
-  state: DurableObjectState;
-
-  constructor(state: DurableObjectState) {
-    this.state = state;
-    when overLimit {
-      console.log(`rate limit crossed: ${count} requests in window`);
-    }
-  }
-
-  async fetch(req: Request): Promise<Response> {
-    if (Date.now() - windowStart > 60_000) {
-      count = 0;
-      windowStart = Date.now();
-    }
-    count++;
-
-    return Response.json({
-      allowed: !overLimit,
-      remaining: Math.max(0, 100 - count),
-    });
-  }
-}
-```
-
-</TabItem>
-<TabItem label=".pjs">
+## src/limiter.pjs
 
 ```pjs
-const cacheControlFor = kind =>
-  kind === "asset" ? "public, max-age=31536000, immutable"
-  : kind === "error" ? "public, max-age=10"
-  : "no-store";
-
-export default {
-  async fetch(req, env) {
-    const url = new URL(req.url);
-    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
-
-    const id = env.RATE_LIMIT.idFromName(ip);
-    const stub = env.RATE_LIMIT.get(id);
-    const limitRes = await stub.fetch("https://internal/check");
-    const { allowed, remaining } = await limitRes.json();
-
-    if (!allowed) {
-      return new Response("rate limited", {
-        status: 429,
-        headers: { "Cache-Control": cacheControlFor("error"), "Retry-After": "60" },
-      });
-    }
-
-    const kind = url.pathname.startsWith("/api/") ? "json" : "asset";
-    return new Response(
-      JSON.stringify({ ok: true, path: url.pathname, remaining }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": cacheControlFor(kind),
-          "X-RateLimit-Remaining": String(remaining),
-        },
-      },
-    );
-  },
-};
-
 export class RateLimiter {
   signal count = 0;
   signal windowStart = Date.now();
@@ -181,70 +37,53 @@ export class RateLimiter {
 }
 ```
 
-</TabItem>
-</Tabs>
+### What's reactive and what isn't
 
-### Notes on the source
+- **`signal count`** + **`signal windowStart`** — mutable cells holding per-IP state across many requests. Each request increments `count`; once a minute the window resets.
+- **`derived overLimit = count > 100`** — recomputes whenever `count` changes. Read-only; written using the `derived` keyword to make the intent explicit (writing `signal` here would auto-promote to the same shape, but `derived` says "you can't assign to this" at the declaration site).
+- **`when overLimit { ... }`** — fires once per false→true transition. Logs the first request that crosses the threshold; doesn't re-fire on every subsequent over-limit request until `count` drops back below 100 and rises again. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking the previous value or an unconditional `effect` that does its own diffing.
 
-- The `fetch` handler is plain JavaScript. Workers run it once per request and then exit, so there's no long-lived state for signals to track and no UI for effects to drive — reactive primitives would be ceremony without a payoff.
-- The `RateLimiter` Durable Object is the opposite story: it's a single instance per IP that lives across many requests, which is exactly the shape `signal` / `derived` / `when` are built for. `count` and `windowStart` are mutable state cells; `overLimit` is `derived` from `count` so the read-only intent is explicit.
-- `when overLimit { ... }` fires once per false→true transition of the predicate — the first request of a window that crosses the threshold, not every subsequent over-limit request. The block won't re-fire until `count` drops back below 100 and rises again.
+The `fetch` method is plain JS — no Para sugar. That's fine: the per-call work isn't reactive, the cross-call state is. Putting the right tool at the right layer is the point.
+
+## The Worker entry that calls it
+
+The `fetch` handler that proxies requests through the Durable Object is plain Workers code; nothing reactive happens here, so it's plain JavaScript:
+
+```pjs
+export default {
+  async fetch(req, env) {
+    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+    const stub = env.RATE_LIMIT.get(env.RATE_LIMIT.idFromName(ip));
+    const { allowed, remaining } = await (await stub.fetch("https://internal/check")).json();
+
+    if (!allowed) {
+      return new Response("rate limited", {
+        status: 429,
+        headers: { "Cache-Control": "public, max-age=10", "Retry-After": "60" },
+      });
+    }
+    return Response.json({ ok: true, remaining }, {
+      headers: { "X-RateLimit-Remaining": String(remaining) },
+    });
+  },
+};
+```
 
 ## wrangler.jsonc
 
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
 ```jsonc
 {
   "name": "my-worker",
   "main": "dist/index.js",
   "compatibility_date": "2026-04-30",
   "durable_objects": {
-    "bindings": [{ "name": "RATE_LIMIT", "class_name": "RateLimiter" }],
+    "bindings": [{ "name": "RATE_LIMIT", "class_name": "RateLimiter" }]
   },
-  "migrations": [{ "tag": "v1", "new_classes": ["RateLimiter"] }],
+  "migrations": [{ "tag": "v1", "new_classes": ["RateLimiter"] }]
 }
 ```
-
-</TabItem>
-<TabItem label=".pjs">
-
-```jsonc
-{
-  "name": "my-worker",
-  "main": "dist/index.js",
-  "compatibility_date": "2026-04-30",
-  "durable_objects": {
-    "bindings": [{ "name": "RATE_LIMIT", "class_name": "RateLimiter" }],
-  },
-  "migrations": [{ "tag": "v1", "new_classes": ["RateLimiter"] }],
-}
-```
-
-</TabItem>
-</Tabs>
 
 ## package.json
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```json
-{
-  "name": "my-worker",
-  "type": "module",
-  "scripts": {
-    "build": "parabun build src/index.pts --target browser --outfile dist/index.js",
-    "deploy": "parabun run build && wrangler deploy"
-  },
-  "dependencies": { "@para/signals": "*", "@para/parallel": "*" },
-  "devDependencies": { "@cloudflare/workers-types": "*", "wrangler": "^4" }
-}
-```
-
-</TabItem>
-<TabItem label=".pjs">
 
 ```json
 {
@@ -254,13 +93,10 @@ export class RateLimiter {
     "build": "parabun build src/index.pjs --target browser --outfile dist/index.js",
     "deploy": "parabun run build && wrangler deploy"
   },
-  "dependencies": { "@para/signals": "*", "@para/parallel": "*" },
+  "dependencies": { "@para/signals": "*" },
   "devDependencies": { "wrangler": "^4" }
 }
 ```
-
-</TabItem>
-</Tabs>
 
 `--target browser` is correct for Workers — the V8 isolate runtime has web-platform globals but no Node APIs.
 
@@ -270,3 +106,9 @@ export class RateLimiter {
 parabun install
 parabun run deploy
 ```
+
+The output is standard JavaScript using `import "@para/signals"`. Wrangler bundles it like any other npm-using Worker.
+
+## TypeScript form
+
+If you prefer types, swap `src/limiter.pjs` for `src/limiter.pts`, declare the `Env` interface (`RATE_LIMIT: DurableObjectNamespace`), and type `state: DurableObjectState` on the class. Same compiled output either way.
