@@ -19,7 +19,7 @@ When you're on Parabun, `@para/*` libraries quietly use their `parabun:*` counte
 
 ## What's in the box
 
-Twenty modules. `✓` means it's available on that side; `—` means it isn't.
+`parabun:*` modules are native, hardware-accelerated, and only available in the Parabun runtime. `@para/*` libraries are cross-runtime, available on npm, and automatically use their `parabun:*` counterpart when running on Parabun.
 
 | Module | `@para/*` | `parabun:*` | What it does |
 |---|:---:|:---:|---|
