@@ -3,11 +3,12 @@ title: Install
 description: Compile .pts / .pjs files with parabun build, install the @para/* npm packages your code uses, ship to any JavaScript runtime.
 ---
 
-Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [ParaBun](/runtime) fork of Bun — mainline Bun does not recognize the syntax. To use Para on a host that isn't ParaBun itself, you need three things:
+Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [ParaBun](/runtime) fork of Bun — mainline Bun does not recognize the syntax. To use Para on a host that isn't ParaBun itself, you need two things:
 
 1. **The ParaBun transpiler** to compile `.pts` → `.js`. The output is plain JavaScript and runs anywhere; ParaBun is only needed at build time.
-2. **A bundler alias** that maps `para:*` import specifiers to the `@para/*` npm packages. One regex line of bundler config.
-3. **The runtime packages** — install only the ones you actually use.
+2. **The runtime packages** from npm — install only the ones you actually use.
+
+The transpiler emits standard `import`s of `@para/*` npm packages, so your bundler resolves them through normal node_modules — no aliases or bundler config needed.
 
 A standalone `@para/transpile` npm package (no ParaBun required) is on the roadmap. Until it ships, the build host needs ParaBun installed; runtime hosts (browser, Lambda, Workers, Node, Bun, Deno) do not.
 
@@ -41,71 +42,13 @@ don't need to install or import from it directly.
 
 All `@para/*` packages are pure JS / Wasm with no native dependencies and target ES2022.
 
-## 3. Configure your bundler (temporary — see LYK-805)
-
-The Para transpiler currently emits `require("para:signals")` (etc.) for every `signal` / `effect` / `~>` lowering. Until [LYK-805](https://linear.app/lyku/issue/LYK-805) updates the transpiler to emit `@para/*` directly, non-Parabun bundlers need a one-line alias to map `para:*` specifiers to the matching `@para/*` package. Once LYK-805 ships, you can delete this whole section from your config — the `@para/*` imports will resolve through normal npm resolution.
-
-### Vite
-
-```ts
-// vite.config.ts
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  resolve: {
-    alias: [{ find: /^para:(.*)$/, replacement: "@para/$1" }],
-  },
-});
-```
-
-### esbuild
-
-```ts
-import { build } from "esbuild";
-
-await build({
-  entryPoints: ["src/main.js"],
-  bundle: true,
-  outfile: "dist/main.js",
-  plugins: [{
-    name: "para-alias",
-    setup(b) {
-      b.onResolve({ filter: /^para:/ }, args => ({
-        path: require.resolve(`@para/${args.path.slice(5)}`),
-      }));
-    },
-  }],
-});
-```
-
-### webpack
-
-```js
-// webpack.config.js
-module.exports = {
-  resolve: {
-    alias: {
-      "para:signals":  "@para/signals",
-      "para:arena":    "@para/arena",
-      "para:parallel": "@para/parallel",
-      "para:pipeline": "@para/pipeline",
-      "para:simd":     "@para/simd",
-      "para:arrow":    "@para/arrow",
-      "para:csv":      "@para/csv",
-      "para:rtp":      "@para/rtp",
-      "para:mcp":      "@para/mcp",
-    },
-  },
-};
-```
-
-## 4. Build
+## 3. Build
 
 ```bash
 parabun build src/main.pts --outdir dist/
 ```
 
-The output is standard JavaScript. Bundle it with your normal toolchain (`vite build`, `webpack`, etc.); the alias takes care of the `para:*` imports.
+The output is standard JavaScript with normal `import "@para/signals"` (etc.) statements. Bundle it with your normal toolchain (`vite build`, `webpack`, etc.) — every bundler resolves `@para/*` through node_modules with no additional config.
 
 ## Editor extension
 

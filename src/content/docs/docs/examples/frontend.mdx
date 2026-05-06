@@ -42,10 +42,10 @@ my-todo/
 signal items = [];
 signal filter = "all";
 
-signal visible = filter === "all"
+derived visible = filter === "all"
   ? items
   : items.filter(t => (filter === "done" ? t.done : !t.done));
-signal openCount = items.filter(t => !t.done).length;
+derived openCount = items.filter(t => !t.done).length;
 
 let nextId = 1;
 
@@ -98,24 +98,18 @@ list.addEventListener("click", e => {
 ### Notes on the source
 
 - `signal items = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
-- `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
+- `derived visible = ...` and `derived openCount = ...` are read-only signals computed from `items` / `filter`. They recompute lazily when a dep changes. (You can write `signal NAME = …` instead and the transpiler auto-promotes when the RHS reads other signals — but `derived` makes the read-only intent explicit at the declaration site.)
 - The list `effect { }` tracks `visible` and re-runs when it changes. Effect blocks are the right shape when the body is multi-line or has more than one statement; for single-sink value bindings, the `~>` operator is more direct.
 - `A ~> B` is the reactive-binding operator — desugars to `effect(() => { B = A; })`. Three of them at the bottom of the file: `count.textContent`, `count.hidden`, `toast.hidden` each track their own expression. One per line keeps the dep set tight: `count.textContent` only re-runs on `openCount` changes, not on the unrelated `items.length` reads. For *side effects* that should fire only on transitions (playing a sound, sending analytics), `when EXPR { … }` (and the paired `when not { … }`) are the edge-triggered alternative.
 - The `$` shorthand binds `document.querySelector` once.
 
 ## vite.config.js
 
+No Para-specific config needed. The transpiler emits standard `import "@para/signals"` statements that Vite resolves through node_modules:
+
 ```js
 import { defineConfig } from "vite";
-
-export default defineConfig({
-  resolve: {
-    // Bridges Para keyword lowering (signal / effect / ~>) to the
-    // npm libraries until the transpiler emits @para/* directly.
-    // Tracked: LYK-805.
-    alias: [{ find: /^para:(.*)$/, replacement: "@para/$1" }],
-  },
-});
+export default defineConfig({});
 ```
 
 ## package.json
