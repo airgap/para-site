@@ -1,29 +1,11 @@
 ---
 title: Frontend example
-description: A todo list using Para signals against the vanilla DOM, built with Vite. Demonstrates signal declarations, derived signals, effect blocks, and when blocks.
+description: A todo list using Para signals against the vanilla DOM, built with Vite. Demonstrates signal declarations, derived signals, effect blocks, and reactive bindings.
 ---
-
-import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 A todo list using Para against the vanilla DOM, built with Vite. Demonstrates `signal`, derived signals, `effect { }`, the `~>` reactive-binding operator, and the bare-read sugar.
 
-You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript superset). Both compile to identical output. The tabs below sync — pick one and the rest of the page follows.
-
 ## Project layout
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```
-my-todo/
-├── index.html
-├── src/main.pts
-├── vite.config.ts
-└── package.json
-```
-
-</TabItem>
-<TabItem label=".pjs">
 
 ```
 my-todo/
@@ -32,9 +14,6 @@ my-todo/
 ├── vite.config.js
 └── package.json
 ```
-
-</TabItem>
-</Tabs>
 
 ## index.html
 
@@ -52,77 +31,12 @@ my-todo/
     <ul id="list"></ul>
     <p id="count"></p>
     <p id="toast" hidden>all done</p>
-    <script type="module" src="./src/main.pts"></script>
+    <script type="module" src="./src/main.pjs"></script>
   </body>
 </html>
 ```
 
-## Source
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```pts
-type Todo = { id: number; text: string; done: boolean };
-
-signal items: Todo[] = [];
-signal filter: "all" | "open" | "done" = "all";
-
-signal visible = filter === "all"
-  ? items
-  : items.filter(t => (filter === "done" ? t.done : !t.done));
-signal openCount = items.filter(t => !t.done).length;
-
-let nextId = 1;
-
-const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!;
-const input    = $<HTMLInputElement>("#new");
-const addBtn   = $<HTMLButtonElement>("#add");
-const filterEl = $<HTMLSelectElement>("#filter");
-const list     = $<HTMLUListElement>("#list");
-const count    = $<HTMLParagraphElement>("#count");
-const toast    = $<HTMLParagraphElement>("#toast");
-
-addBtn.addEventListener("click", () => {
-  if (!input.value.trim()) return;
-  items = [...items, { id: nextId++, text: input.value.trim(), done: false }];
-  input.value = "";
-});
-
-filterEl.addEventListener("change", () => {
-  filter = filterEl.value as typeof filter;
-});
-
-// Effect for the list — long body, multiple template lines. Effect
-// blocks are the right shape when the body isn't a single sink.
-effect {
-  list.innerHTML = visible
-    .map(t => `
-      <li data-id="${t.id}">
-        <input type="checkbox" ${t.done ? "checked" : ""} />
-        <span class="${t.done ? "done" : ""}">${t.text}</span>
-      </li>
-    `).join("");
-}
-
-// Single-sink reactive bindings. Each `A ~> B` desugars to
-// effect(() => { B = A; }). One per line keeps the dep set tight —
-// the textContent binding only re-fires on openCount changes.
-`${openCount} open`            ~> count.textContent;
-!openCount && !items.length    ~> count.hidden;
-!items.length || openCount > 0 ~> toast.hidden;
-
-list.addEventListener("click", e => {
-  if (!(e.target instanceof HTMLInputElement)) return;
-  const li = e.target.closest<HTMLLIElement>("li[data-id]");
-  if (!li) return;
-  const id = +li.dataset.id!;
-  items = items.map(t => (t.id === id ? { ...t, done: !t.done } : t));
-});
-```
-
-</TabItem>
-<TabItem label=".pjs">
+## src/main.pjs
 
 ```pjs
 signal items = [];
@@ -181,69 +95,30 @@ list.addEventListener("click", e => {
 });
 ```
 
-</TabItem>
-</Tabs>
-
 ### Notes on the source
 
 - `signal items = []` declares a reactive cell. `items = newValue` compiles to `items.set(newValue)`; reading `items` inside a tracked context (an `effect`, a `derived`, a `when` predicate, or another signal's RHS) compiles to `items.get()`.
 - `signal visible = ...` and `signal openCount = ...` are auto-promoted to `derived()` because their initializers read other signals. They recompute lazily when a dep changes.
 - The list `effect { }` tracks `visible` and re-runs when it changes. Effect blocks are the right shape when the body is multi-line or has more than one statement; for single-sink value bindings, the `~>` operator is more direct.
 - `A ~> B` is the reactive-binding operator — desugars to `effect(() => { B = A; })`. Three of them at the bottom of the file: `count.textContent`, `count.hidden`, `toast.hidden` each track their own expression. One per line keeps the dep set tight: `count.textContent` only re-runs on `openCount` changes, not on the unrelated `items.length` reads. For *side effects* that should fire only on transitions (playing a sound, sending analytics), `when EXPR { … }` (and the paired `when not { … }`) are the edge-triggered alternative.
-- The `$` shorthand binds `document.querySelector` once. In `.pts` it's a small generic helper so each call site can pass its element type (`$<HTMLInputElement>("#new")`) and the result stays cast-free; in `.pjs` it's just `document.querySelector.bind(document)` since there are no types to thread.
-- The `.pts` version queries each element ref once at the top with its concrete type so handlers stay cast-free; the one remaining `as` is `filterEl.value as typeof filter` (TS can't narrow `<select>.value` to a literal union without a runtime check). The `.pjs` version skips all of that.
+- The `$` shorthand binds `document.querySelector` once.
 
-## vite.config
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```ts
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  resolve: {
-    alias: [{ find: /^para:(.*)$/, replacement: "@para/$1" }],
-  },
-});
-```
-
-</TabItem>
-<TabItem label=".pjs">
+## vite.config.js
 
 ```js
 import { defineConfig } from "vite";
 
 export default defineConfig({
   resolve: {
+    // Bridges Para keyword lowering (signal / effect / ~>) to the
+    // npm libraries until the transpiler emits @para/* directly.
+    // Tracked: LYK-805.
     alias: [{ find: /^para:(.*)$/, replacement: "@para/$1" }],
   },
 });
 ```
 
-</TabItem>
-</Tabs>
-
 ## package.json
-
-<Tabs syncKey="lang">
-<TabItem label=".pts">
-
-```json
-{
-  "name": "my-todo",
-  "type": "module",
-  "scripts": {
-    "build": "parabun build src/main.pts --outfile dist/main.js && vite build",
-    "dev": "parabun build src/main.pts --watch --outfile dist/main.js & vite"
-  },
-  "dependencies": { "@para/signals": "*", "@para/parallel": "*" },
-  "devDependencies": { "vite": "^5", "bun-types": "*" }
-}
-```
-
-</TabItem>
-<TabItem label=".pjs">
 
 ```json
 {
@@ -257,9 +132,6 @@ export default defineConfig({
 }
 ```
 
-</TabItem>
-</Tabs>
-
 ## Build and deploy
 
 ```bash
@@ -268,3 +140,7 @@ parabun run build
 ```
 
 Output is a static `dist/` directory. Deploy to any static host (Cloudflare Pages, Vercel, S3, GitHub Pages, etc.).
+
+## TypeScript form
+
+If you prefer types, swap `src/main.pjs` for `src/main.pts`, type the signals (`signal items: Todo[] = []`), and update `index.html` and `package.json` to point at `.pts`. Same compiled output either way.

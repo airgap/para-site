@@ -1,6 +1,6 @@
 ---
 title: Install
-description: Build .pts files with parabun build, alias para:* in your bundler to @para/* npm packages, ship to any JavaScript runtime.
+description: Compile .pts / .pjs files with parabun build, install the @para/* npm packages your code uses, ship to any JavaScript runtime.
 ---
 
 Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives in the [ParaBun](/runtime) fork of Bun — mainline Bun does not recognize the syntax. To use Para on a host that isn't ParaBun itself, you need three things:
@@ -41,9 +41,9 @@ don't need to install or import from it directly.
 
 All `@para/*` packages are pure JS / Wasm with no native dependencies and target ES2022.
 
-## 3. Configure your bundler
+## 3. Configure your bundler (temporary — see LYK-805)
 
-A single regex rule maps every `para:*` specifier to the matching `@para/*` package:
+The Para transpiler currently emits `require("para:signals")` (etc.) for every `signal` / `effect` / `~>` lowering. Until [LYK-805](https://linear.app/lyku/issue/LYK-805) updates the transpiler to emit `@para/*` directly, non-Parabun bundlers need a one-line alias to map `para:*` specifiers to the matching `@para/*` package. Once LYK-805 ships, you can delete this whole section from your config — the `@para/*` imports will resolve through normal npm resolution.
 
 ### Vite
 
