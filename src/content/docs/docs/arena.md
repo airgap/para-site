@@ -4,7 +4,7 @@ description: A pool of SharedArrayBuffer typed arrays. Per-chunk work doesn't al
 ---
 
 ```ts
-import arena, { Pool, scope } from "para:arena";
+import arena, { Pool, scope } from "@para/arena";
 ```
 
 A small allocator: a pool of `SharedArrayBuffer`-backed typed arrays drawn from a pre-warmed pool, returned at the end of an `arena { }` block (or programmatically via `release()`). Used internally by [`@para/parallel`](/docs/parallel/) and [`@para/pipeline`](/docs/pipeline/) so per-chunk work doesn't allocate a fresh buffer every time.
@@ -43,7 +43,7 @@ pool.release(buf);
 Runs `fn` with a fresh sub-pool. All `alloc` calls inside `fn` are released when `fn` returns — the same semantics as the `arena` block, exposed as a function for plain `.ts` / `.js` files.
 
 ```ts
-import { scope } from "para:arena";
+import { scope } from "@para/arena";
 
 const result = scope(p => {
   const buf = p.alloc("f32", N);

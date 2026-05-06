@@ -4,7 +4,7 @@ description: Chained iterators that fuse adjacent kernels into one pass. Lifts t
 ---
 
 ```ts
-import pipeline from "para:pipeline";
+import pipeline from "@para/pipeline";
 ```
 
 `@para/pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `@para/simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`parabun:gpu`](/docs/gpu/) `simdMap` instead.
@@ -58,7 +58,7 @@ Each operator is a transducer — a function `Iterable → Iterable` (sync or as
 Lazy range generator. Useful as a chain head when you want a numeric stream without materializing.
 
 ```ts
-import pipeline from "para:pipeline";
+import pipeline from "@para/pipeline";
 
 const evenSquares = pipeline.range(0, 1_000)
   .filter(x => x % 2 === 0)
@@ -93,7 +93,7 @@ for (const piece of pipeline.range(0, 1000).filter(x => x % 2).map(x => x * x).c
 Compose without method-chain awareness — useful when stages are passed dynamically:
 
 ```ts
-import { pipe, map, filter, sum } from "para:pipeline";
+import { pipe, map, filter, sum } from "@para/pipeline";
 
 const total = pipe(
   data,

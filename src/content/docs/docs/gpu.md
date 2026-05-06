@@ -49,7 +49,7 @@ Sweeps the real GPU kernel against `@para/simd` at a small set of sizes, persist
 Both signals lazy-init on first read so a CUDA-less host doesn't pay probing cost just for loading `parabun:gpu`. Subscribers see the current value on subscribe.
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 effect(() => console.log(`gpu backend: ${gpu.activeBackendSignal.get()}`));
 ```
 

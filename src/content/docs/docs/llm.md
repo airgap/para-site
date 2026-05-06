@@ -102,7 +102,7 @@ Each `LLM` instance exposes two [`@para/signals`](/docs/signals/) Signals — wi
 | `m.device` | `"cuda" \| "metal" \| "cpu"` | Whichever backend the load probe selected. Stable for the life of the instance. |
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 effect(() => console.log(m.busy.get() ? "🤔" : "✅"));
 ```
 

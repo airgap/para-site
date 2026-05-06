@@ -6,7 +6,7 @@ description: Reactive cells with auto-derived computations and microtask-flushed
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
 ```ts
-import { signal, derived, effect, batch, untrack, Signal } from "para:signals";
+import { signal, derived, effect, batch, untrack, Signal } from "@para/signals";
 ```
 
 `@para/signals` is a small reactive primitive. `signal(v)` is a cell, `derived(fn)` is a read-only signal computed from others, and `effect(fn)` runs side effects when something it read changes. Reads inside an effect register a dependency; writes invalidate downstream and a microtask flush re-runs only the effects whose observed values actually changed.
@@ -20,7 +20,7 @@ Creates a writable cell.
 <Tabs syncKey="lang">
   <TabItem label="TypeScript">
     ```ts
-    import { signal } from "para:signals";
+    import { signal } from "@para/signals";
 
     const count = signal(0);
 
@@ -123,7 +123,7 @@ effect(() => {
 Creates a signal driven by an async iterable. Saves the IIFE+for-await dance for "I want the most recent value as a Signal".
 
 ```ts
-import sigs from "para:signals";
+import sigs from "@para/signals";
 
 // Most recent value from a websocket-like source, exposed as a signal.
 const { signal: msg, dispose } = sigs.fromAsync(socket.messages(), m => m.body, "");
@@ -147,7 +147,7 @@ The internal timer `.unref()`s itself, so a bare `fromInterval(...)` call doesn'
 <Tabs syncKey="lang">
   <TabItem label="TypeScript">
     ```ts
-    import sigs from "para:signals";
+    import sigs from "@para/signals";
 
     // Poll an i2c sensor every 500 ms, expose latest reading as a signal.
     const temp = sigs.fromInterval(
@@ -160,7 +160,7 @@ The internal timer `.unref()`s itself, so a bare `fromInterval(...)` call doesn'
   </TabItem>
   <TabItem label="ParaBun">
     ```parabun
-    import sigs from "para:signals";
+    import sigs from "@para/signals";
 
     const temp = sigs.fromInterval(
       () => sensor.smbus.readWord(0xFA),
@@ -197,7 +197,7 @@ Edge-detection helper. `when` calls `fn` once each time `source` transitions fro
 The initial value is treated as already-observed — a source that starts truthy does **not** fire on first run; only subsequent false→true transitions do.
 
 ```ts
-import signals from "para:signals";
+import signals from "@para/signals";
 
 // Greet on the rising edge of (motion present AND bot idle).
 signals.when(
@@ -221,7 +221,7 @@ Common patterns: button-press detection, arrival/departure handlers, threshold c
 Hardware modules emit signals tied to a real underlying resource (a mic, a camera, a file watcher, a websocket). When the resource closes, those signals should become inert and observers should unwind cleanly. `resource()` is the primitive that makes that lifecycle explicit:
 
 ```ts
-import { resource } from "para:signals";
+import { resource } from "@para/signals";
 
 const mic = resource(({ signal: sig, onDispose }) => {
   const peak = sig(0);

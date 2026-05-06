@@ -4,7 +4,7 @@ description: pmap / preduce / run over a persistent worker pool. AbortSignal, ti
 ---
 
 ```ts
-import parallel from "para:parallel";
+import parallel from "@para/parallel";
 ```
 
 A persistent worker pool. Functions are serialized via `fn.toString()`, so callbacks must be **pure** — no closures, no outer references, no `this`. TypedArray inputs auto-transfer their chunk-slice buffers; non-TypedArray inputs structured-clone.
@@ -12,7 +12,7 @@ A persistent worker pool. Functions are serialized via `fn.toString()`, so callb
 ## Functional API (process-wide singleton)
 
 ```ts
-import { pmap, preduce, run } from "para:parallel";
+import { pmap, preduce, run } from "@para/parallel";
 
 const scores = await pmap(score, rows, { concurrency: 8 });
 const total  = await preduce((a, b) => a + b, scores, 0);
@@ -29,7 +29,7 @@ const blob   = await run(crunch, [largeInput], { transfer: [largeInput.buffer] }
 ## Pool API (explicit lifetime + config)
 
 ```ts
-import { createPool } from "para:parallel";
+import { createPool } from "@para/parallel";
 
 await using pool = createPool({ concurrency: 8, maxTasksPerWorker: 1000 });
 

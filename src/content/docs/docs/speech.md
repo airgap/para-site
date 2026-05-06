@@ -66,7 +66,7 @@ The object `listen()` returns is the async iterator plus three [`@para/signals`]
 | `lastUtterance` | `Utterance \| null` | The most recently emitted utterance. Updates after `hangoverMs` of silence closes a burst. |
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 
 // Reactive-only — call .run() to drain in the background; signals auto-fill.
 const listener = speech.listen(mic.frames(), { sampleRate: 16000 }).run();

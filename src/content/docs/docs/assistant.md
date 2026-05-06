@@ -142,7 +142,7 @@ Every public signal is a [`@para/signals`](/docs/signals/) Signal — wire them 
 | `bot.toolsActive` | `Set<string>` | Names of tool calls currently in flight. Synchronous transitions on dispatch start and end. |
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 
 effect(() => console.log(`bot is ${bot.state.get()}`));
 effect(() => console.log(`history length=${bot.history.get().length}`));
@@ -208,7 +208,7 @@ const bot = await assistant.create({
 **MCP connections** — an object with `tools: ToolDescriptor[]` + `call(name, args)`. Every [`@para/mcp`](/docs/mcp/) connection matches structurally:
 
 ```ts
-import mcp from "para:mcp";
+import mcp from "@para/mcp";
 await using conn = await mcp.connect("stdio", "home-assistant-mcp");
 await using bot = await assistant.create({
   llm: "/models/...gguf",
@@ -229,7 +229,7 @@ While the bot is thinking or speaking, a rising edge on the listen stream's `vad
 This is automatic when the voice loop (`bot.run()` / `bot.turns()`) is in use. For programmatic interruption — UI cancel button, custom barge-in source, watchdog timer, etc. — call `bot.interrupt()`:
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 
 // Cut the bot off when the user clicks "stop":
 cancelButton.onclick = () => bot.interrupt();

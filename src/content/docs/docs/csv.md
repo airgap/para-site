@@ -4,7 +4,7 @@ description: Streaming RFC 4180 CSV parser with two output modes — row objects
 ---
 
 ```ts
-import csv from "para:csv";
+import csv from "@para/csv";
 ```
 
 Two output modes:
@@ -52,8 +52,8 @@ Most CSV libraries return `Array<{col1, col2}>` row objects. Each row is a JS Ob
 ### Composing with `@para/simd`
 
 ```ts
-import csv from "para:csv";
-import { sum, mean } from "para:simd";
+import csv from "@para/csv";
+import { sum, mean } from "@para/simd";
 
 const cols = await csv.parseColumns("./sensors.csv", {
   schema: { temperature: "f32", humidity: "f32" },
@@ -109,7 +109,7 @@ The classical async iterator path. Returns row objects (or string arrays with `h
 - `Uint8Array` or `string` (for in-memory).
 
 ```ts
-import csv from "para:csv";
+import csv from "@para/csv";
 
 for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true })) {
   process(row.id, row.name, row.score);
@@ -159,8 +159,8 @@ Use `parallel: true` to keep the event loop responsive while parsing (parsing N 
 `@para/csv` rows pair naturally with [`@para/arrow`](/docs/arrow/)'s `fromRows`:
 
 ```ts
-import csv from "para:csv";
-import arrow from "para:arrow";
+import csv from "@para/csv";
+import arrow from "@para/arrow";
 
 const rows: any[] = [];
 for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true })) rows.push(row);
@@ -176,7 +176,7 @@ For very large CSVs, batch the bridge — call `arrow.fromRows` per N rows inste
 The inverse of `parseCsv` — take rows in memory and emit RFC 4180 CSV text.
 
 ```ts
-import csv from "para:csv";
+import csv from "@para/csv";
 
 const text = csv.stringify([
   { id: 1, name: "Ada, Lovelace", note: 'said "hi"' },

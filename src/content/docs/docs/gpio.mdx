@@ -125,7 +125,7 @@ The full IoT control loop in one effect block. `chip.line({ pollHz: 50 })` updat
   <TabItem label="TypeScript">
     ```ts
     import gpio from "parabun:gpio";
-    import { effect } from "para:signals";
+    import { effect } from "@para/signals";
 
     await using chip = gpio.open("/dev/gpiochip4");
     await using button = chip.line(27, {

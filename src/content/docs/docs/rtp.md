@@ -4,7 +4,7 @@ description: RFC 3550 packet pack / parse and a jitter buffer. Wire transport fo
 ---
 
 ```ts
-import rtp from "para:rtp";
+import rtp from "@para/rtp";
 ```
 
 A small RTP toolkit — pack a payload into an RFC 3550 packet, parse one off the wire, and reorder by sequence number with a configurable depth. Built to sit under [`parabun:audio`](/docs/audio/)'s Opus encoder for a WebRTC-style send/receive path.
@@ -69,7 +69,7 @@ Three [`@para/signals`](/docs/signals/) Signals on the buffer instance — wire 
 | `jb.lossRateSignal` | `number` | Lifetime loss ratio: `lossCount / (lossCount + delivered)`. Recomputes on every delivered or lost transition. |
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 
 effect(() => {
   if (jb.lossRateSignal.get() > 0.05) console.warn("packet loss > 5%");
@@ -84,7 +84,7 @@ Combined with [`parabun:audio`](/docs/audio/):
 
 ```ts
 import audio from "parabun:audio";
-import rtp from "para:rtp";
+import rtp from "@para/rtp";
 
 await using mic = await audio.capture({ sampleRate: 48000, channels: 1 });
 const enc = new audio.OpusEncoder({ sampleRate: 48000, channels: 1, application: "voip" });

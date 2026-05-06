@@ -64,7 +64,7 @@ The returned iterator carries two [`@para/signals`](/docs/signals/) Signals — 
 | `m.score` | `number` | Most recent smoothed motion score (fraction of luma-changed pixels, [0, 1]). Throttled to ~10 Hz so a 30 fps camera doesn't fire effects on every frame. |
 
 ```ts
-import { effect } from "para:signals";
+import { effect } from "@para/signals";
 
 const m = vision.detectMotion(vision.frames(cam.frames()), { sensitivity: 0.05 }).run();
 

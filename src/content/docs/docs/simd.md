@@ -4,7 +4,7 @@ description: WebAssembly v128 kernels for Float32Array / Float64Array. Zero-copy
 ---
 
 ```ts
-import simd from "para:simd";
+import simd from "@para/simd";
 ```
 
 `@para/simd` is the CPU-side numerical primitive layer. WebAssembly v128 vectorizes `Float32Array` (4-lane f32) and `Float64Array` (2-lane f64) ops; for inputs above ~4 MiB, the wasm module reads straight from the original buffer rather than copying into wasm linear memory.

@@ -4,7 +4,7 @@ description: In-memory columnar tables, computes, and Arrow IPC reader/writer â€
 ---
 
 ```ts
-import arrow from "para:arrow";
+import arrow from "@para/arrow";
 ```
 
 Apache Arrow's columnar model, in-process, with no npm dep on `apache-arrow`. RecordBatches are typed-array views with optional validity bitmaps; tables are sequences of batches sharing a schema. The Arrow IPC streaming + file formats round-trip both directions against the canonical implementations.
@@ -41,8 +41,8 @@ Concatenates batches sharing a schema. `Table` has a `.column(name)` that return
 Bridge between row-shaped JS data and the columnar form. `fromRows` is the typical entry point from [`@para/csv`](/docs/csv/) output:
 
 ```ts
-import csv from "para:csv";
-import arrow from "para:arrow";
+import csv from "@para/csv";
+import arrow from "@para/arrow";
 
 const rows: any[] = [];
 for await (const r of csv.parseCsv(Bun.file("data.csv"), { header: true })) rows.push(r);
