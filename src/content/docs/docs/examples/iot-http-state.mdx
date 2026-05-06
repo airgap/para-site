@@ -51,9 +51,11 @@ const server = Bun.serve({
       return new Response(stream, { headers: { "content-type": "text/event-stream" } });
     }
 
-    if (url.pathname === "/led/0"    && req.method === "POST") { ledOverride = 0;    return Response.json({ override: 0 }); }
-    if (url.pathname === "/led/1"    && req.method === "POST") { ledOverride = 1;    return Response.json({ override: 1 }); }
-    if (url.pathname === "/led/auto" && req.method === "POST") { ledOverride = null; return Response.json({ override: null }); }
+    const ledRoutes: Record<string, 0 | 1 | null> = { "/led/0": 0, "/led/1": 1, "/led/auto": null };
+    if (req.method === "POST" && url.pathname in ledRoutes) {
+      ledOverride = ledRoutes[url.pathname];
+      return Response.json({ override: ledOverride });
+    }
   },
 });
 
