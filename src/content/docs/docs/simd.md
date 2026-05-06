@@ -1,5 +1,5 @@
 ---
-title: para:simd
+title: "@para/simd"
 description: WebAssembly v128 kernels for Float32Array / Float64Array. Zero-copy when inputs are large.
 ---
 
@@ -7,9 +7,9 @@ description: WebAssembly v128 kernels for Float32Array / Float64Array. Zero-copy
 import simd from "para:simd";
 ```
 
-`para:simd` is the CPU-side numerical primitive layer. WebAssembly v128 vectorizes `Float32Array` (4-lane f32) and `Float64Array` (2-lane f64) ops; for inputs above ~4 MiB, the wasm module reads straight from the original buffer rather than copying into wasm linear memory.
+`@para/simd` is the CPU-side numerical primitive layer. WebAssembly v128 vectorizes `Float32Array` (4-lane f32) and `Float64Array` (2-lane f64) ops; for inputs above ~4 MiB, the wasm module reads straight from the original buffer rather than copying into wasm linear memory.
 
-The same operations exist on [`parabun:gpu`](/docs/gpu/) with device-dispatch fallback — `para:simd` is the floor that always works.
+The same operations exist on [`parabun:gpu`](/docs/gpu/) with device-dispatch fallback — `@para/simd` is the floor that always works.
 
 ## Element-wise
 
@@ -78,7 +78,7 @@ True when `arr.buffer` is the wasm linear-memory `ArrayBuffer`.
 
 CPU release build, x86_64 (AVX2 supported), N=100k:
 
-| op (f32) | `.map` / `.reduce` | tight scalar loop | para:simd |
+| op (f32) | `.map` / `.reduce` | tight scalar loop | `@para/simd` |
 | --- | --- | --- | --- |
 | `mulScalar(a, 3)` | 808 µs | 60 µs | 30 µs |
 | `add(a, b)` | 884 µs | 73 µs | 40 µs |

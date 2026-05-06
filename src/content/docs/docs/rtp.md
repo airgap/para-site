@@ -1,5 +1,5 @@
 ---
-title: para:rtp
+title: "@para/rtp"
 description: RFC 3550 packet pack / parse and a jitter buffer. Wire transport for the codec stack.
 ---
 
@@ -60,7 +60,7 @@ for (const ordered of buf.drain()) {
 
 ### Reactive signals
 
-Three [`para:signals`](/docs/signals/) Signals on the buffer instance — wire them into a UI without polling.
+Three [`@para/signals`](/docs/signals/) Signals on the buffer instance — wire them into a UI without polling.
 
 | Signal | Type | When it changes |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ effect(() => {
 });
 ```
 
-`session.connected` and `session.jitterMs` from `PLAN-module-signals.md` need a future Session abstraction (RTP / RTCP correlation, source-arrival timestamp differencing) — neither exists in `para:rtp` v1. When a Session class lands, those signals will join the surface there.
+`session.connected` and `session.jitterMs` from `PLAN-module-signals.md` need a future Session abstraction (RTP / RTCP correlation, source-arrival timestamp differencing) — neither exists in `@para/rtp` v1. When a Session class lands, those signals will join the surface there.
 
 ## A full audio pipeline
 
@@ -117,4 +117,4 @@ for await (const frame of mic.frames()) {
 
 - Single-stream — no SDES / RTCP companion.
 - The jitter buffer is sequence-only. Packet-loss concealment, FEC, and rate-adaptive depth are all on the encoder/decoder side ([`parabun:audio.OpusDecoder`](/docs/audio/) handles in-band PLC).
-- IPv4 / IPv6 wire transport itself is up to the caller — `para:rtp` produces / consumes bytes, not sockets.
+- IPv4 / IPv6 wire transport itself is up to the caller — `@para/rtp` produces / consumes bytes, not sockets.

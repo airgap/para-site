@@ -1,5 +1,5 @@
 ---
-title: para:parallel
+title: "@para/parallel"
 description: pmap / preduce / run over a persistent worker pool. AbortSignal, timeout, transferables, recycling, stats.
 ---
 
@@ -84,7 +84,7 @@ It loses when:
 - The function is cheap arithmetic — main-thread JS is faster than crossing the worker boundary.
 - Inputs aren't typed arrays — structured-clone copy of plain arrays makes the pool's overhead grow with input size.
 
-For small payloads or trivial functions, [`para:simd`](/docs/simd/) on the main thread is almost always the right choice.
+For small payloads or trivial functions, [`@para/simd`](/docs/simd/) on the main thread is almost always the right choice.
 
 ## Sequential fallback
 

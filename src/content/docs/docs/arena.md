@@ -1,5 +1,5 @@
 ---
-title: para:arena
+title: "@para/arena"
 description: A pool of SharedArrayBuffer typed arrays. Per-chunk work doesn't allocate a fresh buffer.
 ---
 
@@ -7,7 +7,7 @@ description: A pool of SharedArrayBuffer typed arrays. Per-chunk work doesn't al
 import arena, { Pool, scope } from "para:arena";
 ```
 
-A small allocator: a pool of `SharedArrayBuffer`-backed typed arrays drawn from a pre-warmed pool, returned at the end of an `arena { }` block (or programmatically via `release()`). Used internally by [`para:parallel`](/docs/parallel/) and [`para:pipeline`](/docs/pipeline/) so per-chunk work doesn't allocate a fresh buffer every time.
+A small allocator: a pool of `SharedArrayBuffer`-backed typed arrays drawn from a pre-warmed pool, returned at the end of an `arena { }` block (or programmatically via `release()`). Used internally by [`@para/parallel`](/docs/parallel/) and [`@para/pipeline`](/docs/pipeline/) so per-chunk work doesn't allocate a fresh buffer every time.
 
 ## `arena { ... }` — block form
 
@@ -54,7 +54,7 @@ const result = scope(p => {
 
 ## When it pays off
 
-`para:arena` matters when you have:
+`@para/arena` matters when you have:
 
 - Tight inner loops allocating short-lived intermediate buffers.
 - A tail-of-microtask allocation pattern that the GC doesn't reach in time.

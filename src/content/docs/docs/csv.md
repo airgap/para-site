@@ -1,5 +1,5 @@
 ---
-title: para:csv
+title: "@para/csv"
 description: Streaming RFC 4180 CSV parser with two output modes — row objects and per-column TypedArrays.
 ---
 
@@ -136,7 +136,7 @@ A leading UTF-8 BOM (U+FEFF) is stripped from the first chunk automatically; you
 
 ## Parallel mode
 
-`parallel: true` chunks the input across [`para:parallel`](/docs/parallel/)'s worker pool when the input has no quoted cells (the byte-boundary heuristic doesn't work otherwise). It runs the parse off the main thread.
+`parallel: true` chunks the input across [`@para/parallel`](/docs/parallel/)'s worker pool when the input has no quoted cells (the byte-boundary heuristic doesn't work otherwise). It runs the parse off the main thread.
 
 ```ts
 for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true, parallel: true })) {
@@ -156,7 +156,7 @@ Use `parallel: true` to keep the event loop responsive while parsing (parsing N 
 
 ## Bridging to columnar
 
-`para:csv` rows pair naturally with [`para:arrow`](/docs/arrow/)'s `fromRows`:
+`@para/csv` rows pair naturally with [`@para/arrow`](/docs/arrow/)'s `fromRows`:
 
 ```ts
 import csv from "para:csv";

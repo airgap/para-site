@@ -34,7 +34,7 @@ const examples = [
 // without the |> sugar. Page still exists at /docs/pipeline/ for the
 // language-internals doc, just not in the libs sidebar group.
 const libModules = ["signals", "arena", "parallel", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
-  label: `para:${slug}`,
+  label: `@para/${slug}`,
   link: `${docsRoot}/${slug}/`,
 }));
 const runtimeModules = [

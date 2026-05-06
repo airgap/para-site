@@ -1,5 +1,5 @@
 ---
-title: para:arrow
+title: "@para/arrow"
 description: In-memory columnar tables, computes, and Arrow IPC reader/writer — wire-compatible with apache-arrow, pyarrow, polars, duckdb.
 ---
 
@@ -38,7 +38,7 @@ Concatenates batches sharing a schema. `Table` has a `.column(name)` that return
 
 ### `fromRows(rows, opts?)` / `toRows(source)`
 
-Bridge between row-shaped JS data and the columnar form. `fromRows` is the typical entry point from [`para:csv`](/docs/csv/) output:
+Bridge between row-shaped JS data and the columnar form. `fromRows` is the typical entry point from [`@para/csv`](/docs/csv/) output:
 
 ```ts
 import csv from "para:csv";

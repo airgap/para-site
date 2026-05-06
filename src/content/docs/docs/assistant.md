@@ -40,7 +40,7 @@ type AssistantOptions = {
   llmOpts?: { maxContext?: number };
   chatOpts?: { maxTokens?: number; temperature?: number; topK?: number; topP?: number };
   memory?: string | { path: string };  // sqlite path — opt-in persistent transcript
-  tools?: AssistantTool[];           // inline tools or para:mcp connections
+  tools?: AssistantTool[];           // inline tools or @para/mcp connections
   wakeWord?: string | WakeWordConfig;  // gate utterances on a phrase ("hey jetson")
   schedule?: ScheduledPrompt[];      // cron-driven self-initiated turns
   knowledge?: KnowledgeOptions;      // RAG over a local doc directory
@@ -62,7 +62,7 @@ type WakeWordConfig = {
 | `mic` | ALSA capture options (defaults: `default`, 16 kHz, mono, 20 ms periods). | n/a if you have `stt` — defaults are fine for Whisper. |
 | `speaker` | ALSA playback device. Sample rate is auto-negotiated from the TTS-emitted WAV. | n/a if you have `tts`. |
 | `memory` | Sqlite-backed persistent transcript that replays on next `create`. | Each process starts with an empty history (system prompt only). |
-| `tools` | Inline `{name,schema,run}` tools and/or `para:mcp` connections — the model can call them mid-turn. | The bot is a pure chat surface (still very useful, just no actuators). |
+| `tools` | Inline `{name,schema,run}` tools and/or `@para/mcp` connections — the model can call them mid-turn. | The bot is a pure chat surface (still very useful, just no actuators). |
 | `wakeWord` | The voice loop ignores utterances that don't carry the wake phrase. Re-arms after every turn. | The bot replies to every utterance the mic picks up. |
 | `schedule` | Cron-driven self-initiated turns. Each fire calls `bot.ask(prompt)`; the resulting `Turn` carries `scheduled: true`. | The bot only speaks when spoken to. |
 | `knowledge` | RAG over a local doc directory. Each user turn retrieves the top-K most-relevant chunks and prepends them to the prompt. `bot.knowledge.search(text, n)` and `.reindex()` exposed. | The model only knows what's in its own weights + this session's transcript. |
@@ -131,7 +131,7 @@ await bot.say("Your laundry cycle is finished.");
 
 ## Reactive signals
 
-Every public signal is a [`para:signals`](/docs/signals/) Signal — wire them into a UI without polling. Each updates synchronously when its source changes; subscribe with `.subscribe(cb)` or read with `.get()`.
+Every public signal is a [`@para/signals`](/docs/signals/) Signal — wire them into a UI without polling. Each updates synchronously when its source changes; subscribe with `.subscribe(cb)` or read with `.get()`.
 
 | Signal | Type | When it changes |
 | --- | --- | --- |
@@ -205,7 +205,7 @@ const bot = await assistant.create({
 
 `run` returns any JSON-serializable value. Async returns are awaited. Schema is the JSON Schema fed to grammar-constrained sampling; only structures the schema lib supports work (no recursive `oneOf`, no recursive `object`).
 
-**MCP connections** — an object with `tools: ToolDescriptor[]` + `call(name, args)`. Every [`para:mcp`](/docs/mcp/) connection matches structurally:
+**MCP connections** — an object with `tools: ToolDescriptor[]` + `call(name, args)`. Every [`@para/mcp`](/docs/mcp/) connection matches structurally:
 
 ```ts
 import mcp from "para:mcp";
@@ -380,7 +380,7 @@ Per `PLAN-bun-assistant.md` build order, the core covers:
 - `assistant.create` + `bot.run` / `turns` / `ask` / `say` / `close` / `interrupt`
 - Reactive signals: `state`, `history`, `lastTurn`, `interrupted`, `toolsActive`
 - In-memory + sqlite-backed transcript
-- Tool dispatch: inline `{name,schema,run}` tools and `para:mcp` connections
+- Tool dispatch: inline `{name,schema,run}` tools and `@para/mcp` connections
 - VAD-driven barge-in (and programmatic `bot.interrupt()`)
 - Wake-word gate (whisper-backed; substring / exact / fuzzy matching)
 - Cron-driven scheduled / proactive prompts

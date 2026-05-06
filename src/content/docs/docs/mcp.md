@@ -1,5 +1,5 @@
 ---
-title: para:mcp
+title: "@para/mcp"
 description: Model Context Protocol — client and server. Stdio + WebSocket transports. Composes with parabun:assistant's tool dispatch.
 ---
 

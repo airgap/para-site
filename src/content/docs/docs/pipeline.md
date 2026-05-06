@@ -1,5 +1,5 @@
 ---
-title: para:pipeline
+title: "@para/pipeline"
 description: Chained iterators that fuse adjacent kernels into one pass. Lifts to parabun:gpu when the input is large enough.
 ---
 
@@ -7,7 +7,7 @@ description: Chained iterators that fuse adjacent kernels into one pass. Lifts t
 import pipeline from "para:pipeline";
 ```
 
-`para:pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `para:simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`parabun:gpu`](/docs/gpu/) `simdMap` instead.
+`@para/pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `@para/simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`parabun:gpu`](/docs/gpu/) `simdMap` instead.
 
 ## Stage operators
 
@@ -80,7 +80,7 @@ const evenSquares = pipeline.range(0, 1_000)
 
 ### Bring your own
 
-Any iterable / async iterable works as a source — typed arrays, [`para:csv`](/docs/csv/) row streams, [`parabun:audio`](/docs/audio/) capture frames, anything.
+Any iterable / async iterable works as a source — typed arrays, [`@para/csv`](/docs/csv/) row streams, [`parabun:audio`](/docs/audio/) capture frames, anything.
 
 ```ts
 for (const piece of pipeline.range(0, 1000).filter(x => x % 2).map(x => x * x).chunk(100)) {
@@ -105,11 +105,11 @@ const total = pipe(
 
 ## `pipeParallel(source, ...stages)`
 
-Same shape, but the iterable is consumed across [`para:parallel`](/docs/parallel/)'s worker pool. Each worker processes a chunk through the entire stage chain, then results are merged. Stages must be pure (same constraint as `pmap`).
+Same shape, but the iterable is consumed across [`@para/parallel`](/docs/parallel/)'s worker pool. Each worker processes a chunk through the entire stage chain, then results are merged. Stages must be pure (same constraint as `pmap`).
 
 ## Fusion + GPU lift
 
-When every stage in a chain is a `para:simd` kernel (the documented set: `mulScalar`, `addScalar`, `add`, `mul`, `Math.*` body via `simdMap`), the call to `.toFloat32Array()` walks the chain and emits a single `simdMap` call covering the composed function. No intermediates allocated.
+When every stage in a chain is a `@para/simd` kernel (the documented set: `mulScalar`, `addScalar`, `add`, `mul`, `Math.*` body via `simdMap`), the call to `.toFloat32Array()` walks the chain and emits a single `simdMap` call covering the composed function. No intermediates allocated.
 
 If `gpu.winsForSize` returns true at the chain's input size, the fused chain runs on GPU instead of CPU SIMD — same call site, dispatched.
 
@@ -125,5 +125,5 @@ const ys = pipeline.range(0, 1_000_000)
 ## Limits
 
 - Fusion only collapses arithmetic + `Math.*` + ternary bodies. Branchy or stateful operators (`filter`, `chunk`, anything that breaks the 1-in-1-out shape) act as fusion barriers.
-- `pipeParallel` adds the worker-pool overhead — see [`para:parallel`](/docs/parallel/) for when that pays off.
+- `pipeParallel` adds the worker-pool overhead — see [`@para/parallel`](/docs/parallel/) for when that pays off.
 - The chain executes lazily — operators don't run until a sink pulls. If you `tap(console.log)` and never call a sink, nothing prints.
