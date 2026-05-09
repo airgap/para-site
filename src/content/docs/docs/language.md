@@ -3,7 +3,7 @@ title: Para
 description: ParaBun's optional TypeScript dialect. Parse-time desugarings — output is standard JavaScript.
 ---
 
-**Para** is the language ParaBun ships alongside its runtime. Files ending in `.pts` (or `.ptsx`) are parsed with the extensions described below — purity, error chaining, pipelines, ranges, reactivity, edge-triggered handlers — and lower to standard JS at parse time. Nothing in the runtime depends on the syntax. Plain `.ts` / `.tsx` files behave exactly as in upstream Bun.
+**Para** is the language ParaBun ships alongside its runtime. Files ending in `.pts` (or `.ptsx`) are parsed with the extensions described below — purity, error chaining, pipelines, ranges, reactivity, edge-triggered handlers, JSON Schema data shapes, pattern matching — and lower to standard JS at parse time. Nothing in the runtime depends on the syntax. Plain `.ts` / `.tsx` files behave exactly as in upstream Bun.
 
 The same extensions also work over plain JavaScript in `.pjs` / `.pjsx` files. We don't lead with that path — `.pts` is the canonical Para surface — but it's there if you need it.
 
@@ -197,6 +197,51 @@ Each `Nd` literal lowers to `__paraDec("N")` — using the **string** source, ne
 
 The `@para/decimal` package is self-contained — no `decimal.js` / `big.js` dep — and ships ~300 lines of TypeScript.
 
+## `schema` and `match`
+
+`schema NAME = body` declares a JSON Schema 2020-12 binding with a runtime validator and field-navigation accessors. The same keyword works as an inline expression literal — `schema { ... }` mints a decorated value at any value position:
+
+```parabun
+schema User = {
+  type: 'object',
+  properties: {
+    id:   { type: 'bigint' },
+    name: { type: 'string', minLength: 1, maxLength: 50 },
+  },
+  required: ['id', 'name'],
+};
+
+User.parse({ id: 1n, name: 'Alice' });   // { tag: 'Ok', value: ... }
+User.id.type;                              // 'bigint'   — schema fields navigable
+User.name.maxLength;                       // 50
+
+// Inline at value position — same shape, no name binding.
+const ep = {
+  request:  schema { type: 'bigint' },
+  response: User,
+  authenticated: true,
+};
+ep.request.parse(123n).tag;                // 'Ok'
+```
+
+Both forms desugar to `__paraFromSchema(...)` and produce: `parse(v) → Result<T, string>`, `is(v) → boolean`, `schema` (literal back-ref), and per-field accessors. Composes naturally inside lockstep `satisfies TsonHandlerModel` blocks — endpoint records that hold `schema { ... }` slots type-check against the JSON Schema vocabulary while gaining runtime validators for free.
+
+Para extends the JSON Schema `type` field with `bigint`, `varchar`, `text`, `char`, `timestamptz`, `snowflake`, `numeric`, `jsonb`, `enum`. Alt forms: `schema X from <expr>` ingests an existing schema (e.g. lockstep pg-models output); `schema X { id: int, name: str(1..=50) }` is the refinement-typed DSL.
+
+`match` is pattern matching over the subject. Arms can be literal numbers / strings / booleans, `Ok(x)`/`Err(e)`/`Some(x)`/`None` Result/Option ctors, identifier-bind, `_` wildcard, or OR-alternation (`a | b | c`):
+
+```parabun
+const status = match res {
+  Ok(user)  => `welcome ${user.name}`,
+  Err(404)  => 'not found',
+  Err(_)    => 'something broke',
+};
+```
+
+Lowers to `switch` (when arms are all literals or all Result/Option tags) or an IIFE-wrapped ternary chain otherwise. Subject is evaluated once.
+
+Companion: `Ok(x)` / `Err(e)` / `Some(x)` / `None` are constructor sugar for `{ tag: 'Ok', value: x }` etc.; `expr is Type` is a runtime type-guard that lowers to `Type.parse(expr).tag === 'Ok'` and narrows `expr` inside the `if` body via an injected typed predicate; `function f(req:: Type)` injects a parse-and-throw at entry.
+
 ## Diagnostics
 
-The LSP carries arity-based hints: *"could be memo"* / *"memo probably not worth it"* on free functions, plus full purity diagnostics on `pure` bodies. The full grammar lives in [`LLMs.md`](https://github.com/airgap/parabun/blob/main/LLMs.md#language-extensions).
+The LSP carries arity-based hints: *"could be memo"* / *"memo probably not worth it"* on free functions, full purity diagnostics on `pure` bodies, and JSON-Schema-keyword validation on `schema X = body` blocks (with did-you-mean suggestions for typo'd keys). The full grammar lives in [`LLMs.md`](https://github.com/airgap/parabun/blob/main/LLMs.md#language-extensions).
