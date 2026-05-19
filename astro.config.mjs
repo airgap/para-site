@@ -83,7 +83,13 @@ export default defineConfig({
       sidebar: [
         { label: "Guides", items: guides },
         { label: "Examples", items: examples },
-        { label: "Lib modules (cross-runtime)", items: libModules },
+        {
+          label: "Lib modules (cross-runtime)",
+          // para-sort ships as @lyku/para-sort (not @para/sort), so it's an
+          // explicit entry with its real label rather than going through the
+          // @para/<slug> map above.
+          items: [...libModules, { label: "@lyku/para-sort", link: `${docsRoot}/sort/` }],
+        },
         { label: "Runtime modules (ParaBun)", items: runtimeModules },
       ],
       expressiveCode: {

@@ -9,6 +9,8 @@ import parallel from "@para/parallel";
 
 A persistent worker pool. Functions are serialized via `fn.toString()`, so callbacks must be **pure** — no closures, no outer references, no `this`. TypedArray inputs auto-transfer their chunk-slice buffers; non-TypedArray inputs structured-clone.
 
+On the **ParaBun runtime** `@para/parallel` resolves to the native builtin — SAB-backed zero-copy `pmap`/`preduce`, parallel SAB-radix `psort`, atomic `Mutex`/`Semaphore`. Off-runtime this package is a faithful in-process fallback at the same API; `psort` is then a correct **sequential** sort (not Worker-parallel), and `Mutex`/`Semaphore` are in-process. `__paraParallelShim` is `true` only when that sequential fallback is active — check `!mod.__paraParallelShim` if you must pin a real parallel path.
+
 ## Functional API (process-wide singleton)
 
 ```ts
@@ -44,6 +46,30 @@ console.log(pool.stats()); // { workers, busy, idle, queued, waiting, completed,
 | `maxTasksPerWorker` | `Infinity` | Recycle a worker (terminate + respawn) once it has completed this many tasks. Defends against memory growth in long-lived pools. |
 
 `pool` exposes `.pmap`, `.preduce`, `.run`, `.stats()`, `.dispose()`. `dispose()` rejects every queued and in-flight task with a "pool is disposed" error so awaiting callers don't hang.
+
+## Sort + concurrency primitives
+
+```ts
+import { psort, Mutex, Semaphore, pool } from "@para/parallel";
+
+const sorted = await psort(scores);                 // TypedArray → parallel SAB-radix
+const ordered = await psort(rows, (a, b) => a.k - b.k); // Array → stable comparator sort
+
+const m = new Mutex();
+await m.with(async () => { /* critical section */ });
+
+const sem = new Semaphore(4);                        // cap concurrency at 4
+await sem.with(() => fetchOne());
+```
+
+| API | Description |
+| --- | --- |
+| `psort(array, comparator?, { serial?, concurrency? })` | TypedArray → value sort via the native parallel SAB-radix (no `comparator` — wrap in a plain `Array` for comparator sort). `Array` → stable sort by `comparator`. Off-runtime: a correct sequential sort. |
+| `new Mutex(sab?)` | `lock()` / `tryLock()` / `unlock()` / `with(fn)`, `.sab`. Native = SAB + Atomics (shareable across workers); fallback = in-process. |
+| `new Semaphore(initialPermits, sab?)` | `tryAcquire()` / `acquire()` / `release()` / `with(fn)`, `.sab`. |
+| `pool({ size?, module })` | Module-worker pool on the runtime; the fallback honors `size` and builds workers from `fn.toString()` (`module` is N/A off-runtime). |
+
+For typed-array sorting with automatic serial/parallel/GPU tier selection and a stable argsort, see [`@lyku/para-sort`](/docs/sort/), which builds on `psort`.
 
 ## Per-call options
 

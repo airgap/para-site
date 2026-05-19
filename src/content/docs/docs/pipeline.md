@@ -46,6 +46,8 @@ Each operator is a transducer — a function `Iterable → Iterable` (sync or as
 | `sum()` | Numeric sum (Kahan-compensated). |
 | `first(pred?)` / `last(pred?)` / `find(pred)` | Selector terminals. |
 | `min(keyFn?)` / `max(keyFn?)` | Extreme by numeric key. |
+| `topK(k, keyFn?, {by})` | The `k` best, best→worst. Streaming bounded heap — O(n log k) time, **O(k) memory**, never sorts/buffers the dataset. `by:"max"` (default)/`"min"`, stable on ties. |
+| `argTopK(k, keyFn?, {by})` | Same, returns a `Uint32Array` of source indices (the "top *rows*" form). |
 | `every(pred)` / `some(pred)` | Universal / existential. |
 | `toMap(keyFn, valueFn?)` / `toSet` | Collect into `Map` / `Set`. |
 | `groupBy(keyFn)` | `Map<K, T[]>`. |
@@ -120,6 +122,28 @@ const ys = pipeline.range(0, 1_000_000)
   .map(x => Math.sqrt(x))
   .toFloat32Array();
 // → single GPU simdMap kernel: x => Math.sqrt(x * 2 + 1)
+```
+
+## Top-K over large / sharded data
+
+`source |> sort() |> take(k)` is **not** a sort — it's selection. `topK` does it in one streaming pass with an O(k) heap; the dataset is never sorted or materialized. Combined with the columnar projection sources you get "top rows by score over an arbitrarily large CSV" at **O(batchSize + k) memory** — the parser holds one batch, the heap holds `k`:
+
+```ts
+import csv from "@para/csv";
+import p from "@para/pipeline";
+
+const top5 = await p.topK(5, r => r.score)(
+  p.fromColumns(csv.parseBatches(file, { schema: { id: "string", score: "f32" }, batchSize: 8192 }), ["id", "score"]),
+);
+```
+
+`fromColumn(batches, name)` / `fromColumns(batches, names)` project a column-batch stream to per-row scalars / a per-row object of just those fields — no full-row objects. They are structural: both the [`@para/csv`](/docs/csv/) `parseBatches` shape and an [`@para/arrow`](/docs/arrow/) `RecordBatch` work; this module depends on neither.
+
+`topK` is a **monoid** — `mergeTopK([topK(A), topK(B)], k) ≡ topK(A ∪ B)` — so multi-file / multi-shard top-k is local-top-k per shard then a synchronous merge, at O(shards·k) memory regardless of total rows:
+
+```ts
+const locals = await Promise.all(files.map(f => p.topK(5, keyFn)(streamOf(f))));
+const global = p.mergeTopK(locals, 5, keyFn);
 ```
 
 ## Limits
