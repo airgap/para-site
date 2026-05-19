@@ -242,6 +242,16 @@ Lowers to `switch` (when arms are all literals or all Result/Option tags) or an 
 
 Companion: `Ok(x)` / `Err(e)` / `Some(x)` / `None` are constructor sugar for `{ tag: 'Ok', value: x }` etc.; `expr is Type` is a runtime type-guard that lowers to `Type.parse(expr).tag === 'Ok'` and narrows `expr` inside the `if` body via an injected typed predicate; `function f(req:: Type)` injects a parse-and-throw at entry.
 
+The same `is` keyword, with a **string/number literal union** on the right (instead of a capitalized `schema` name), is set-membership sugar:
+
+```ts
+order.status is 'open' | 'pending' | 'closed'   // → (order.status === 'open' || order.status === 'pending' || order.status === 'closed')
+code is 200 | 404 | 500                          // → (code === 200 || code === 404 || code === 500)
+status is not 'open' | 'closed'                  // → (status !== 'open' && status !== 'closed')   (De Morgan)
+```
+
+It lowers to the strict-equality `||` chain (`is not` → the `!==`/`&&` De-Morgan chain) — the *exact* form `match`'s all-literal arm emits — so TS narrows the operand precisely as a hand-written chain would, and there's none of the per-evaluation array allocation/scan of `['open','pending','closed'].includes(order.status)`. The literal kind disambiguates from the schema guard (capitalized identifier → `schema`; quoted/numeric literal → membership; a lowercase identifier leaves `is` as a plain identifier). The operand must be a simple expression — an identifier or property path — so it is evaluated once and narrowing is preserved; bind a call's result to a variable first. String and numeric literals only.
+
 ## Diagnostics
 
 The LSP carries arity-based hints: *"could be memo"* / *"memo probably not worth it"* on free functions, full purity diagnostics on `pure` bodies, and JSON-Schema-keyword validation on `schema X = body` blocks (with did-you-mean suggestions for typo'd keys). The full grammar lives in [`LLMs.md`](https://github.com/airgap/parabun/blob/main/LLMs.md#language-extensions).
