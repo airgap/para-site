@@ -109,6 +109,18 @@ Element-wise map. `fn` is a JS function `(x, i) => number`. The runtime translat
 const y = gpu.simdMap(x => x * x + 1, input);     // compiled to PTX/MSL
 ```
 
+### Async (non-blocking): `matmulAsync` / `matVecAsync` / `dotAsync`
+
+The synchronous ops block the JS thread on `cuCtxSynchronize` for the whole GPU round-trip. The `*Async` variants instead enqueue on a private CUDA stream and poll `cuStreamQuery`, yielding the event loop between polls; inputs are staged through pooled pinned host buffers and DMA'd asynchronously, so the H2D/compute/D2H **transfer is yielded too** — not just the kernel.
+
+```ts
+const c = await gpu.matmulAsync(A, B, m, k, n, out?);
+const y = await gpu.matVecAsync(matrix, vec, nRows, nCols);
+const d = await gpu.dotAsync(a, b);
+```
+
+Same results and dispatch thresholds as the sync calls; below the threshold (or on Metal/CPU) they resolve with the synchronous result. Concurrent async GPU calls are **serialized** through an internal gate (pooled-buffer safety — not multi-stream overlap). Honest residue: `dotAsync` with ≤~4 MB of transfer yields ~0 (too little PCIe to span an event-loop tick — the benefit scales with transfer size). The sync paths are unchanged. For a cross-runtime wrapper (WebGPU / CPU fallback when off the ParaBun runtime) see `@lyku/para-gpu`.
+
 ## Reductions
 
 ```ts
