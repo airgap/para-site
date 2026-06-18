@@ -57,7 +57,7 @@ type Utterance = {
 
 ### Reactive signals on the listen stream
 
-The object `listen()` returns is the async iterator plus three [`@para/signals`](/docs/signals/) Signals — wire them straight into a UI without polling.
+The object `listen()` returns is the async iterator plus three [`@lyku/para-signals`](/docs/signals/) Signals — wire them straight into a UI without polling.
 
 | Signal | Type | What it tracks |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ The object `listen()` returns is the async iterator plus three [`@para/signals`]
 | `lastUtterance` | `Utterance \| null` | The most recently emitted utterance. Updates after `hangoverMs` of silence closes a burst. |
 
 ```ts
-import { effect } from "@para/signals";
+import { effect } from "@lyku/para-signals";
 
 // Reactive-only — call .run() to drain in the background; signals auto-fill.
 const listener = speech.listen(mic.frames(), { sampleRate: 16000 }).run();

@@ -5,7 +5,7 @@ description: Voice loop bridged into a real Model Context Protocol server. One m
 
 The [headline voice assistant](/docs/examples/voice-assistant/) declares one inline tool wired to a GPIO pin. That works when *you* own the action. When the action lives behind a tool surface someone else maintains — anything that speaks the [Model Context Protocol](https://modelcontextprotocol.io/) — bridging it into the bot is one line.
 
-`assistant.create({ tools })` accepts a structural type with `.tools: ToolDescriptor[]` and `.call(name, args)`. `@para/mcp` connection objects fit that shape natively, so dropping a connection into `tools: [...]` flattens every tool the server exposes into the bot's catalog. The grammar-constrained generation, JSON dispatch, and round-tripped result are identical to inline tools.
+`assistant.create({ tools })` accepts a structural type with `.tools: ToolDescriptor[]` and `.call(name, args)`. `@lyku/para-mcp` connection objects fit that shape natively, so dropping a connection into `tools: [...]` flattens every tool the server exposes into the bot's catalog. The grammar-constrained generation, JSON dispatch, and round-tripped result are identical to inline tools.
 
 ## src/agent.pts — voice + Context7
 
@@ -13,9 +13,9 @@ The [headline voice assistant](/docs/examples/voice-assistant/) declares one inl
 
 ```parabun
 import assistant from "parabun:assistant";
-import mcp       from "@para/mcp";
+import mcp       from "@lyku/para-mcp";
 
-// Spawn Context7 as a subprocess; @para/mcp speaks JSON-RPC over its stdio.
+// Spawn Context7 as a subprocess; @lyku/para-mcp speaks JSON-RPC over its stdio.
 // CONTEXT7_API_KEY is optional (raises rate limits); works without one.
 await using docs = await mcp.connect("stdio", "npx", {
   args: ["-y", "@upstash/context7-mcp"],
@@ -125,7 +125,7 @@ Same as the [headline voice assistant](/docs/examples/voice-assistant/#hardware)
 ## Next steps
 
 - [Voice assistant](/docs/examples/voice-assistant/) — the GPIO version with one inline tool
-- [`@para/mcp`](/docs/mcp/) — connect and serve transports, structural integration
+- [`@lyku/para-mcp`](/docs/mcp/) — connect and serve transports, structural integration
 - [`parabun:assistant`](/docs/assistant/) — the bot harness
 - [`parabun:llm`](/docs/llm/) — grammar-constrained generation if you want to drive tool dispatch yourself
 - [Context7](https://context7.com) and [official MCP servers](https://github.com/modelcontextprotocol/servers) — more catalogs to bridge in

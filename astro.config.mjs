@@ -43,7 +43,7 @@ const examples = [
 // without the |> sugar. Page still exists at /docs/pipeline/ for the
 // language-internals doc, just not in the libs sidebar group.
 const libModules = ["signals", "arena", "parallel", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
-  label: `@para/${slug}`,
+  label: `@lyku/para-${slug}`,
   link: `${docsRoot}/${slug}/`,
 }));
 const runtimeModules = [
@@ -60,6 +60,28 @@ const runtimeModules = [
   "video",
   "vision",
 ].map(slug => ({ label: `parabun:${slug}`, link: `${docsRoot}/${slug}/` }));
+
+// Language spec (draft) — the first formal Para spec, one Starlight page
+// per chapter under /spec/*. Hand-ordered to match the chapter numbering;
+// existing-surface chapters 1–12 then the two appendices.
+const specPages = [
+  { label: "Spec home", link: "/spec/" },
+  { label: "Design principles & notation", link: "/spec/00-design-principles-and-notation/" },
+  { label: "1 · Overview & surfaces", link: "/spec/01-overview-and-surfaces/" },
+  { label: "2 · Lexical & operators", link: "/spec/02-lexical-and-expression-syntax/" },
+  { label: "3 · Schema spine", link: "/spec/03-type-and-schema-system/" },
+  { label: "4 · Reactivity", link: "/spec/04-reactivity-core/" },
+  { label: "5 · Effects & concurrency", link: "/spec/05-effects-lifecycle-concurrency/" },
+  { label: "6 · .pui components", link: "/spec/06-pui-component-model/" },
+  { label: "7 · Sources & native/AI", link: "/spec/07-sources-async-and-native/" },
+  { label: "8 · Data sync", link: "/spec/08-data-sync-and-authority/" },
+  { label: "9 · Errors & validation", link: "/spec/09-errors-results-and-validation/" },
+  { label: "10 · Purity", link: "/spec/10-purity-and-determinism/" },
+  { label: "11 · Modules & build", link: "/spec/11-modules-projections-and-build/" },
+  { label: "12 · Tooling & conformance", link: "/spec/12-tooling-diagnostics-and-conformance/" },
+  { label: "Appendix A · Frontier", link: "/spec/90-frontier-proposed-directions/" },
+  { label: "Appendix B · Grammar", link: "/spec/95-grammar-appendix/" },
+];
 
 // Pre-consolidation parabun.script.dev had its configurator at /configure;
 // the page now lives at /runtime/configure/ since both subdomains hit the
@@ -85,12 +107,14 @@ export default defineConfig({
         { label: "Examples", items: examples },
         {
           label: "Lib modules (cross-runtime)",
-          // para-sort ships as @lyku/para-sort (not @para/sort), so it's an
-          // explicit entry with its real label rather than going through the
-          // @para/<slug> map above.
+          // para-sort kept as an explicit entry; its @lyku/para-sort label
+          // now matches what the @lyku/para-<slug> map above would produce,
+          // but it stays separate for clarity (and was the lone exception
+          // back when it alone used the @lyku scope).
           items: [...libModules, { label: "@lyku/para-sort", link: `${docsRoot}/sort/` }],
         },
         { label: "Runtime modules (ParaBun)", items: runtimeModules },
+        { label: "Language spec (draft)", items: specPages, collapsed: true },
       ],
       expressiveCode: {
         // Custom TextMate grammars for `.pts` / `.ptsx` / `.pjs` / `.pjsx`.
@@ -116,6 +140,13 @@ export default defineConfig({
             ptsx: "parabun-tsx",
             pjs: "parabun-js",
             pjsx: "parabun-jsx",
+            // Spec docs use `para` for bare Para/.pts code blocks and `pui`
+            // for .pui component blocks. Map them onto the ParaBun grammars:
+            // `para` → the .pts grammar; `pui` → the TSX grammar (closest fit
+            // for .pui's script + JSX-like markup). (`ebnf` has no grammar and
+            // renders as plain text, which suits grammar productions.)
+            para: "parabun-ts",
+            pui: "parabun-tsx",
           },
         },
         // Tokyo Night for the night-sky default — slate background with

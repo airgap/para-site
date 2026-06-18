@@ -1,13 +1,13 @@
 ---
-title: "@para/pipeline"
+title: "@lyku/para-pipeline"
 description: Chained iterators that fuse adjacent kernels into one pass. Lifts to parabun:gpu when the input is large enough.
 ---
 
 ```ts
-import pipeline from "@para/pipeline";
+import pipeline from "@lyku/para-pipeline";
 ```
 
-`@para/pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `@para/simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`parabun:gpu`](/docs/gpu/) `simdMap` instead.
+`@lyku/para-pipeline` is a small streaming-iterator toolkit shaped like RxJS / IxJS but specialized for typed arrays. The win is *fusion*: a chain of `@lyku/para-simd` kernels (`mulScalar`, `add`, `relu`, …) collapses into a single pass at `.run()` time, so the intermediate arrays don't get allocated. If the input is large enough that GPU dispatch wins (`gpu.winsForSize(...)`), the fused chain runs as one [`parabun:gpu`](/docs/gpu/) `simdMap` instead.
 
 ## Stage operators
 
@@ -60,7 +60,7 @@ Each operator is a transducer — a function `Iterable → Iterable` (sync or as
 Lazy range generator. Useful as a chain head when you want a numeric stream without materializing.
 
 ```ts
-import pipeline from "@para/pipeline";
+import pipeline from "@lyku/para-pipeline";
 
 const evenSquares = pipeline.range(0, 1_000)
   .filter(x => x % 2 === 0)
@@ -82,7 +82,7 @@ const evenSquares = pipeline.range(0, 1_000)
 
 ### Bring your own
 
-Any iterable / async iterable works as a source — typed arrays, [`@para/csv`](/docs/csv/) row streams, [`parabun:audio`](/docs/audio/) capture frames, anything.
+Any iterable / async iterable works as a source — typed arrays, [`@lyku/para-csv`](/docs/csv/) row streams, [`parabun:audio`](/docs/audio/) capture frames, anything.
 
 ```ts
 for (const piece of pipeline.range(0, 1000).filter(x => x % 2).map(x => x * x).chunk(100)) {
@@ -95,7 +95,7 @@ for (const piece of pipeline.range(0, 1000).filter(x => x % 2).map(x => x * x).c
 Compose without method-chain awareness — useful when stages are passed dynamically:
 
 ```ts
-import { pipe, map, filter, sum } from "@para/pipeline";
+import { pipe, map, filter, sum } from "@lyku/para-pipeline";
 
 const total = pipe(
   data,
@@ -107,11 +107,11 @@ const total = pipe(
 
 ## `pipeParallel(source, ...stages)`
 
-Same shape, but the iterable is consumed across [`@para/parallel`](/docs/parallel/)'s worker pool. Each worker processes a chunk through the entire stage chain, then results are merged. Stages must be pure (same constraint as `pmap`).
+Same shape, but the iterable is consumed across [`@lyku/para-parallel`](/docs/parallel/)'s worker pool. Each worker processes a chunk through the entire stage chain, then results are merged. Stages must be pure (same constraint as `pmap`).
 
 ## Fusion + GPU lift
 
-When every stage in a chain is a `@para/simd` kernel (the documented set: `mulScalar`, `addScalar`, `add`, `mul`, `Math.*` body via `simdMap`), the call to `.toFloat32Array()` walks the chain and emits a single `simdMap` call covering the composed function. No intermediates allocated.
+When every stage in a chain is a `@lyku/para-simd` kernel (the documented set: `mulScalar`, `addScalar`, `add`, `mul`, `Math.*` body via `simdMap`), the call to `.toFloat32Array()` walks the chain and emits a single `simdMap` call covering the composed function. No intermediates allocated.
 
 If `gpu.winsForSize` returns true at the chain's input size, the fused chain runs on GPU instead of CPU SIMD — same call site, dispatched.
 
@@ -129,15 +129,15 @@ const ys = pipeline.range(0, 1_000_000)
 `source |> sort() |> take(k)` is **not** a sort — it's selection. `topK` does it in one streaming pass with an O(k) heap; the dataset is never sorted or materialized. Combined with the columnar projection sources you get "top rows by score over an arbitrarily large CSV" at **O(batchSize + k) memory** — the parser holds one batch, the heap holds `k`:
 
 ```ts
-import csv from "@para/csv";
-import p from "@para/pipeline";
+import csv from "@lyku/para-csv";
+import p from "@lyku/para-pipeline";
 
 const top5 = await p.topK(5, r => r.score)(
   p.fromColumns(csv.parseBatches(file, { schema: { id: "string", score: "f32" }, batchSize: 8192 }), ["id", "score"]),
 );
 ```
 
-`fromColumn(batches, name)` / `fromColumns(batches, names)` project a column-batch stream to per-row scalars / a per-row object of just those fields — no full-row objects. They are structural: both the [`@para/csv`](/docs/csv/) `parseBatches` shape and an [`@para/arrow`](/docs/arrow/) `RecordBatch` work; this module depends on neither.
+`fromColumn(batches, name)` / `fromColumns(batches, names)` project a column-batch stream to per-row scalars / a per-row object of just those fields — no full-row objects. They are structural: both the [`@lyku/para-csv`](/docs/csv/) `parseBatches` shape and an [`@lyku/para-arrow`](/docs/arrow/) `RecordBatch` work; this module depends on neither.
 
 `topK` is a **monoid** — `mergeTopK([topK(A), topK(B)], k) ≡ topK(A ∪ B)` — so multi-file / multi-shard top-k is local-top-k per shard then a synchronous merge, at O(shards·k) memory regardless of total rows:
 
@@ -149,5 +149,5 @@ const global = p.mergeTopK(locals, 5, keyFn);
 ## Limits
 
 - Fusion only collapses arithmetic + `Math.*` + ternary bodies. Branchy or stateful operators (`filter`, `chunk`, anything that breaks the 1-in-1-out shape) act as fusion barriers.
-- `pipeParallel` adds the worker-pool overhead — see [`@para/parallel`](/docs/parallel/) for when that pays off.
+- `pipeParallel` adds the worker-pool overhead — see [`@lyku/para-parallel`](/docs/parallel/) for when that pays off.
 - The chain executes lazily — operators don't run until a sink pulls. If you `tap(console.log)` and never call a sink, nothing prints.

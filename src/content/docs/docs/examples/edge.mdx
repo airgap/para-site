@@ -93,7 +93,7 @@ export default {
     "build": "parabun build src/index.pjs --target browser --outfile dist/index.js",
     "deploy": "parabun run build && wrangler deploy"
   },
-  "dependencies": { "@para/signals": "*" },
+  "dependencies": { "@lyku/para-signals": "*" },
   "devDependencies": { "wrangler": "^4" }
 }
 ```
@@ -107,7 +107,7 @@ parabun install
 parabun run deploy
 ```
 
-The output is standard JavaScript using `import "@para/signals"`. Wrangler bundles it like any other npm-using Worker.
+The output is standard JavaScript using `import "@lyku/para-signals"`. Wrangler bundles it like any other npm-using Worker.
 
 ## TypeScript form
 

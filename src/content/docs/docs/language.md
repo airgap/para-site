@@ -38,6 +38,17 @@ memo async fetchProfile(id: string) { return await db.users.get(id); }
 
 `derived NAME = <rhs>` is the explicit form — useful when you want the keyword to telegraph "this is read-only" instead of relying on the auto-promote heuristic. Lowers identically to a `derived()` call with the same bare-read rewrite. Cells (writable) get `signal`; deriveds (read-only) can be `signal` (auto) or `derived` (explicit) — pick `derived` when clarity matters more than brevity.
 
+`signal NAME = <rhs> every <ms>` ticks the cell from an interval. The RHS is re-evaluated every `<ms>` milliseconds; each evaluation is written through `.set()`. The signal carries a `.stop()` method that clears the underlying interval — useful for connection-scoped or feature-flag-gated cells. The internal timer is `.unref()`d so a bare declaration doesn't pin the event loop. Lowers to `signalEvery(() => <rhs>, <ms>)` from `@lyku/para-signals`.
+
+```parabun
+signal now = Date.now() every 1_000;       // fresh value every second
+signal heartbeat = ping() every 30_000;
+signal temp = readTempSensor() every 500;  // re-read sensor twice/sec
+
+// Stop when no longer needed (e.g. on cleanup):
+now.stop();
+```
+
 `A ~> B` is a reactive **assignment** binding. It desugars to `effect(() => { B = A; })`, so `B` stays in step with `A` and whatever signals `A` reads from.
 
 `A -> fn` is a reactive **call** binding — the call-sink complement to `~>`. It desugars to `effect(() => { fn(A); })`, so `fn` is called with the latest value of `A` whenever its tracked deps change. RHS must be a callable target (identifier, `obj.method`, or `arr[i]`) — bare calls, literals, and arrows are rejected.
@@ -104,7 +115,24 @@ when stop            { console.log("recovered"); }   // strict-edge — fires on
 
 The three Promise operators (`..>`, `..!`, `..&`) cover the whole `Promise.prototype` chain surface symmetrically — same precedence, same handler shape, composable in any order. Bare arrow handlers compose without parens: each arrow body terminates at the next chain operator. If you need a chain operator *inside* an arrow body, parens force the nesting — `..! err => (recover() ..! finalFallback)`. `await` binds tighter than the dotted operators, so `await p ..> f` parses as `(await p).then(f)`; wrap with `await (p ..> f)` to await the whole chain.
 
-A leading `.` in `..>` / `..!` handler position is sugar for "method/property on the resolved value": `..> .json()` desugars to `..> (_) => _.json()`. Chains of access work too — `..> .users[0].id`. The sugar doesn't apply to `..&` since `.finally` callbacks receive no value.
+A leading `.` in `..>` / `..!` handler position is sugar for "method/property on the resolved value": `..> .json()` desugars to `..> (__pcv) => __pcv.json()`. Chains of access work too — `..> .users[0].id`. The sugar doesn't apply to `..&` since `.finally` callbacks receive no value.
+
+### `_` as expression-context lambda
+
+The bare-dot lambda handles property pluckers. For everything else — comparisons, arithmetic, function calls — a free `_` inside a call argument wraps the whole expression in a one-arg lambda where `_` is the parameter:
+
+```parabun
+const positive = data.filter(_ > 0);                  // → data.filter((__pu) => __pu > 0)
+const doubled  = data.map(_ * 2);
+const offset   = data.map(2 * _ + 1);                 // works on either side
+const square   = data.map(_ * _);                     // multiple `_` share the same param
+const absHigh  = data.every(Math.abs(_) > 0);         // function-call wrappers too
+const scores   = data.map(_.score * 2);               // composes with bare-dot
+```
+
+Bare `_` at top-level argument position is **not** wrapped — that's the pipeline placeholder slot. `data |> normalize(_, opts)` keeps its existing meaning: thread `data` into `_`'s slot at the callsite, lowering to `normalize(data, opts)`. The wrap only fires when `_` appears in a larger expression.
+
+Free `_` inside nested arrow / function literals isn't captured by the outer wrap — `arr.map(x => arr2.filter(_ > 0))` produces an outer arrow with parameter `x` and a separate inner `_`-lambda over `arr2`.
 
 ```parabun
 pure function sq(x: number) { return x * x; }
@@ -182,7 +210,7 @@ Both forms use `Promise.all` semantics — fail-fast on first rejection. For `al
 `0.1 + 0.2 !== 0.3` keeps biting people. Para's `Nd` literal suffix produces a `Decimal` value with exact arithmetic — `coef * 10^exp` representation, BigInt internally, no floating-point roundoff:
 
 ```parabun
-import { Decimal } from "@para/decimal";
+import { Decimal } from "@lyku/para-decimal";
 
 0.1d.plus(0.2d).eq(0.3d);                              // true
 0.1d.times(3d).eq(0.3d);                               // true
@@ -195,7 +223,7 @@ const total = price.plus(tax);
 
 Each `Nd` literal lowers to `__paraDec("N")` — using the **string** source, never roundtripping through float. JS doesn't allow operator overloading, so arithmetic is explicit method calls: `.plus`, `.minus`, `.times`, `.dividedBy` (alias `.div`), `.eq`, `.lt`, `.gt`, `.lte`, `.gte`, `.neg`, `.abs`. Conversions: `.toNumber()`, `.toString()`, `.toBigInt()`. Division takes `{ precision, roundingMode }` — seven `RoundingMode` variants (default `HALF_EVEN`); division-by-zero throws.
 
-The `@para/decimal` package is self-contained — no `decimal.js` / `big.js` dep — and ships ~300 lines of TypeScript.
+The `@lyku/para-decimal` package is self-contained — no `decimal.js` / `big.js` dep — and ships ~300 lines of TypeScript.
 
 ## `schema` and `match`
 
@@ -224,9 +252,43 @@ const ep = {
 ep.request.parse(123n).tag;                // 'Ok'
 ```
 
-Both forms desugar to `__paraFromSchema(...)` and produce: `parse(v) → Result<T, string>`, `is(v) → boolean`, `schema` (literal back-ref), and per-field accessors. Composes naturally inside lockstep `satisfies TsonHandlerModel` blocks — endpoint records that hold `schema { ... }` slots type-check against the JSON Schema vocabulary while gaining runtime validators for free.
+Both forms desugar via `__paraFromSchema(...)` and produce:
 
-Para extends the JSON Schema `type` field with `bigint`, `varchar`, `text`, `char`, `timestamptz`, `snowflake`, `numeric`, `jsonb`, `enum`. Alt forms: `schema X from <expr>` ingests an existing schema (e.g. lockstep pg-models output); `schema X { id: int, name: str(1..=50) }` is the refinement-typed DSL.
+- `parse(v) → Result<T, string>` — runtime validator; returns `{ tag: 'Ok', value }` on success or `{ tag: 'Err', error }` with a path-qualified message.
+- `validate(v) → Result<T, string>` — alias for `parse` today. The semantic split (parse accepts JSON strings via `JSON.parse`, validate handles already-parsed objects) is a planned follow-up; for now the two methods are interchangeable.
+- `schema` — the underlying JSON Schema object (literal back-ref). Hand it off to OpenAPI / MongoDB / AJV / form generators.
+- Per-field accessors — `User.email.maxLength`, `User.address.city.type`, etc. walks the schema graph as if `properties` was transparent.
+
+(The `expr is Type` keyword exists at the parser level — see below — but `.is()` is **not** a method on the binding. To test without unwrapping the Result, use `expr is User`, which lowers to `User.parse(expr).tag === 'Ok'`.)
+
+Composes naturally inside lockstep `satisfies TsonHandlerModel` blocks — endpoint records that hold `schema { ... }` slots type-check against the JSON Schema vocabulary while gaining runtime validators for free.
+
+Para extends the JSON Schema `type` field with `bigint`, `varchar`, `text`, `char`, `timestamptz`, `snowflake`, `numeric`, `jsonb`, `enum`. Three declaration forms cover the common cases:
+
+```parabun
+// 1. DSL block — Para's concise refinement-typed vocabulary
+schema User {
+  id: int,
+  email: Email,
+  age: int(0..150)?
+}
+
+// 2. Ingest existing JSON Schema from a file / fetch / variable
+import userSchema from "./pg-models/user.json";
+schema User from userSchema;
+
+// 3. Inline JSON Schema literal — same `from` form, no opaque import
+schema User from {
+  type: "object",
+  properties: {
+    id:    { type: "integer" },
+    email: { type: "string", format: "email" }
+  },
+  required: ["id", "email"]
+};
+```
+
+All three give you the same `User.parse` / `User.schema` / field accessor surface. Pick (1) for greenfield records, (2) when you already have JSON Schema artifacts in the repo, (3) for ad-hoc shapes or features the DSL doesn't cover (`$ref`, `allOf`, `oneOf`).
 
 `match` is pattern matching over the subject. Arms can be literal numbers / strings / booleans, `Ok(x)`/`Err(e)`/`Some(x)`/`None` Result/Option ctors, identifier-bind, `_` wildcard, or OR-alternation (`a | b | c`):
 

@@ -56,7 +56,7 @@ for await (const { frame, motion } of vision.detectMotion(vision.frames(cam.fram
 
 ### Reactive signals
 
-The returned iterator carries two [`@para/signals`](/docs/signals/) Signals — wire `effect()` blocks against motion state without iterating the full stream.
+The returned iterator carries two [`@lyku/para-signals`](/docs/signals/) Signals — wire `effect()` blocks against motion state without iterating the full stream.
 
 | Signal | Type | When it changes |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ The returned iterator carries two [`@para/signals`](/docs/signals/) Signals — 
 | `m.score` | `number` | Most recent smoothed motion score (fraction of luma-changed pixels, [0, 1]). Throttled to ~10 Hz so a 30 fps camera doesn't fire effects on every frame. |
 
 ```ts
-import { effect } from "@para/signals";
+import { effect } from "@lyku/para-signals";
 
 const m = vision.detectMotion(vision.frames(cam.frames()), { sensitivity: 0.05 }).run();
 

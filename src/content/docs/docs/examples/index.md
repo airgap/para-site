@@ -30,14 +30,14 @@ Each example is a complete project with file layout, source, build commands, and
 ## Setup
 
 ```bash
-# Install the @para/* packages your code uses, e.g.:
-npm install @para/signals @para/parallel @para/arrow
+# Install the @lyku/para-* packages your code uses, e.g.:
+npm install @lyku/para-signals @lyku/para-parallel @lyku/para-arrow
 
 # .pts / .pjs files compile with parabun build:
 parabun build src/main.pts --outfile dist/main.js
 ```
 
-Compiled output is standard JavaScript with `import "@para/foo"` statements — bundlers resolve those through `node_modules` with no additional config.
+Compiled output is standard JavaScript with `import "@lyku/para-foo"` statements — bundlers resolve those through `node_modules` with no additional config.
 
 ## Build targets
 

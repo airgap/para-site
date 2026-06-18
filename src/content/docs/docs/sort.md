@@ -18,7 +18,7 @@ const big = await sort.u32Async(huge, { backend: "parallel" });
 ## Tiers
 
 1. **serial** — LSD radix. Synchronous, deterministic, beats `TypedArray.prototype.sort()` above a measured per-kind crossover. Always available.
-2. **parallel** — delegates to [`@para/parallel`](/docs/parallel/) `psort` (tuned SAB histogram+scatter radix across a worker pool). Resolvable only on the ParaBun runtime. **Async only** (`*.f32Async`) — a worker pool can't be synchronous, and forcing the whole API async would make every tiny serial sort `await`.
+2. **parallel** — delegates to [`@lyku/para-parallel`](/docs/parallel/) `psort` (tuned SAB histogram+scatter radix across a worker pool). Resolvable only on the ParaBun runtime. **Async only** (`*.f32Async`) — a worker pool can't be synchronous, and forcing the whole API async would make every tiny serial sort `await`.
 3. **gpu** — Phase 2. `backend:"gpu"` throws today.
 
 ## API

@@ -1,10 +1,10 @@
 ---
-title: "@para/csv"
+title: "@lyku/para-csv"
 description: Streaming RFC 4180 CSV parser with two output modes — row objects and per-column TypedArrays.
 ---
 
 ```ts
-import csv from "@para/csv";
+import csv from "@lyku/para-csv";
 ```
 
 Two output modes:
@@ -47,13 +47,13 @@ Empty / missing numeric cells become `NaN` for floats, `0` for ints. The result 
 
 Most CSV libraries return `Array<{col1, col2}>` row objects. Each row is a JS Object (~56-byte header) plus a boxed `Number` for each numeric cell — ~24 bytes per number. For a 1M-row, 4-numeric-column CSV that's ~120 MB of boxing overhead before you've done any actual work.
 
-`parseColumns` writes straight into `TypedArray` buffers (one per column), grows them exponentially as rows arrive, and tight-fits the result at end-of-stream. For a 200K-row × 4-numeric-column CSV: 1.4× faster than the row-objects path on this codebase, and the result is 3 MB of contiguous bytes — ready to hand to `@para/simd`, `@para/arrow.fromColumns()`, GPU upload, or any other consumer that expects packed numeric data.
+`parseColumns` writes straight into `TypedArray` buffers (one per column), grows them exponentially as rows arrive, and tight-fits the result at end-of-stream. For a 200K-row × 4-numeric-column CSV: 1.4× faster than the row-objects path on this codebase, and the result is 3 MB of contiguous bytes — ready to hand to `@lyku/para-simd`, `@lyku/para-arrow.fromColumns()`, GPU upload, or any other consumer that expects packed numeric data.
 
-### Composing with `@para/simd`
+### Composing with `@lyku/para-simd`
 
 ```ts
-import csv from "@para/csv";
-import { sum, mean } from "@para/simd";
+import csv from "@lyku/para-csv";
+import { sum, mean } from "@lyku/para-simd";
 
 const cols = await csv.parseColumns("./sensors.csv", {
   schema: { temperature: "f32", humidity: "f32" },
@@ -72,7 +72,7 @@ for await (const batch of csv.parseBatches(Bun.file("./big.csv"), {
 })) {
   // batch.temp is a Float32Array of up to 8192 rows
   // batch.ts is a Float64Array of up to 8192 rows
-  // process batch — feed to @para/simd, append to an Arrow stream, etc.
+  // process batch — feed to @lyku/para-simd, append to an Arrow stream, etc.
 }
 ```
 
@@ -109,7 +109,7 @@ The classical async iterator path. Returns row objects (or string arrays with `h
 - `Uint8Array` or `string` (for in-memory).
 
 ```ts
-import csv from "@para/csv";
+import csv from "@lyku/para-csv";
 
 for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true })) {
   process(row.id, row.name, row.score);
@@ -136,7 +136,7 @@ A leading UTF-8 BOM (U+FEFF) is stripped from the first chunk automatically; you
 
 ## Parallel mode
 
-`parallel: true` chunks the input across [`@para/parallel`](/docs/parallel/)'s worker pool when the input has no quoted cells (the byte-boundary heuristic doesn't work otherwise). It runs the parse off the main thread.
+`parallel: true` chunks the input across [`@lyku/para-parallel`](/docs/parallel/)'s worker pool when the input has no quoted cells (the byte-boundary heuristic doesn't work otherwise). It runs the parse off the main thread.
 
 ```ts
 for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true, parallel: true })) {
@@ -156,11 +156,11 @@ Use `parallel: true` to keep the event loop responsive while parsing (parsing N 
 
 ## Bridging to columnar
 
-`@para/csv` rows pair naturally with [`@para/arrow`](/docs/arrow/)'s `fromRows`:
+`@lyku/para-csv` rows pair naturally with [`@lyku/para-arrow`](/docs/arrow/)'s `fromRows`:
 
 ```ts
-import csv from "@para/csv";
-import arrow from "@para/arrow";
+import csv from "@lyku/para-csv";
+import arrow from "@lyku/para-arrow";
 
 const rows: any[] = [];
 for await (const row of csv.parseCsv(Bun.file("data.csv"), { header: true })) rows.push(row);
@@ -176,7 +176,7 @@ For very large CSVs, batch the bridge — call `arrow.fromRows` per N rows inste
 The inverse of `parseCsv` — take rows in memory and emit RFC 4180 CSV text.
 
 ```ts
-import csv from "@para/csv";
+import csv from "@lyku/para-csv";
 
 const text = csv.stringify([
   { id: 1, name: "Ada, Lovelace", note: 'said "hi"' },

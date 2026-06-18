@@ -11,8 +11,8 @@ This is the demo for "reactivity across the wire." Adding another sensor or anot
 
 ```pjs
 import gpio from "parabun:gpio";
-import signals from "@para/signals";
-import lifecycle from "@para/lifecycle";
+import signals from "@lyku/para-signals";
+import lifecycle from "@lyku/para-lifecycle";
 
 await using chip = gpio.openDefaultChip();    // RP1 on Pi 5; gpiochip0 elsewhere
 await using button = chip.line(27, { mode: "in", pull: "up", pollHz: 50 });
@@ -97,5 +97,5 @@ The SSE stream emits one event per state change — no polling, no client-side t
 ## Next steps
 
 - [`parabun:gpio`](/docs/gpio/) — line / chip / event APIs
-- [`@para/signals`](/docs/signals/) — `effect { }`, `~>`, derived signals
+- [`@lyku/para-signals`](/docs/signals/) — `effect { }`, `~>`, derived signals
 - [Multi-plant waterer](/docs/examples/iot-waterer/) — same shape with more sensors

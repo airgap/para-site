@@ -94,7 +94,7 @@ Returns a `PrefixCache` — the KV cache snapshot after running `text` (or the t
 
 ### Reactive signals
 
-Each `LLM` instance exposes two [`@para/signals`](/docs/signals/) Signals — wire them into a UI to drive busy spinners and device badges without polling.
+Each `LLM` instance exposes two [`@lyku/para-signals`](/docs/signals/) Signals — wire them into a UI to drive busy spinners and device badges without polling.
 
 | Signal | Type | What it tracks |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ Each `LLM` instance exposes two [`@para/signals`](/docs/signals/) Signals — wi
 | `m.device` | `"cuda" \| "metal" \| "cpu"` | Whichever backend the load probe selected. Stable for the life of the instance. |
 
 ```ts
-import { effect } from "@para/signals";
+import { effect } from "@lyku/para-signals";
 effect(() => console.log(m.busy.get() ? "🤔" : "✅"));
 ```
 

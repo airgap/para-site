@@ -98,7 +98,7 @@ Options:
 - `edge: "rising" | "falling" | "both" | "none"` — edge events to deliver via `edges()`. Default `"none"`.
 - `initial: 0 | 1` — output starting value. Default `0`.
 
-`Line` is `AsyncDisposable`. The reactive `line.value` Signal updates on `read()` and on edge events — pair with [`@para/signals`](/docs/signals/) for `effect { ... }` / `~>` composition.
+`Line` is `AsyncDisposable`. The reactive `line.value` Signal updates on `read()` and on edge events — pair with [`@lyku/para-signals`](/docs/signals/) for `effect { ... }` / `~>` composition.
 
 ### `chip.bank(offsets, opts)`
 
@@ -125,7 +125,7 @@ The full IoT control loop in one effect block. `chip.line({ pollHz: 50 })` updat
   <TabItem label="TypeScript">
     ```ts
     import gpio from "parabun:gpio";
-    import { effect } from "@para/signals";
+    import { effect } from "@lyku/para-signals";
 
     await using chip = gpio.open("/dev/gpiochip4");
     await using button = chip.line(27, {
@@ -175,4 +175,4 @@ uAPI v2 is ioctl-bound at ~1 MHz toggle rate per pin (two writes per toggle cycl
 
 - [`parabun:i2c`](/docs/i2c/) — i2c-dev character device on the same Linux SBCs.
 - [`parabun:spi`](/docs/spi/) — spidev wrapper for the same hardware family.
-- [`@para/signals`](/docs/signals/) — reactive composition over `line.value`.
+- [`@lyku/para-signals`](/docs/signals/) — reactive composition over `line.value`.

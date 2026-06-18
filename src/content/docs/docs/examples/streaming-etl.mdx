@@ -1,16 +1,16 @@
 ---
 title: Streaming ETL pipeline
-description: 10M-element pipeline with the |> operator + @para/simd primitives. Each |> step is one SIMD pass over the typed array. Native AVX2 / NEON in Parabun, WebAssembly SIMD elsewhere; ~5-6× faster than .map().reduce().
+description: 10M-element pipeline with the |> operator + @lyku/para-simd primitives. Each |> step is one SIMD pass over the typed array. Native AVX2 / NEON in Parabun, WebAssembly SIMD elsewhere; ~5-6× faster than .map().reduce().
 ---
 
-A stream of 10M float readings, transformed through three SIMD operations and reduced to a sum. Built around the `|>` pipeline operator and `@para/simd`'s typed-array primitives — each `|>` is one pass over the buffer. Cross-runtime: native AVX2 / NEON when run in Parabun, WebAssembly SIMD in browsers, scalar fallback elsewhere.
+A stream of 10M float readings, transformed through three SIMD operations and reduced to a sum. Built around the `|>` pipeline operator and `@lyku/para-simd`'s typed-array primitives — each `|>` is one pass over the buffer. Cross-runtime: native AVX2 / NEON when run in Parabun, WebAssembly SIMD in browsers, scalar fallback elsewhere.
 
 This is the example for "Para syntax that's actually faster than the equivalent JS." The `|>` operator isn't just sugar; the kernels it threads through are different code paths than the array-method baseline.
 
 ## src/etl.pjs
 
 ```pjs
-import simd from "@para/simd";
+import simd from "@lyku/para-simd";
 
 const N = 10_000_000;
 const readings = new Float32Array(N);
@@ -74,10 +74,10 @@ Same code, harder to scan.
 parabun src/etl.pjs
 ```
 
-Cross-runtime — `npm install @para/simd` and run with Node. You won't get the AVX2 path (Node uses WebAssembly SIMD), but the pipeline still works and still beats `.map().reduce()` by ~3×.
+Cross-runtime — `npm install @lyku/para-simd` and run with Node. You won't get the AVX2 path (Node uses WebAssembly SIMD), but the pipeline still works and still beats `.map().reduce()` by ~3×.
 
 ## Next steps
 
-- [`@para/simd`](/docs/simd/) — the full kernel surface (sum / dot / matVec / topK / scalar+vector arithmetic)
-- [`@para/pipeline`](/docs/pipeline/) — `|>` runtime helpers + affine-chain `compile()`
+- [`@lyku/para-simd`](/docs/simd/) — the full kernel surface (sum / dot / matVec / topK / scalar+vector arithmetic)
+- [`@lyku/para-pipeline`](/docs/pipeline/) — `|>` runtime helpers + affine-chain `compile()`
 - [Parquet ETL](/docs/examples/parquet-etl/) — the heavier data-engineering cousin

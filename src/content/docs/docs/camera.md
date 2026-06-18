@@ -62,7 +62,7 @@ Manual close. Equivalent to `using` scope exit. Idempotent.
 
 ### Reactive signals
 
-Three [`@para/signals`](/docs/signals/) Signals on the camera handle — wire them into a UI without polling.
+Three [`@lyku/para-signals`](/docs/signals/) Signals on the camera handle — wire them into a UI without polling.
 
 | Signal | Type | When it changes |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ Three [`@para/signals`](/docs/signals/) Signals on the camera handle — wire th
 | `cam.cameraFormat` | `{ width, height, pixelFormat }` | Initialized from `open()`. Future renegotiation on V4L2 format-change events updates this in place; today it stays static for the lifetime of the camera. |
 
 ```ts
-import { effect } from "@para/signals";
+import { effect } from "@lyku/para-signals";
 
 await using cam = await camera.open("/dev/video0", { format: "yuyv", width: 640, height: 480 });
 

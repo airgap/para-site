@@ -7,7 +7,7 @@ description: GPU-accelerated vector + matrix primitives. Metal on macOS, CUDA on
 import gpu from "parabun:gpu";
 ```
 
-`parabun:gpu` is the device-dispatch layer. The same API works on Metal, CUDA, and CPU — backends register themselves via probe + capability, and `parabun:gpu` picks the best one available. The CPU backend forwards to [`@para/simd`](/docs/simd/), so unsupported hosts still get vectorized routes.
+`parabun:gpu` is the device-dispatch layer. The same API works on Metal, CUDA, and CPU — backends register themselves via probe + capability, and `parabun:gpu` picks the best one available. The CPU backend forwards to [`@lyku/para-simd`](/docs/simd/), so unsupported hosts still get vectorized routes.
 
 ## Backend
 
@@ -37,7 +37,7 @@ The CPU backend always returns `false` so `if (winsForSize(...))` falls through 
 
 ### `calibrate()`
 
-Sweeps the real GPU kernel against `@para/simd` at a small set of sizes, persists the measured crossover under `~/.cache/parabun/gpu-calibrate-<hash>.json`, and rehydrates it on subsequent process starts. Intended to be called once at app boot — the sweep takes 200–500ms. Setting `BUN_PARABUN_SKIP_CALIBRATION=1` bypasses the cache read on module load.
+Sweeps the real GPU kernel against `@lyku/para-simd` at a small set of sizes, persists the measured crossover under `~/.cache/parabun/gpu-calibrate-<hash>.json`, and rehydrates it on subsequent process starts. Intended to be called once at app boot — the sweep takes 200–500ms. Setting `BUN_PARABUN_SKIP_CALIBRATION=1` bypasses the cache read on module load.
 
 ### Reactive signals
 
@@ -49,7 +49,7 @@ Sweeps the real GPU kernel against `@para/simd` at a small set of sizes, persist
 Both signals lazy-init on first read so a CUDA-less host doesn't pay probing cost just for loading `parabun:gpu`. Subscribers see the current value on subscribe.
 
 ```ts
-import { effect } from "@para/signals";
+import { effect } from "@lyku/para-signals";
 effect(() => console.log(`gpu backend: ${gpu.activeBackendSignal.get()}`));
 ```
 
@@ -169,7 +169,7 @@ Obj-C FFI to `MTLDevice` + `MTLComputePipelineState`. Zero-copy via Apple's unif
 
 ### CPU
 
-Forwards every op to [`@para/simd`](/docs/simd/). Always available — useful for tests and CI hosts without a GPU.
+Forwards every op to [`@lyku/para-simd`](/docs/simd/). Always available — useful for tests and CI hosts without a GPU.
 
 ## Limits
 

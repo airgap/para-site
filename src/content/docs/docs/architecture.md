@@ -1,27 +1,27 @@
 ---
 title: Architecture
-description: How Para and Parabun fit together — what the @para/* libraries give you, what the parabun:* runtime modules add, and which ones you reach for when.
+description: Para's two namespaces — @lyku/para-* cross-runtime npm libraries vs parabun:* native modules — and how Lang and Runtime fit on top of them.
 ---
 
-Para is two products that work together.
+Para's two products ([Lang and Runtime](/docs/)) ship code across two npm-vs-binary namespaces. The split tells a reader at a glance whether an import is portable or needs the Runtime:
 
-- **`@para/*`** — eight cross-runtime libraries on npm. Pure JS / Wasm, no native dependencies. They run anywhere JS does — Node, Deno, Bun, browsers, Parabun.
-- **`parabun:*`** — twelve native runtime modules that ship with Parabun. They wrap codec stacks, GPU compute, and hardware I/O — work that pure JS can't match.
+- **`@lyku/para-*`** — nine cross-runtime libraries on npm. Pure JS / Wasm, no native dependencies. They run anywhere JS does — Node, Deno, Bun, browsers, ParaBun. This is most of Lang's runtime surface.
+- **`parabun:*`** — twelve native modules linked into the ParaBun binary. They wrap codec stacks, GPU compute, and hardware I/O — work that pure JS can't match. Only available when running on ParaBun.
 
 Both share the same import shape, so you don't have to think about which side you're on:
 
 ```ts
-import signals from "@para/signals";   // anywhere
+import signals from "@lyku/para-signals";   // anywhere
 import image   from "parabun:image";   // Parabun
 ```
 
-When you're on Parabun, `@para/*` libraries quietly use their `parabun:*` counterparts under the hood — where one exists. Same import, faster impl, no code change to opt in.
+When you're on Parabun, `@lyku/para-*` libraries quietly use their `parabun:*` counterparts under the hood — where one exists. Same import, faster impl, no code change to opt in.
 
 ## What's in the box
 
-`parabun:*` modules are native, hardware-accelerated, and only available in the Parabun runtime. `@para/*` libraries are cross-runtime, available on npm, and automatically use their `parabun:*` counterpart when running on Parabun.
+`parabun:*` modules are native, hardware-accelerated, and only available in the Parabun runtime. `@lyku/para-*` libraries are cross-runtime, available on npm, and automatically use their `parabun:*` counterpart when running on Parabun.
 
-| Module | `@para/*` | `parabun:*` | What it does |
+| Module | `@lyku/para-*` | `parabun:*` | What it does |
 |---|:---:|:---:|---|
 | signals | ✓ | — | Reactive state — Signal / Computed / Effect |
 | parallel | ✓ | planned | Worker pool — pmap / preduce / psort + Mutex / Semaphore |
@@ -48,25 +48,25 @@ When you're on Parabun, `@para/*` libraries quietly use their `parabun:*` counte
 How to read it at a glance:
 
 - **Both columns filled** → portable library that gets faster on Parabun.
-- **— in `@para/*`** → Parabun-only. System codecs, GPU, and kernel drivers don't have a credible browser/Node equivalent.
+- **— in `@lyku/para-*`** → Parabun-only. System codecs, GPU, and kernel drivers don't have a credible browser/Node equivalent.
 - **— in `parabun:*`** → pure JS is already as fast as native here, so we don't ship one.
-- **`planned`** → on the roadmap. The `@para/*` library works today; the native fast path is tracked but not yet shipped.
+- **`planned`** → on the roadmap. The `@lyku/para-*` library works today; the native fast path is tracked but not yet shipped.
 
 Two more npm packages back Para language features:
 
 | Package | Backs which feature |
 |---|---|
-| `@para/pipeline` | `\|>` operator runtime + affine-chain `compile()` |
-| `@para/decimal` | Exact-decimal arithmetic for `0.1d` literals |
+| `@lyku/para-pipeline` | `\|>` operator runtime + affine-chain `compile()` |
+| `@lyku/para-decimal` | Exact-decimal arithmetic for `0.1d` literals |
 
 ## What you can build
 
 These modules compose. A few realistic shapes:
 
-- **Streaming ETL** — `@para/csv` + `@para/arrow` parse a multi-GB CSV and write per-country Parquet without loading the file into memory. Works in Node today; faster on Parabun once the native CSV parser lands.
+- **Streaming ETL** — `@lyku/para-csv` + `@lyku/para-arrow` parse a multi-GB CSV and write per-country Parquet without loading the file into memory. Works in Node today; faster on Parabun once the native CSV parser lands.
 - **Voice assistants** — `parabun:speech` + `parabun:llm` + `parabun:audio` give you a wake-word → STT → LLM → TTS loop in 30 lines. Parabun-only because the engines need GPU.
-- **IoT control loops** — `parabun:gpio` + `@para/signals` make a reactive sensor → threshold → relay loop on a Raspberry Pi. The same `@para/signals` powers the React dashboard you serve from the device.
-- **In-browser data tools** — `@para/arrow` + `@para/parallel` slice a Parquet file and run worker-pooled aggregates on the user's machine, no server round-trip.
+- **IoT control loops** — `parabun:gpio` + `@lyku/para-signals` make a reactive sensor → threshold → relay loop on a Raspberry Pi. The same `@lyku/para-signals` powers the React dashboard you serve from the device.
+- **In-browser data tools** — `@lyku/para-arrow` + `@lyku/para-parallel` slice a Parquet file and run worker-pooled aggregates on the user's machine, no server round-trip.
 
 See [Examples](/docs/examples/) for runnable code.
 
@@ -74,14 +74,14 @@ See [Examples](/docs/examples/) for runnable code.
 
 Two namespaces, two distribution stories:
 
-- `@para/*` ships on npm and is meant to be portable. You can install one of them in a Node project that's never heard of Parabun, and everything works.
+- `@lyku/para-*` ships on npm and is meant to be portable. You can install one of them in a Node project that's never heard of Parabun, and everything works.
 - `parabun:*` ships inside the Parabun binary and links against system libraries (codecs, CUDA, V4L2, SPI). It can't be `npm install`ed because most environments don't have what it needs.
 
-Keeping them in separate namespaces means a developer reading code can tell at a glance which side an import is on — `parabun:` is the "you need Parabun for this" tell, `@para/` is the "this works anywhere" tell. The cross-runtime promise stays unambiguous.
+Keeping them in separate namespaces means a developer reading code can tell at a glance which side an import is on — `parabun:` is the "you need Parabun for this" tell, `@lyku/para-` is the "this works anywhere" tell. The cross-runtime promise stays unambiguous.
 
 ## Next steps
 
-- [Install the libraries](/docs/install-libs/) — `npm install @para/<package>`.
+- [Install the libraries](/docs/install-libs/) — `npm install @lyku/para-<package>`.
 - [Install Parabun](/docs/install-runtime/) — single curl install, includes everything.
 - [Examples](/docs/examples/) — runnable code across frontend / backend / edge.
-- Module deep-dives: [`@para/signals`](/docs/signals/), [`@para/csv`](/docs/csv/), [`parabun:llm`](/docs/llm/), [`parabun:gpu`](/docs/gpu/), and the [full list in the sidebar](/docs/).
+- Module deep-dives: [`@lyku/para-signals`](/docs/signals/), [`@lyku/para-csv`](/docs/csv/), [`parabun:llm`](/docs/llm/), [`parabun:gpu`](/docs/gpu/), and the [full list in the sidebar](/docs/).

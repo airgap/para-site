@@ -1,10 +1,10 @@
 ---
-title: "@para/mcp"
+title: "@lyku/para-mcp"
 description: Model Context Protocol — client and server. Stdio + WebSocket transports. Composes with parabun:assistant's tool dispatch.
 ---
 
 ```ts
-import mcp from "@para/mcp";
+import mcp from "@lyku/para-mcp";
 ```
 
 A Model Context Protocol implementation. **Client and server**, both shapes of the spec. Two transports — stdio (subprocess over newline-delimited JSON-RPC 2.0) and ws (WebSocket text frames; client only) — plus the structural surface [`parabun:assistant`](/docs/assistant/) reuses for its `tools:` option.
@@ -33,7 +33,7 @@ The connection is `AsyncDisposable` — `await using` releases the transport at 
 | Option | Default | Description |
 | --- | --- | --- |
 | `protocolVersion` | `"2025-03-26"` | Override the spec version sent in `initialize`. |
-| `clientInfo` | `{ name: "@para/mcp", version: "0.1.0" }` | Client identifier sent in `initialize`. |
+| `clientInfo` | `{ name: "@lyku/para-mcp", version: "0.1.0" }` | Client identifier sent in `initialize`. |
 
 Stdio transport adds:
 

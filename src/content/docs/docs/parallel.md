@@ -1,20 +1,20 @@
 ---
-title: "@para/parallel"
+title: "@lyku/para-parallel"
 description: pmap / preduce / run over a persistent worker pool. AbortSignal, timeout, transferables, recycling, stats.
 ---
 
 ```ts
-import parallel from "@para/parallel";
+import parallel from "@lyku/para-parallel";
 ```
 
 A persistent worker pool. Functions are serialized via `fn.toString()`, so callbacks must be **pure** — no closures, no outer references, no `this`. TypedArray inputs auto-transfer their chunk-slice buffers; non-TypedArray inputs structured-clone.
 
-On the **ParaBun runtime** `@para/parallel` resolves to the native builtin — SAB-backed zero-copy `pmap`/`preduce`, parallel SAB-radix `psort`, atomic `Mutex`/`Semaphore`. Off-runtime this package is a faithful in-process fallback at the same API; `psort` is then a correct **sequential** sort (not Worker-parallel), and `Mutex`/`Semaphore` are in-process. `__paraParallelShim` is `true` only when that sequential fallback is active — check `!mod.__paraParallelShim` if you must pin a real parallel path.
+On the **ParaBun runtime** `@lyku/para-parallel` resolves to the native builtin — SAB-backed zero-copy `pmap`/`preduce`, parallel SAB-radix `psort`, atomic `Mutex`/`Semaphore`. Off-runtime this package is a faithful in-process fallback at the same API; `psort` is then a correct **sequential** sort (not Worker-parallel), and `Mutex`/`Semaphore` are in-process. `__paraParallelShim` is `true` only when that sequential fallback is active — check `!mod.__paraParallelShim` if you must pin a real parallel path.
 
 ## Functional API (process-wide singleton)
 
 ```ts
-import { pmap, preduce, run } from "@para/parallel";
+import { pmap, preduce, run } from "@lyku/para-parallel";
 
 const scores = await pmap(score, rows, { concurrency: 8 });
 const total  = await preduce((a, b) => a + b, scores, 0);
@@ -31,7 +31,7 @@ const blob   = await run(crunch, [largeInput], { transfer: [largeInput.buffer] }
 ## Pool API (explicit lifetime + config)
 
 ```ts
-import { createPool } from "@para/parallel";
+import { createPool } from "@lyku/para-parallel";
 
 await using pool = createPool({ concurrency: 8, maxTasksPerWorker: 1000 });
 
@@ -50,7 +50,7 @@ console.log(pool.stats()); // { workers, busy, idle, queued, waiting, completed,
 ## Sort + concurrency primitives
 
 ```ts
-import { psort, Mutex, Semaphore, pool } from "@para/parallel";
+import { psort, Mutex, Semaphore, pool } from "@lyku/para-parallel";
 
 const sorted = await psort(scores);                 // TypedArray → parallel SAB-radix
 const ordered = await psort(rows, (a, b) => a.k - b.k); // Array → stable comparator sort
@@ -110,7 +110,7 @@ It loses when:
 - The function is cheap arithmetic — main-thread JS is faster than crossing the worker boundary.
 - Inputs aren't typed arrays — structured-clone copy of plain arrays makes the pool's overhead grow with input size.
 
-For small payloads or trivial functions, [`@para/simd`](/docs/simd/) on the main thread is almost always the right choice.
+For small payloads or trivial functions, [`@lyku/para-simd`](/docs/simd/) on the main thread is almost always the right choice.
 
 ## Sequential fallback
 

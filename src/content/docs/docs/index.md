@@ -1,32 +1,22 @@
 ---
 title: Para docs
-description: Para is a set of TypeScript libraries (signals, parallel, arena, simd, csv, arrow, rtp, mcp) plus an optional .pts syntax that compiles to JS calls into them.
+description: Para is two products. Lang is parse-time TypeScript syntax for pipelines, schemas, signals, and purity. Runtime (ParaBun) is a Bun fork with native modules for AI and device I/O. Neither requires the other.
 ---
 
-Para is two things:
+Para is two independent products:
 
-- **The libraries** — eight `@para/*` npm packages: `signals`, `parallel`, `arena`, `simd`, `csv`, `arrow`, `rtp`, `mcp`. Pure JS / Wasm. Install only the ones your code uses; each works on any JS runtime.
-- **The optional `.pts` syntax** — sugar over the libraries (`signal x = 0`, `effect { … }`, `~>`, `->`, `|>`, `..!`, `..&`, ranges, `pure`, `memo`, `defer`, `arena`). Compiles to standard JavaScript at parse time, which then imports from the libraries.
+- **Lang** — parse-time TypeScript syntax. Purity (`pure`), error chains (`..>` / `..!` / `..&`), pipelines (`|>`), ranges (`a..b` / `a..=b`), reactive signals (`signal` / `derived` / `effect` / `when`), JSON Schema data shapes (`schema`), pattern matching (`match`), decimal literals (`0.1d`). Lowers to standard JavaScript at parse time — runs anywhere Node, Bun, Deno, or browsers run. Files end in `.pts` / `.ptsx` (or `.pjs` / `.pjsx` over plain JS).
+- **Runtime (ParaBun)** — a fork of Bun with native modules linked into the binary: `parabun:llm` (CUDA / Metal inference), `parabun:speech` (Whisper STT + Piper TTS), `parabun:vision`, `parabun:gpu`, `parabun:camera`, `parabun:audio`, `parabun:gpio` / `i2c` / `spi`. Built for using one machine's hardware fully — single-node multi-GPU is in scope; distributed is not.
 
-You can use the libraries from plain TypeScript or JavaScript without ever touching `.pts`. The syntax is there if you want fewer parens around reactive code.
+Neither requires the other. Lang compiles to JS that runs on stock Bun / Node / Deno; Runtime runs vanilla `.ts` / `.js` without any Para syntax. Pick one, both, or neither — they share a name because the design decisions reinforce each other, not because they depend on each other.
 
-Try `.pts` in the browser at the **[Playground](/playground/)** — no install needed.
+Try Lang in the browser at the **[Playground](/playground/)** — no install needed.
 
 ## Sections
 
-- **[Install (libs)](/docs/install-libs/)** — `@para/*` packages, plus the parabun build step if you use `.pts` files. **[Install (runtime)](/docs/install-runtime/)** — install ParaBun itself for the GPU / hardware modules.
-- **Modules** — API reference for each library:
-  - [`@para/signals`](/docs/signals/) — reactive cells, derived values, effects
-  - [`@para/parallel`](/docs/parallel/) — `pmap` / `preduce` over a Worker pool
-  - [`@para/arena`](/docs/arena/) — typed-array `Pool` + scope helper
-  - [`@para/simd`](/docs/simd/) — Wasm v128 kernels
-  - [`@para/csv`](/docs/csv/) — RFC 4180 streaming parser
-  - [`@para/arrow`](/docs/arrow/) — in-memory tables + IPC + Parquet
-  - [`@para/rtp`](/docs/rtp/) — RFC 3550 packet framing + jitter buffer
-  - [`@para/mcp`](/docs/mcp/) — Model Context Protocol client
-- **[Language reference](/docs/language/)** — every `.pts` extension, with the JavaScript it desugars to.
-- **Examples** — three worked projects: [frontend](/docs/examples/frontend/) (DOM, Vite), [backend](/docs/examples/backend/) (Node WebSocket server), [edge](/docs/examples/edge/) (Cloudflare Workers).
-
-## Related projects
-
-[ParaBun](/runtime) is a fork of Bun that bundles Para and adds native modules for GPU compute, on-device LLM inference, V4L2 camera capture, ALSA audio, and GPIO / I²C / SPI on Linux. The libraries documented here run anywhere a JS engine runs; ParaBun is the runtime to reach for when you also need hardware.
+- **[Install (Lang)](/docs/install-libs/)** — compile `.pts` to JS plus the `@lyku/para-*` runtime packages (cross-runtime: Node / Bun / Deno / browsers).
+- **[Install (Runtime)](/docs/install-runtime/)** — single-script install for ParaBun on Linux / macOS.
+- **[Language reference](/docs/language/)** — every Lang extension with the JavaScript it desugars to.
+- **[Architecture](/docs/architecture/)** — how `@lyku/para-*` (cross-runtime npm) and `parabun:*` (native Runtime) split, with the full module index.
+- **Modules** — API references in the sidebar. Cross-runtime: `@lyku/para-signals` · `parallel` · `arena` · `lifecycle` · `simd` · `csv` · `arrow` · `rtp` · `mcp`. Runtime-only: `parabun:llm` · `speech` · `vision` · `image` · `video` · `audio` · `camera` · `gpu` · `gpio` · `i2c` · `spi` · `assistant`. Plus `@lyku/para-pipeline` and `@lyku/para-decimal` which back Lang's `|>` operator and `Nd`-literal features.
+- **Examples** — worked projects across [frontend](/docs/examples/frontend/), [backend](/docs/examples/backend/), [edge](/docs/examples/edge/), [IoT](/docs/examples/iot-waterer/), [voice assistants](/docs/examples/voice-assistant/), and more.

@@ -18,8 +18,8 @@ The full source. Three Parabun helpers do the heavy lifting:
 ```pts
 import gpio from "parabun:gpio";
 import i2c from "parabun:i2c";
-import signals from "@para/signals";
-import lifecycle from "@para/lifecycle";
+import signals from "@lyku/para-signals";
+import lifecycle from "@lyku/para-lifecycle";
 
 const PLANTS = [
   { name: "basil",     ch: 0, pin: 17, dryAt: 0.35, pumpMs: 1500, cooldownMs: 60_000 },
@@ -119,5 +119,5 @@ parabun demos/iot-waterer.pts --simulate --demo-empty --seconds 14
 ## Next steps
 
 - [`parabun:gpio`](/docs/gpio/) and [`parabun:i2c`](/docs/i2c/) — the hardware primitives
-- [`@para/signals`](/docs/signals/) — `signal` / `derived` / `when` / `effect`
+- [`@lyku/para-signals`](/docs/signals/) — `signal` / `derived` / `when` / `effect`
 - [Edge example](/docs/examples/edge/) — the same `when` shape in a Cloudflare Durable Object

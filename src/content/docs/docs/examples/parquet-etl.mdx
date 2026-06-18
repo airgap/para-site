@@ -5,12 +5,12 @@ description: Synthesize 50K events across 5 row groups, write Parquet with zstd 
 
 A complete analytical-pipeline shape: build an Arrow table from typed-array columns, write it as Parquet with bloom filters on the indexed columns, and demonstrate that the bloom + min/max stats actually let queries skip row groups they don't need to scan. Self-contained — no fixtures, no external dataset.
 
-This is `@para/arrow` showing what a real Parquet writer can do: zstd compression, multi-row-group output, bloom filters, predicate pushdown via row-group filter callbacks. None of it is reactive — Arrow is data-engineering, not UI.
+This is `@lyku/para-arrow` showing what a real Parquet writer can do: zstd compression, multi-row-group output, bloom filters, predicate pushdown via row-group filter callbacks. None of it is reactive — Arrow is data-engineering, not UI.
 
 ## src/pipeline.ts
 
 ```ts
-import arrow from "@para/arrow";
+import arrow from "@lyku/para-arrow";
 
 const ROWS_PER_BATCH = 10_000;
 const NUM_BATCHES = 5;
@@ -98,10 +98,10 @@ stats-filter amount≈0: kept 1 of 5 row groups, 10000 rows in 251ms     ← 5×
 parabun src/pipeline.ts
 ```
 
-Cross-runtime — works in Node too with `npm install @para/arrow` and `node src/pipeline.ts`. The Parquet output is byte-compatible with apache-arrow 21.1.0; you can read it from Python (`pyarrow.parquet.read_table`), DuckDB, or anything else that speaks Parquet.
+Cross-runtime — works in Node too with `npm install @lyku/para-arrow` and `node src/pipeline.ts`. The Parquet output is byte-compatible with apache-arrow 21.1.0; you can read it from Python (`pyarrow.parquet.read_table`), DuckDB, or anything else that speaks Parquet.
 
 ## Next steps
 
-- [`@para/arrow`](/docs/arrow/) — the full Arrow + IPC + Parquet API
-- [`@para/csv`](/docs/csv/) — pair with `arrow.fromRows` for CSV → Parquet pipelines
+- [`@lyku/para-arrow`](/docs/arrow/) — the full Arrow + IPC + Parquet API
+- [`@lyku/para-csv`](/docs/csv/) — pair with `arrow.fromRows` for CSV → Parquet pipelines
 - [Streaming-ETL](/docs/examples/streaming-etl/) — the pure-numeric pipeline cousin

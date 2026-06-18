@@ -72,10 +72,9 @@ wss.on("connection", (ws: WebSocket) => {
 
   signal messages = 0;
   signal lastSeen = Date.now();
-  signal idle = (Date.now() - lastSeen) > 60_000;
-  signal closed = false;
-
-  const ping = setInterval(() => lastSeen = lastSeen, 5_000);
+  signal now      = Date.now() every 1_000;   // tick so `idle` recomputes
+  signal idle     = (now - lastSeen) > 60_000;
+  signal closed   = false;
 
   ws.on("message", buf => {
     messages++;
@@ -86,7 +85,7 @@ wss.on("connection", (ws: WebSocket) => {
 
   ws.on("close", () => {
     closed = true;
-    clearInterval(ping);
+    now.stop();
     totalConnections--;
   });
 
@@ -138,10 +137,9 @@ wss.on("connection", ws => {
 
   signal messages = 0;
   signal lastSeen = Date.now();
-  signal idle = (Date.now() - lastSeen) > 60_000;
-  signal closed = false;
-
-  const ping = setInterval(() => lastSeen = lastSeen, 5_000);
+  signal now      = Date.now() every 1_000;   // tick so `idle` recomputes
+  signal idle     = (now - lastSeen) > 60_000;
+  signal closed   = false;
 
   ws.on("message", buf => {
     messages++;
@@ -152,7 +150,7 @@ wss.on("connection", ws => {
 
   ws.on("close", () => {
     closed = true;
-    clearInterval(ping);
+    now.stop();
     totalConnections--;
   });
 
@@ -192,7 +190,7 @@ server.listen(8080, () => console.log("listening on :8080"));
   },
   "dependencies": {
     "ws": "^8",
-    "@para/signals": "*", "@para/parallel": "*"
+    "@lyku/para-signals": "*", "@lyku/para-parallel": "*"
   },
   "devDependencies": { "@types/ws": "*" }
 }
@@ -211,7 +209,7 @@ server.listen(8080, () => console.log("listening on :8080"));
   },
   "dependencies": {
     "ws": "^8",
-    "@para/signals": "*", "@para/parallel": "*"
+    "@lyku/para-signals": "*", "@lyku/para-parallel": "*"
   }
 }
 ```
@@ -219,7 +217,7 @@ server.listen(8080, () => console.log("listening on :8080"));
 </TabItem>
 </Tabs>
 
-The `parabun build --target node` invocation emits standard `@para/*` imports that Node resolves through `node_modules` like any other npm package — no bundler plugin needed.
+The `parabun build --target node` invocation emits standard `@lyku/para-*` imports that Node resolves through `node_modules` like any other npm package — no bundler plugin needed.
 
 ## Build and run
 

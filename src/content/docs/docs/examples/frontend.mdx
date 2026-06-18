@@ -104,7 +104,7 @@ list.addEventListener("click", e => {
 
 ## vite.config.js
 
-No Para-specific config needed. The transpiler emits standard `import "@para/signals"` statements that Vite resolves through node_modules:
+No Para-specific config needed. The transpiler emits standard `import "@lyku/para-signals"` statements that Vite resolves through node_modules:
 
 ```js
 import { defineConfig } from "vite";
@@ -121,7 +121,7 @@ export default defineConfig({});
     "build": "parabun build src/main.pjs --outfile dist/main.js && vite build",
     "dev": "parabun build src/main.pjs --watch --outfile dist/main.js & vite"
   },
-  "dependencies": { "@para/signals": "*", "@para/parallel": "*" }
+  "dependencies": { "@lyku/para-signals": "*", "@lyku/para-parallel": "*" }
 }
 ```
 

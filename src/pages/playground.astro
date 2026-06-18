@@ -1,7 +1,7 @@
 ---
 // /playground — in-browser Para transpiler.
 //
-// Runs entirely client-side: @para/transpile is bundled into the
+// Runs entirely client-side: @lyku/para-transpile is bundled into the
 // page (~600 KB; Babel parser + generator + traverse account for most),
 // CodeMirror 6 provides the input editor, and a read-only CodeMirror
 // pane shows the JS output. Live transpile-on-keystroke with a 150 ms
@@ -53,13 +53,39 @@
         Sample
         <select id="pg-sample">
           <option value="welcome">Welcome</option>
-          <option value="pipeline">Pipeline + error chain</option>
-          <option value="ranges">Ranges</option>
-          <option value="signals">Signals + effect</option>
-          <option value="when">when (edge-triggered)</option>
-          <option value="defer">defer</option>
-          <option value="memo">memo</option>
-          <option value="pure">pure</option>
+          <optgroup label="Pipelines & chains">
+            <option value="pipeline">Pipeline + error chain</option>
+            <option value="promises">Promise chain (..&gt;, ..!)</option>
+            <option value="underscoreLambda">`_` expression lambda</option>
+            <option value="ranges">Ranges</option>
+            <option value="fusion">Stream fusion</option>
+            <option value="earlyExit">Early-exit fusion</option>
+            <option value="collect">Default collect</option>
+            <option value="literalFold">Compile-time fold</option>
+          </optgroup>
+          <optgroup label="Pattern matching">
+            <option value="match">match (literal arms)</option>
+            <option value="resultMatch">Result + match</option>
+          </optgroup>
+          <optgroup label="Schemas & validation">
+            <option value="schema">schema (DSL declaration)</option>
+            <option value="schemaFrom">schema from JSON Schema (file)</option>
+            <option value="schemaJSON">schema from JSON Schema (inline)</option>
+            <option value="boundary">:: parameter validation</option>
+          </optgroup>
+          <optgroup label="Reactivity">
+            <option value="signals">Signals + effect</option>
+            <option value="when">when (edge-triggered)</option>
+          </optgroup>
+          <optgroup label="Scope & purity">
+            <option value="defer">defer</option>
+            <option value="memo">memo</option>
+            <option value="pure">pure</option>
+            <option value="paraConst">para const (fan-out)</option>
+          </optgroup>
+          <optgroup label="Numbers">
+            <option value="decimal">Decimal literal</option>
+          </optgroup>
         </select>
       </label>
       <a class="pg-link" href="/docs/">Docs →</a>
@@ -87,7 +113,7 @@
       } from "@codemirror/language";
       import { tags as t } from "@lezer/highlight";
       import { closeBrackets } from "@codemirror/autocomplete";
-      import { transpile } from "@para/transpile";
+      import { transpile } from "@lyku/para-transpile";
 
       // Stellar Atlas highlight — keywords paint in the ParaBun companion
       // (amber), functions / types paint in the Para primary
@@ -224,6 +250,175 @@ pure function distance(a, b) {
   const dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
+`,
+        promises: `// ..> chains a .then, ..! a .catch, ..& a .finally.
+// .name as a bare-dot lambda becomes (_ => _.name) at the
+// receiving callsite — handy for property pluckers.
+
+fetch("/api/users")
+  ..> .json()
+  ..> .filter(.active)
+  ..! err => log(err)
+`,
+        underscoreLambda: `// LYK-827: \`_\` in an argument expression becomes a
+// one-arg lambda parameter. Para wraps the whole arg in
+// (__pu => <arg with _ → __pu>) at parse time. Multiple
+// \`_\` in one arg share the same param. Works for
+// arbitrary operator / call / comparison shapes.
+
+const data = [1, -2, 3, -4, 5];
+
+// Binary ops on either side.
+const doubled  = data.map(_ * 2);
+const offset   = data.map(2 * _ + 1);
+
+// Comparisons / predicates.
+const positive = data.filter(_ > 0);
+const nullish  = data.some(_ === null);
+
+// Multiple \`_\` share one param.
+const square   = data.map(_ * _);
+
+// Function calls wrap their own arg too.
+const absHigh  = data.every(Math.abs(_) > 0);
+
+// Composes with the bare-dot lambda — \`_.field\` reads
+// the implicit parameter's property.
+const scores   = data.map(_.score * 2);
+
+// Bare \`_\` at top-level arg position stays as the
+// pipeline placeholder slot (separate mechanism).
+function normalize(arr, opts) { return arr.map(x => x + opts.bias); }
+const opts = { bias: 10 };
+const fixed = data |> normalize(_, opts);
+`,
+        match: `// match — literal arms compile down to a switch (jump
+// table), OR-patterns to fall-through cases, _ to default.
+
+const msg = match status {
+  200       => "ok",
+  400 | 404 => "client error",
+  500       => "server error",
+  _         => "unknown"
+};
+`,
+        resultMatch: `// Para's Ok / Err destructure inside match. With all
+// arms being tagged constructors, the lowering becomes a
+// switch on the discriminant — no chained typeof checks.
+
+const result = fetchUser(id);
+
+const msg = match result {
+  Ok(user) => "got " + user.name,
+  Err(e)   => "error: " + e
+};
+`,
+        schema: `// schema declares a shape with .parse (runtime validator
+// returning Result) and .schema (JSON Schema 2020-12).
+// Field types include int, Email, and constraint specs
+// like int(0..150) for ranges; ? marks optional fields.
+
+schema User {
+  id: int,
+  email: Email,
+  age: int(0..150)?
+}
+
+// User.parse(req.body)        → Result<User, string>
+// User.schema                 → hand off to OpenAPI / Mongo / etc.
+`,
+        schemaFrom: `// schema X from <expr> ingests an existing JSON Schema
+// at runtime and gives you the same .parse / .schema
+// interface — no codegen step.
+
+import userSchema from "./pg-models/user.json";
+
+schema User from userSchema;
+`,
+        schemaJSON: `// schema X from <expr> takes any expression as the source,
+// including a JSON Schema 2020-12 object literal written
+// right here. Use this when you want JSON Schema features
+// the DSL doesn't cover (allOf, $ref, oneOf), or when copy-
+// pasting from an existing spec is faster than retyping.
+
+schema User from {
+  type: "object",
+  properties: {
+    id:    { type: "integer" },
+    email: { type: "string", format: "email" },
+    age:   { type: "integer", minimum: 0, exclusiveMaximum: 150 }
+  },
+  required: ["id", "email"]
+};
+`,
+        boundary: `// :: opts a parameter into runtime validation. The
+// callsite stays unchanged; the function body wraps the
+// arg in a User.parse call and throws on Err.
+
+function handler(req:: User, ctx) {
+  return req.email;
+}
+`,
+        paraConst: `// para const fans out a comma-list of bindings into a
+// Promise.all that resolves in parallel — useful when
+// several independent awaits would otherwise serialize.
+
+para const cpu = bench.cpu(),
+            gpu = bench.gpu(),
+            mem = bench.mem();
+`,
+        decimal: `// The 'd' suffix marks a decimal literal. Arithmetic on
+// decimals routes through .add / .mul methods so rounding
+// stays exact — the JS Number type can't represent 0.0825
+// or 0.1 + 0.2 without drift.
+
+const rate = 0.0825d;
+const tax = subtotal * rate;
+const total = subtotal + tax;
+`,
+        fusion: `// Pipelines of imported combinators from @lyku/para-pipeline
+// fuse at parse time: the chain lowers to a single loop
+// that runs each operator inline per element, never
+// allocating intermediate arrays.
+
+import { map, filter, sum } from "@lyku/para-pipeline";
+
+const total = nums
+  |> map(x => x * x)
+  |> filter(x => x > 0)
+  |> sum;
+`,
+        earlyExit: `// take is special — once its budget is exhausted, the
+// fused loop breaks. So filter + take + sum scans no
+// further than the third matching element.
+
+import { filter, take, sum } from "@lyku/para-pipeline";
+
+const topThree = scores
+  |> filter(x => x > 0)
+  |> take(3)
+  |> sum;
+`,
+        collect: `// Chains ending in map / filter / take auto-collect into
+// an array — no terminal combinator required, but still
+// a single fused loop under the hood.
+
+import { map, filter } from "@lyku/para-pipeline";
+
+const TOP_3 = nums
+  |> filter(x => x > 0)
+  |> map(x => x * 2)
+  |> take(3);
+`,
+        literalFold: `// When every input is a literal, @lyku/para-pipeline chains
+// evaluate at parse time and collapse to the constant
+// result. Run the computation once, ship the answer.
+
+import { map, filter, sum, some } from "@lyku/para-pipeline";
+
+const TOTAL   = [1, 2, 3, 4, 5] |> map(x => x * x) |> sum;
+const SQUARES = 1..=5 |> map(x => x * x);
+const HAS_NEG = [1, 2, -3, 4] |> some(x => x < 0);
 `,
       };
 

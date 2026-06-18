@@ -99,13 +99,13 @@ On stock Pi 5, the user header's i2c-1 isn't enabled by default. Add `dtparam=i2
 
 ## Reactive sensor reads
 
-Pair with [`@para/signals`](/docs/signals/)' `fromInterval` to turn any periodic register read into a reactive Signal. The shape is identical for any chip — replace the register address and decoding with whatever the sensor's datasheet says.
+Pair with [`@lyku/para-signals`](/docs/signals/)' `fromInterval` to turn any periodic register read into a reactive Signal. The shape is identical for any chip — replace the register address and decoding with whatever the sensor's datasheet says.
 
 <Tabs syncKey="lang">
   <TabItem label="TypeScript">
     ```ts
     import i2c from "parabun:i2c";
-    import sigs from "@para/signals";
+    import sigs from "@lyku/para-signals";
 
     await using bus = i2c.open("/dev/i2c-1");
     const sensor = bus.device(0x76);
@@ -127,7 +127,7 @@ Pair with [`@para/signals`](/docs/signals/)' `fromInterval` to turn any periodic
   <TabItem label="ParaBun">
     ```parabun
     import i2c from "parabun:i2c";
-    import sigs from "@para/signals";
+    import sigs from "@lyku/para-signals";
 
     await using bus = i2c.open("/dev/i2c-1");
     const sensor = bus.device(0x76);

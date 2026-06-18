@@ -6,7 +6,7 @@
     <title>Para Lang — .pts syntax sugar over Para Lib</title>
     <meta
       name="description"
-      content="Para Lang is an optional .pts / .pjs syntax over Para Lib. signal / effect / ~> / -> reactive bindings, |> pipelines, ..! / ..& error chaining, integer ranges, pure / memo declarators, defer / arena blocks. Compiles to standard JavaScript that imports from @para/* npm packages."
+      content="Para Lang is an optional .pts / .pjs syntax over Para Lib. signal / effect / ~> / -> reactive bindings, |> pipelines, ..! / ..& error chaining, integer ranges, pure / memo declarators, defer / arena blocks. Compiles to standard JavaScript that imports from @lyku/para-* npm packages."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -64,9 +64,9 @@
         to standard JavaScript at parse time.
       </p>
       <p class="lede">
-        The reactive forms desugar to imports from <code>@para/signals</code>; the rest desugar to plain JS. The
+        The reactive forms desugar to imports from <code>@lyku/para-signals</code>; the rest desugar to plain JS. The
         <code>.pts</code> compiler today lives inside <a href="/runtime/">ParaBun</a>; a standalone
-        <code>@para/transpile</code> for non-ParaBun build hosts is in development.
+        <code>@lyku/para-transpile</code> for non-ParaBun build hosts is in development.
       </p>
 
       <h2 id="syntax">Syntax (Para Lang)</h2>
@@ -192,7 +192,7 @@
       </p>
       <p>
         On ParaBun, those specifiers resolve to built-in modules. On any other host (browser, Node, Bun, Deno,
-        Cloudflare Workers, …) alias them to the matching <code>@para/*</code> npm packages in your bundler.
+        Cloudflare Workers, …) alias them to the matching <code>@lyku/para-*</code> npm packages in your bundler.
       </p>
       <pre
         data-lang="ts"
@@ -201,17 +201,17 @@
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">export</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> default</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> defineConfig</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">({</span></span>
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">  resolve</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span></span>
-<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">    alias</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> find</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> /</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">^</span><span style="--shiki-light:#22863A;--shiki-dark:#B4F9F8">para:</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">(</span><span style="--shiki-light:#22863A;--shiki-dark:#BB9AF7">.</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">*</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">$</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">/</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> replacement</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@para/$1</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
+<span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#73DACA">    alias</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> [{</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> find</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> /</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">^</span><span style="--shiki-light:#22863A;--shiki-dark:#B4F9F8">para:</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">(</span><span style="--shiki-light:#22863A;--shiki-dark:#BB9AF7">.</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">*</span><span style="--shiki-light:#22863A;--shiki-dark:#F7768E">)</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7">$</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">/</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#41A6B5"> replacement</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@lyku/para-$1</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }]</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">  }</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span></span>
 <span class="line"><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">})</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
       <p>The same one-line alias works for esbuild, webpack, and rollup. See the install guide for the variants.</p>
 
-      <div class="install"><span class="prompt">$</span>npm install @para/signals @para/parallel @para/pipeline</div>
+      <div class="install"><span class="prompt">$</span>npm install @lyku/para-signals @lyku/para-parallel @lyku/para-pipeline</div>
       <div class="install"><span class="prompt">$</span>parabun build src/main.pts --outdir dist/</div>
 
       <p class="caveat">
         ParaBun is required for the build step today (it owns the <code>.pts</code> parser). A standalone
-        npm-installable transpiler (<code>@para/transpile</code>) is on the roadmap.
+        npm-installable transpiler (<code>@lyku/para-transpile</code>) is on the roadmap.
       </p>
 
       <h2 id="examples">Examples</h2>
