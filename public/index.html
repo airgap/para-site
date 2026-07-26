@@ -3,48 +3,68 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Para — three-body JS ecosystem</title>
+    <title>Para: Lang and Runtime for JavaScript</title>
     <meta
       name="description"
-      content="Para is a JavaScript ecosystem in three pieces: Lib (cross-runtime npm packages), Lang (.pts syntax sugar), and Runtime (ParaBun, a Bun fork). Pick whichever you need; they don't depend on each other."
+      content="Para is two products. Lang is parse-time TypeScript syntax for pipelines, schemas, signals, synced values, and purity. Runtime (ParaBun) is a Bun fork with native modules for AI and device I/O. Neither requires the other."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap"
     />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="umbrella">
     <!-- Atmospheric backdrop (starfield + corner nebula tints) is
          drawn into a fixed-position canvas by /space.js. Brand-card
-         hover effects are CSS-only (lift + trinity-colored glow) —
+         hover effects are CSS-only (lift + per-card-tinted glow) —
          see .brand-card:hover in /styles.css. -->
     <main class="splash">
       <header class="splash-header">
         <h1>Para</h1>
       </header>
 
-      <!-- Hero: live .pts → JS desugaring demo. See /transpile.js. -->
+      <!-- Hero: live .pts → JS desugaring demo. See /transpile.js.
+           Earlier rev had Language/Runtime tabs above the panel; the
+           reel now cycles through both pools continuously and the
+           progress dots are color-coded by category (spectral blue =
+           Lang, will-o-wisp green = Runtime) so the viewer can tell
+           which type of demo is upcoming at a glance. -->
       <div class="hero-stage">
         <div class="hero transpile" aria-hidden="true">
           <div class="transpile-col">
             <div class="transpile-header">
-              <span class="transpile-tag">.pts</span>
+              <span class="transpile-tag transpile-source-tag">.pts</span>
+              <!-- "parabun only" runtime-tag — visible only when the
+                   current snippet's category === "runtime", toggled
+                   via .transpile.runtime-only class set by
+                   transpile.js's runSnippet. Tells the viewer "this
+                   needs ParaBun's native binary, not stock Bun/Node"
+                   at a glance, replacing the earlier per-dot color
+                   coding which was too subtle to read. -->
+              <span class="transpile-runtime-badge" aria-hidden="true">parabun only</span>
               <span class="transpile-title"></span>
             </div>
             <pre class="transpile-code transpile-source-code"></pre>
           </div>
+          <!-- Demo controls (pause btn + progress dots + paused
+               hint) live OUTSIDE both column headers — they're
+               absolute-positioned top-right of the whole .transpile
+               panel via the `.transpile-controls` rule in styles.css.
+               Earlier rev had them inside the source-col header,
+               which kept them visible across split/single mode but
+               anchored them mid-panel rather than at the corner. -->
+          <span class="transpile-controls">
+            <span class="transpile-paused-hint" aria-hidden="true">paused</span>
+            <button type="button" class="transpile-pause-btn" aria-label="pause" aria-pressed="false"></button>
+            <span class="transpile-progress" aria-label="snippet progress"></span>
+          </span>
           <div class="transpile-arrow" aria-hidden="true">→</div>
           <div class="transpile-col">
             <div class="transpile-header">
               <span class="transpile-tag">.js</span>
-              <span class="transpile-paused-hint" aria-hidden="true">paused</span>
-              <span class="transpile-controls">
-                <button type="button" class="transpile-pause-btn" aria-label="pause" aria-pressed="false"></button>
-                <span class="transpile-progress" aria-label="snippet progress"></span>
-              </span>
             </div>
             <pre class="transpile-code transpile-output-code"></pre>
           </div>
@@ -55,28 +75,21 @@
       </div>
 
       <div class="brands">
-        <a href="/libs/" class="brand-card lib">
-          <span class="brand-dot" data-star="lib"></span>
-          <span class="brand-name">Libraries</span>
-          <span class="brand-role">8 npm packages, no native deps</span>
-          <span class="brand-meta">signals · parallel · arena · simd · csv · arrow · rtp · mcp</span>
-          <span class="brand-url">/libs →</span>
-        </a>
         <a href="/lang/" class="brand-card lang">
           <span class="brand-dot" data-star="lang"></span>
           <span class="brand-name">Language</span>
-          <span class="brand-role"><code>.pts</code> → JS at parse time</span>
-          <span class="brand-meta">..&gt; · ..! · |&gt; · parallel · derived · 0.0825d</span>
-          <span class="brand-url">/lang →</span>
+          <span class="brand-role">TypeScript with pipelines, schemas, and native signals</span>
+          <span class="brand-meta">chains · pipes · parallel · match · schemas · signals · synced · decimals · pure fun</span>
         </a>
         <a href="/runtime/" class="brand-card runtime">
           <span class="brand-dot" data-star="runtime"></span>
           <span class="brand-name">Runtime</span>
-          <span class="brand-role">Bun fork, native modules linked in</span>
-          <span class="brand-meta">parabun:gpu · camera · audio · gpio · i2c · spi · llm</span>
-          <span class="brand-url">/runtime →</span>
+          <span class="brand-role">Bun fork for AI and device I/O</span>
+          <span class="brand-meta">gpu · llm · speech · vision · camera · audio · gpio · i2c · spi</span>
         </a>
       </div>
+
+      <p class="brands-aside">Neither requires the other.</p>
 
       <footer class="splash-footer">
         <a href="/docs/">docs</a> ·

@@ -3,22 +3,12 @@
   "displayName": "ParaBun JavaScript",
   "name": "parabun-js",
   "scopeName": "source.pjs",
-  "embeddedLangs": ["javascript"],
+  "embeddedLangs": [
+    "javascript"
+  ],
   "patterns": [
     {
       "include": "#parabun-keywords"
-    },
-    {
-      "include": "#parabun-fun"
-    },
-    {
-      "include": "#parabun-pure"
-    },
-    {
-      "include": "#parabun-operators"
-    },
-    {
-      "include": "#parabun-decimal-literal"
     },
     {
       "include": "source.js"
@@ -28,6 +18,106 @@
     "parabun-keywords": {
       "patterns": [
         {
+          "comment": "async { … } — Para async block expression (async immediately before a brace)",
+          "match": "\\b(async)\\b(?=\\s*\\{)",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.async"
+            }
+          }
+        },
+        {
+          "comment": "fun NAME(...) — shorthand alias for function declarations / expressions",
+          "match": "\\b(fun)\\b(?=\\s*[a-zA-Z_$*(<])",
+          "captures": {
+            "1": {
+              "name": "storage.type.function.parabun"
+            }
+          }
+        },
+        {
+          "comment": "export pure async fun/function declaration",
+          "match": "\\b(export)\\s+(pure)\\s+(async)\\s+(fun(?:ction)?)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.export"
+            },
+            "2": {
+              "name": "keyword.other.pure.parabun"
+            },
+            "3": {
+              "name": "storage.modifier.async"
+            },
+            "4": {
+              "name": "storage.type.function.parabun"
+            }
+          }
+        },
+        {
+          "comment": "export pure fun/function declaration",
+          "match": "\\b(export)\\s+(pure)\\s+(fun(?:ction)?)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.export"
+            },
+            "2": {
+              "name": "keyword.other.pure.parabun"
+            },
+            "3": {
+              "name": "storage.type.function.parabun"
+            }
+          }
+        },
+        {
+          "comment": "pure async fun/function declaration or expression",
+          "match": "\\b(pure)\\s+(async)\\s+(fun(?:ction)?)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.other.pure.parabun"
+            },
+            "2": {
+              "name": "storage.modifier.async"
+            },
+            "3": {
+              "name": "storage.type.function.parabun"
+            }
+          }
+        },
+        {
+          "comment": "pure fun/function declaration or expression",
+          "match": "\\b(pure)\\s+(fun(?:ction)?)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.other.pure.parabun"
+            },
+            "2": {
+              "name": "storage.type.function.parabun"
+            }
+          }
+        },
+        {
+          "comment": "pure async arrow — pure async (x) => ... / pure async x => ...",
+          "match": "\\b(pure)\\s+(async)\\b(?=\\s*(?:\\(|\\w+\\s*=>))",
+          "captures": {
+            "1": {
+              "name": "keyword.other.pure.parabun"
+            },
+            "2": {
+              "name": "storage.modifier.async"
+            }
+          }
+        },
+        {
+          "comment": "pure arrow — pure (x) => ... / pure x => ...",
+          "match": "\\b(pure)\\b(?=\\s*(?:\\(|\\w+\\s*=>))",
+          "captures": {
+            "1": {
+              "name": "keyword.other.pure.parabun"
+            }
+          }
+        },
+        {
+          "comment": "signal NAME = ... — reactive cell declaration",
           "match": "\\b(signal)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=,;:!])",
           "captures": {
             "1": {
@@ -36,7 +126,53 @@
           }
         },
         {
-          "match": "\\b(derived)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=,;:!])",
+          "comment": "source NAME = ... — native-handle reactive view, auto-disposed on unmount (.pui)",
+          "match": "\\b(source)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=:])",
+          "captures": {
+            "1": {
+              "name": "storage.type.source.parabun"
+            }
+          }
+        },
+        {
+          "comment": "sync NAME :: SCHEMA from KEY | sync NAME : TYPE from KEY — server-authoritative replica, parse-gated (::) or trusted (:) (.pui)",
+          "match": "\\b(sync)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*::?)",
+          "captures": {
+            "1": {
+              "name": "storage.type.sync.parabun"
+            }
+          }
+        },
+        {
+          "comment": "synced NAME = ARGS — full-control synced(key, opts) replica binding (.pui)",
+          "match": "\\b(synced)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=:])",
+          "captures": {
+            "1": {
+              "name": "storage.type.synced.parabun"
+            }
+          }
+        },
+        {
+          "comment": "mutate NAME of ENTITY { optimistic(p){…} [rollback(p){…}] [confirm(p){…}] } — Tier-2 optimistic write intent (.pui, §13.1)",
+          "match": "\\b(mutate)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s+of\\b)",
+          "captures": {
+            "1": {
+              "name": "storage.type.mutate.parabun"
+            }
+          }
+        },
+        {
+          "comment": "`every MS_EXPR` postfix on a signal declaration — drives the cell from an interval",
+          "match": "(?<=[\\)\\d\\w$])\\s+(every)\\s+(?=\\d|[A-Za-z_$\\(])",
+          "captures": {
+            "1": {
+              "name": "keyword.control.every.parabun"
+            }
+          }
+        },
+        {
+          "comment": "derived NAME = EXPR or derived NAME { … } — read-only computed cell ($derived / $derived.by)",
+          "match": "\\b(derived)\\b(?=\\s+[A-Za-z_$][\\w$]*\\s*[=,;:!{])",
           "captures": {
             "1": {
               "name": "storage.type.derived.parabun"
@@ -44,7 +180,8 @@
           }
         },
         {
-          "match": "\\b(effect)\\b(?=\\s*\\{)",
+          "comment": "effect { ... } block, or effect EXPR; single-statement — signals.effect() / $effect",
+          "match": "\\b(effect)\\b(?=\\s*\\{|\\s+[A-Za-z_$])",
           "captures": {
             "1": {
               "name": "keyword.control.effect.parabun"
@@ -52,6 +189,49 @@
           }
         },
         {
+          "comment": "when not EXPR { ... } — fires on the negated edge",
+          "match": "\\b(when)\\s+(not)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.when.parabun"
+            },
+            "2": {
+              "name": "keyword.control.when.not.parabun"
+            }
+          }
+        },
+        {
+          "comment": "when EXPR { ... } — fires on the rising edge",
+          "match": "\\b(when)\\b(?=\\s+[!A-Za-z_$])",
+          "captures": {
+            "1": {
+              "name": "keyword.control.when.parabun"
+            }
+          }
+        },
+        {
+          "comment": "trailing `start` modifier — initial-truthy + edge",
+          "match": "\\b(start)\\b(?=\\s*\\{)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.when.start.parabun"
+            }
+          }
+        },
+        {
+          "comment": "paired `when stop { }` arm — fires on falling edge of preceding when",
+          "match": "\\b(when)\\s+(stop)\\b(?=\\s*\\{)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.when.parabun"
+            },
+            "2": {
+              "name": "keyword.control.when.stop.parabun"
+            }
+          }
+        },
+        {
+          "comment": "arena { ... } — DeferGC scope",
           "match": "\\b(arena)\\b(?=\\s*\\{)",
           "captures": {
             "1": {
@@ -60,17 +240,19 @@
           }
         },
         {
+          "comment": "memo async NAME( — statement-form async memoized fn",
           "match": "\\b(memo)\\s+(async)\\s+(?=[A-Za-z_$][\\w$]*\\s*(?:<|\\())",
           "captures": {
             "1": {
               "name": "keyword.other.memo.parabun"
             },
             "2": {
-              "name": "storage.modifier.async.js"
+              "name": "storage.modifier.async"
             }
           }
         },
         {
+          "comment": "memo NAME( — statement-form memoized fn (sync)",
           "match": "\\b(memo)\\s+(?!async\\b)(?=[A-Za-z_$][\\w$]*\\s*(?:<|\\())",
           "captures": {
             "1": {
@@ -79,17 +261,19 @@
           }
         },
         {
+          "comment": "memo async (...) / memo async NAME => — async arrow form",
           "match": "\\b(memo)\\s+(async)\\s+(?=\\(|[A-Za-z_$][\\w$]*\\s*=>)",
           "captures": {
             "1": {
               "name": "keyword.other.memo.parabun"
             },
             "2": {
-              "name": "storage.modifier.async.js"
+              "name": "storage.modifier.async"
             }
           }
         },
         {
+          "comment": "memo (...) / memo <T>(...) / memo NAME => — sync arrow form",
           "match": "\\b(memo)\\s+(?=\\(|<[\\w\\s,=]+>\\s*\\(|[A-Za-z_$][\\w$]*\\s*=>)",
           "captures": {
             "1": {
@@ -98,154 +282,281 @@
           }
         },
         {
+          "comment": "defer EXPR / defer await EXPR — block-exit hook (LIFO)",
           "match": "\\b(defer)\\b(?=\\s+[A-Za-z_$])",
           "captures": {
             "1": {
               "name": "keyword.control.defer.parabun"
             }
           }
-        }
-      ]
-    },
-    "parabun-fun": {
-      "patterns": [
+        },
         {
-          "match": "\\b(fun)\\b(?=\\s*[a-zA-Z_$*(<])",
+          "comment": "~> reactive-binding operator — `src ~> dst` wraps in signals.effect(() => { dst = src })",
+          "match": "~>",
+          "name": "keyword.operator.rbind.parabun"
+        },
+        {
+          "comment": "-> reactive call-binding operator (negative lookbehind guards against `-->` / `=>` / `<-`)",
+          "match": "(?<![\\-=<])->",
+          "name": "keyword.operator.callbind.parabun"
+        },
+        {
+          "comment": "cyclic [(n)] schema — cycle-capability modifier on a schema declaration. Only a keyword when `schema` follows; `cyclic(1)` alone stays a plain call.",
+          "match": "\\b(cyclic)\\s*(?:\\(\\s*(\\d+)\\s*\\))?(?=\\s*schema\\b)",
           "captures": {
             "1": {
-              "name": "storage.type.function.js"
-            }
-          }
-        }
-      ]
-    },
-    "parabun-pure": {
-      "patterns": [
-        {
-          "match": "\\b(export)\\s+(pure)\\s+(async)\\s+(fun(?:ction)?)\\b",
-          "captures": {
-            "1": {
-              "name": "keyword.control.export.js"
+              "name": "storage.modifier.cyclic.parabun"
             },
             "2": {
-              "name": "keyword.other.pure.parabun"
+              "name": "constant.numeric.cyclic-length.parabun"
+            }
+          }
+        },
+        {
+          "comment": "schema(depth: 8) NAME — declaration with config list. `schema(` followed by a paren group and then an identifier is a declaration; without the trailing identifier it remains a plain call (see schema-bare skip).",
+          "match": "\\b(schema)\\s*\\(([^()]*)\\)\\s*([A-Za-z_$][\\w$]*)\\b",
+          "captures": {
+            "1": {
+              "name": "storage.type.schema.parabun"
             },
             "3": {
-              "name": "storage.modifier.async.js"
+              "name": "entity.name.type.schema.parabun"
+            }
+          }
+        },
+        {
+          "comment": "export schema NAME from <expr> — exported JSON Schema ingestion",
+          "match": "\\b(export)\\s+(schema)\\s+([A-Za-z_$][\\w$]*)\\s+(from)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.export.ts"
+            },
+            "2": {
+              "name": "storage.type.schema.parabun"
+            },
+            "3": {
+              "name": "entity.name.type.schema.parabun"
             },
             "4": {
-              "name": "storage.type.function.js"
+              "name": "keyword.control.from.parabun"
             }
           }
         },
         {
-          "match": "\\b(export)\\s+(pure)\\s+(fun(?:ction)?)\\b",
+          "comment": "schema NAME from <expr> — ingest existing JSON Schema (file / fetch / inline literal)",
+          "match": "\\b(schema)\\s+([A-Za-z_$][\\w$]*)\\s+(from)\\b",
           "captures": {
             "1": {
-              "name": "keyword.control.export.js"
+              "name": "storage.type.schema.parabun"
             },
             "2": {
-              "name": "keyword.other.pure.parabun"
+              "name": "entity.name.type.schema.parabun"
             },
             "3": {
-              "name": "storage.type.function.js"
+              "name": "keyword.control.from.parabun"
             }
           }
         },
         {
-          "match": "\\b(pure)\\s+(async)\\s+(fun(?:ction)?)\\b",
+          "comment": "export schema NAME { ... } / NAME = ... — exported declaration",
+          "match": "\\b(export)\\s+(schema)\\s+([A-Za-z_$][\\w$]*)\\b",
           "captures": {
             "1": {
-              "name": "keyword.other.pure.parabun"
+              "name": "keyword.control.export.ts"
             },
             "2": {
-              "name": "storage.modifier.async.js"
+              "name": "storage.type.schema.parabun"
             },
             "3": {
-              "name": "storage.type.function.js"
+              "name": "entity.name.type.schema.parabun"
             }
           }
         },
         {
-          "match": "\\b(pure)\\s+(fun(?:ction)?)\\b",
+          "comment": "schema NAME { ... } / NAME = ... / NAME from ... — declaration",
+          "match": "\\b(schema)\\s+([A-Za-z_$][\\w$]*)\\b",
           "captures": {
             "1": {
-              "name": "keyword.other.pure.parabun"
+              "name": "storage.type.schema.parabun"
             },
             "2": {
-              "name": "storage.type.function.js"
+              "name": "entity.name.type.schema.parabun"
             }
           }
         },
         {
-          "match": "\\b(pure)\\s+(async)\\b(?=\\s*(?:\\(|\\w+\\s*=>))",
+          "comment": "schema { ... } — inline expression literal (no name binding)",
+          "match": "\\b(schema)\\b(?=\\s*\\{)",
           "captures": {
             "1": {
-              "name": "keyword.other.pure.parabun"
+              "name": "storage.type.schema.parabun"
+            }
+          }
+        },
+        {
+          "comment": "ts<import('./x').T> — TS-extraction directive at schema-body position (para-ts-extractor-plan.md §0). Closed form only: ts, <, import('specifier'), ., TypeName, >. Substituted with the extracted JSON body by para-extract; unsubstituted sites throw at runtime with instructions.",
+          "match": "\\b(ts)\\s*(<)\\s*(import)\\s*\\(\\s*(['\"][^'\"]*['\"])\\s*\\)\\s*(\\.)\\s*([A-Za-z_$][\\w$]*)\\s*(>)",
+          "captures": {
+            "1": {
+              "name": "storage.type.ts-extract.parabun"
+            },
+            "3": {
+              "name": "keyword.control.import.ts"
+            },
+            "4": {
+              "name": "string.quoted.parabun"
+            },
+            "6": {
+              "name": "entity.name.type.schema.parabun"
+            }
+          }
+        },
+        {
+          "comment": "Bare `schema` keyword fallback — highlights as soon as typed; skipped when followed by =/(/./: (used as identifier or object key)",
+          "match": "\\b(schema)\\b(?![\\s]*[=.(:])",
+          "captures": {
+            "1": {
+              "name": "storage.type.schema.parabun"
+            }
+          }
+        },
+        {
+          "comment": "match EXPR { ... } — pattern matching expression",
+          "match": "\\b(match)\\b(?=\\s+[A-Za-z_$(])",
+          "captures": {
+            "1": {
+              "name": "keyword.control.match.parabun"
+            }
+          }
+        },
+        {
+          "comment": ":: per-arg runtime validation marker — `fn(req:: User) {...}` injects User.parse(req) at entry",
+          "match": "::",
+          "name": "keyword.operator.validate.parabun"
+        },
+        {
+          "comment": "Ok / Err / Some — Result/Option tagged-union constructors (in call position)",
+          "match": "\\b(Ok|Err|Some)\\b(?=\\s*\\()",
+          "captures": {
+            "1": {
+              "name": "support.function.constructor.result.parabun"
+            }
+          }
+        },
+        {
+          "comment": "None — bare Option constant",
+          "match": "\\b(None)\\b(?!\\s*[\\.\\[\\(])",
+          "captures": {
+            "1": {
+              "name": "constant.language.option.none.parabun"
+            }
+          }
+        },
+        {
+          "comment": "Capitalized refinement / format types — Email / UUID / Url / Date / DateTime / IpV4 / IpV6 / Slug",
+          "match": "(:|::)(\\s+)(Email|UUID|Url|Date|DateTime|IpV4|IpV6|Slug)\\b",
+          "captures": {
+            "1": {
+              "name": "punctuation.separator.key-value.ts"
+            },
+            "3": {
+              "name": "support.type.ts"
+            }
+          }
+        },
+        {
+          "comment": "Lowercase primitive types — int / str / string / bool / boolean / float / num / number (in `: Type` position)",
+          "match": "(:)(\\s+)(int|str|string|bool|boolean|float|num|number)\\b",
+          "captures": {
+            "1": {
+              "name": "punctuation.separator.key-value.ts"
+            },
+            "3": {
+              "name": "support.type.primitive.ts"
+            }
+          }
+        },
+        {
+          "comment": "`expr is not Type` — runtime negated type-guard, lowers to Type.parse(expr).tag !== \"Ok\"",
+          "match": "\\b(is)\\s+(not)\\b(?=\\s+[A-Z])",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.is.parabun"
             },
             "2": {
-              "name": "storage.modifier.async.js"
+              "name": "keyword.operator.is.parabun"
             }
           }
         },
         {
-          "match": "\\b(pure)\\b(?=\\s*(?:\\(|\\w+\\s*=>))",
+          "comment": "`expr is Type` — runtime type-guard, lowers to Type.parse(expr).tag === \"Ok\"",
+          "match": "\\b(is)\\b(?=\\s+[A-Z])",
           "captures": {
             "1": {
-              "name": "keyword.other.pure.parabun"
+              "name": "keyword.operator.is.parabun"
             }
           }
-        }
-      ]
-    },
-    "parabun-operators": {
-      "patterns": [
-        {
-          "name": "keyword.operator.range-inclusive.parabun",
-          "match": "\\.\\.="
         },
         {
-          "name": "keyword.operator.catch.parabun",
-          "match": "\\.\\.!"
+          "comment": "parallel/para let|const NAME = ..., ... — fan-out promise composition (statement form)",
+          "match": "\\b(parallel|para)\\s+(let|const)\\b",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.parallel.parabun"
+            },
+            "2": {
+              "name": "storage.type.ts"
+            }
+          }
         },
         {
-          "name": "keyword.operator.finally.parabun",
-          "match": "\\.\\.&"
+          "comment": "parallel/para { ... } — fan-out promise composition (expression form)",
+          "match": "\\b(parallel|para)\\b(?=\\s*\\{)",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.parallel.parabun"
+            }
+          }
         },
         {
-          "name": "keyword.operator.then.parabun",
-          "match": "\\.\\.>"
+          "comment": "..= inclusive range — `a..=b` lowers to iterator over [a, b]",
+          "match": "\\.\\.=",
+          "name": "keyword.operator.range-inclusive.parabun"
         },
         {
-          "name": "keyword.operator.range.parabun",
+          "comment": "..! error-chain operator — `p ..! handler` lowers to `p.catch(handler)`",
+          "match": "\\.\\.!",
+          "name": "keyword.operator.catch.parabun"
+        },
+        {
+          "comment": "..& finally operator — `p ..& cleanup` lowers to `p.finally(cleanup)`",
+          "match": "\\.\\.&",
+          "name": "keyword.operator.finally.parabun"
+        },
+        {
+          "comment": "..> then operator — `p ..> next` lowers to `p.then(next)`",
+          "match": "\\.\\.>",
+          "name": "keyword.operator.then.parabun"
+        },
+        {
+          "comment": ".. exclusive range — `a..b` lowers to iterator over [a, b)",
           "match": "\\.\\.(?!\\.)",
-          "comment": "Bare `..` range \u2014 negative lookahead `(?!\\.)` so the pattern does not eat the first two dots of `...` (spread/rest), which would leave the trailing `.x` looking like member access. The `..=` / `..!` / `..&` / `..>` variants cannot collide because each carries its own third character."
+          "name": "keyword.operator.range.parabun"
         },
         {
-          "name": "keyword.operator.pipeline.parabun",
-          "match": "\\|>"
+          "comment": "|> pipeline operator — threads LHS as first arg of RHS call",
+          "match": "\\|>",
+          "name": "keyword.operator.pipeline.parabun"
         },
         {
-          "name": "keyword.operator.rbind.parabun",
-          "match": "~>"
-        },
-        {
-          "name": "keyword.operator.callbind.parabun",
-          "match": "(?<![\\-=<])->"
-        }
-      ]
-    },
-    "parabun-decimal-literal": {
-      "patterns": [
-        {
-          "comment": "Nd decimal literal — base-10 number followed by `d` suffix",
+          "comment": "Nd decimal literal — `0.0825d` / `42d` route arithmetic through .add / .mul methods (exact, no FP drift)",
           "match": "(?<![\\w$.])((?:\\.\\d+|\\d+(?:\\.\\d*)?)(?:[eE][+-]?\\d+)?)(d)(?![\\w$])",
           "captures": {
             "1": {
               "name": "constant.numeric.decimal.parabun"
             },
             "2": {
-              "name": "keyword.other.suffix.decimal.parabun"
+              "name": "keyword.other.decimal-suffix.parabun"
             }
           }
         }

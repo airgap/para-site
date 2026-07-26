@@ -14,19 +14,23 @@
   const sourceTagEl = root.querySelector(".transpile-source-tag");
   if (!sourceEl || !outputEl) return;
 
-  // Hand-curated splash hero reel. Five snippets — each one shows a
-  // Para-distinctive construct on the left and its standard-JS
-  // desugaring on the right. The full feature atlas (20+ samples
-  // including stream fusion, early-exit, decimal, `::` validation,
-  // `schema from`, compile-time fold, etc.) lives in /playground —
-  // the splash is the hero reel; the playground is the full menu.
+  // Hand-curated splash hero reel. Seven Lang snippets — each one
+  // shows a Para-distinctive construct on the left and its
+  // standard-JS desugaring on the right. The full feature atlas
+  // (20+ samples including stream fusion, early-exit, decimal, `::`
+  // validation, `schema from`, compile-time fold, etc.) lives in
+  // /playground — the splash is the hero reel; the playground is
+  // the full menu.
   //
   // Ordering: lead with the most visually distinctive Para syntax
-  // (..>, ..!, bare-dot lambda), then |>, then the three headline-
-  // tagged features (match, signals, schema). Earlier rev had a
-  // sixth "compile-time fold" demo; dropped because it only applies
-  // to literal-input pipelines, which real code almost never has —
-  // it taught an optimization not a programming model.
+  // (..>, ..!, bare-dot lambda), then |>, then the namesake fan-out
+  // (para const), then the headline-tagged features (match, signals,
+  // schema) with synced last — it parse-gates through the User
+  // schema the previous snippet declares, so the pair reads as one
+  // story. Earlier rev had a "compile-time fold" demo; dropped
+  // because it only applies to literal-input pipelines, which real
+  // code almost never has — it taught an optimization not a
+  // programming model.
   // Each snippet declares its `category` so the demo can cycle within
   // a single tab's pool. Lang snippets default to split-pane (mode
   // omitted = 'split'); Runtime snippets are single-pane (mode:
@@ -61,6 +65,21 @@
   ),
   10
 )`,
+    },
+    {
+      // The namesake. Output verified against @lyku/para-transpile —
+      // the comma-list fans out into one Promise.all with positional
+      // destructuring (formatted multi-line here for the panel).
+      category: "lang",
+      name: "para const: independent awaits fan out through Promise.all",
+      pts: `para const cpu = bench.cpu(),
+           gpu = bench.gpu(),
+           mem = bench.mem()`,
+      js: `const [cpu, gpu, mem] = await Promise.all([
+  bench.cpu(),
+  bench.gpu(),
+  bench.mem()
+])`,
     },
     {
       category: "lang",
@@ -138,6 +157,28 @@ n.set(n.get() + 1)`,
     required: ["id", "email"]
   `,
       ],
+    },
+    {
+      // Follows the schema demo on purpose: the `User` this replica
+      // parse-gates through is the schema the previous snippet just
+      // declared. Tagged `.pui` because the lowering shown is the
+      // component-scoped runes bridge para-preprocess emits ($state +
+      // $effect.pre + onDestroy) — the sync/synced forms are the
+      // fourth distance of the reactive idea: a value changing across
+      // a trust boundary. Read-only Tier-1: the server writes the
+      // cell, the component reads it.
+      category: "lang",
+      name: "synced: server-authoritative live value, parse-gated over the wire",
+      tag: ".pui",
+      pts: `// read-only replica — the server writes, you read
+sync user :: User from \`user:\${id}\``,
+      js: `// every envelope parse-gated by User, reconciled
+// by (schema_version, sequence), auto-disposed
+const __syn_user = synced(\`user:\${id}\`, User)
+let user = $state(__syn_user.peek?.() ?? __syn_user)
+$effect.pre(() =>
+  __syn_user.subscribe?.(v => { user = v }))
+onDestroy(() => __syn_user.dispose?.())`,
     },
     {
       // Single-pane mode: no parse-time desugar to show — the wow is
@@ -226,7 +267,7 @@ mic.peakLevel > 0.3 -> led.write;`,
     // `bun run codegen` in the parabun repo. The Jenkins `Codegen
     // check` stage fails if this block drifts from the catalog.
     const kw = isPara
-      ? /\b(pure|fun|signal|derived|effect|source|when|arena|memo|defer|match|schema|parallel|para|is|every|const|let|var|function|return|await|async|new|class|if|else|true|false|null|import|from|export|default|as|switch|case|throw|for|of)\b/g
+      ? /\b(pure|fun|cyclic|signal|derived|effect|source|sync|synced|mutate|when|arena|memo|defer|match|schema|parallel|para|is|every|const|let|var|function|return|await|async|new|class|if|else|true|false|null|import|from|export|default|as|switch|case|throw|for|of)\b/g
       : /\b(const|let|var|function|return|await|async|new|class|if|else|true|false|null|import|from|export|default|as|switch|case|throw|for|of)\b/g;
     // ─── codegen:splash-keywords:end ────────────────────────────────
     const builtin = /\b(then|catch)\b/g;
