@@ -7,7 +7,7 @@ sidebar:
 
 # Chapter: Data Sync, Replication & Authority Model
 
-&gt; **Status of this chapter:** Mixed. The *read/reconcile* spine is **Shipped** (in `@lyku/para-sync` + `para-preprocess` today): the `sync NAME :: SCHEMA from KEY`, `sync NAME : TYPE from KEY`, and `synced NAME = ARGS` declaration forms; the `SyncedHandle` (`value`/`status`/`get`/`peek`/`subscribe`/`meta`/`stats`/`whenIdle`/`dispose`); `SyncEnvelope { value, schema_version, sequence }`; `createClientReplica` with its parse-gate / baseline / steady-state / gap rules; `ReplicaStatus` (`ok`/`stale`/`skew`/`refetching`); the `SyncTransport` contract with `InProcessTransport` / `NatsTransport`; the Class-A reconciliation default; and the domain-free visibility surface (`defineVisibility`/`classKeyOf`/`projectByClass`/`visibilityGate`/`createVisibilityCache`). Everything in *Proposed Extensions* (§13) is **Proposed** (net-new surface, not in `language-surface.ts` today): the Tier-2 write path (`mutate`/intent versioning/confirm-reject-rollback), per-field authority/conflict-policy declarations *in* the schema, the offline/queued-mutation model, presence/ephemeral channels, the typed subscription/query surface (`sync feed :: Post[] from query(...)`), and cross-entity transactional sync.
+&gt; **Status of this chapter:** Mixed. The *read/reconcile* spine is **Shipped** (in `@lyku/para-sync` + `para-preprocess` today): the `sync NAME :: SCHEMA from KEY`, `sync NAME : TYPE from KEY`, and `synced NAME = ARGS` declaration forms; the `SyncedHandle` (`value`/`status`/`get`/`peek`/`subscribe`/`meta`/`stats`/`whenIdle`/`dispose`); `SyncEnvelope { value, schema_version, sequence }`; `createClientReplica` with its parse-gate / baseline / steady-state / gap rules; `ReplicaStatus` (`ok`/`stale`/`skew`/`refetching`); the `SyncTransport` contract with `InProcessTransport` / `NatsTransport`; the Class-A reconciliation default; and the domain-free visibility surface (`defineVisibility`/`classKeyOf`/`projectByClass`/`visibilityGate`/`createVisibilityCache`). *Proposed Extensions* (§13) is now mixed too (re-audited 2026-07-26): the Tier-2 write path (§13.1 `mutate` → `createIntent`), the array query surface (§13.3 → `syncedQuery`), and presence channels (§13.4 → `presence()`) are **Shipped** — `para-preprocess` lowering + `@lyku/para-sync` runtime, cataloged in `language-surface.ts` where a keyword applies; offline queued mutations (§13.5) and cross-entity transactions (§13.6) have shipped runtime primitives (`queue.js`, `transaction.js`) but no surface sugar, so their *surface* remains **Proposed**; per-field authority (§13.2) is fully **Proposed**; the scalar-query and server-source forms (§13.7–§13.8, added 2026-07-26) are **Proposed** — implementation plan in `para-sync-query-plan.md` (para repo).
 &gt; **Cross-refs:** This chapter owns the **fourth distance** of the one reactive idea — a value *changing across a trust boundary* [→ ch:overview-and-surfaces §0]. A `sync`/`synced` cell is **also a source** (§07's `peek`/`subscribe`/`dispose` convention) — it lowers through the *identical* `$state` + `$effect.pre` + `onDestroy` runes bridge [→ ch:sources-async-and-native §2, §07 INV-src-2] — but it adds a `(schema_version, sequence)` **reconcile machine** that a plain source has no need for, which is why it has its own chapter. The schema whose `parse` gate every envelope crosses, and the `schema_version` it carries, are defined in [→ ch:type-and-schema-system §`schema`, §`SchemaValue`]. The `::` / `is` parse-gate operators are [→ ch:type-and-schema-system, ch:errors-results-and-validation] — sync uses the gate in its **branch-on-`.tag`, never-throw** mode (a malformed delta triggers *recovery*, not a crash), the exact inverse of the throw-on-`Err` handler boundary. The `.pui` binding surface (how `sync`/`synced` bridge into a component, `prop`, the escape-analysis bridge) is [→ ch:pui-component-model]; this chapter shows the bridge only where the *reconcile* semantics depend on it. The **WRITE-path codegen** and the **wire codec** generation are [→ ch:modules-projections-and-build] — this chapter owns the read + reconcile *runtime and semantics*; the projections chapter owns the generation of the typed mutation call and the msgpack codec. The keyword catalog this chapter conforms to is `src/language-surface.ts` [→ ch:overview-and-surfaces §3.1]; the authority/transport configuration this chapter consumes (`authority { S => class-a }`, `transport nats {…}`) is declared once in the `.para` manifest [→ ch:overview-and-surfaces §5.1].
 
 ---
@@ -597,7 +597,9 @@ An implementation is **Tier-1 conformant** iff:
 
 &gt; All constructs in this section are **Proposed** (net-new surface, not in `language-surface.ts` / the reconciler today). Each includes a desugaring sketch so it remains glass-floor-compatible (I1). They extend the **write** half (Tier 2) and the **shape** of what can be synced (collections, presence, transactions) — the surfaces `schema-is-the-application.md` §5 / `s5-reconciliation-spike.md` mark as designed-favorable-but-bounded. The governing rule throughout: **the mechanical machine is spec'd/generated; the policy is a hand-written typed delta** — concurrent multi-writer merge is *never* ambient (the anti-Meteor boundary, §7.2).
 
-### 13.1 `mutate` — the Tier-2 optimistic write path  `Proposed`
+### 13.1 `mutate` — the Tier-2 optimistic write path  `Shipped`
+
+&gt; **Shipped 2026-07:** `para-preprocess` lowers `mutate NAME of ENTITY { … }` to `createIntent` (`writer.js`); the arm set is `optimistic` / `rollback` / `confirm`, and `mutate` is cataloged in `language-surface.ts`. The desugar below is the shipped shape.
 
 **Rationale.** Tier 1 is read-only; today the write half is hand-rolled over `any` (`s5-reconciliation-spike.md` "Ground truth": two uncoordinated `any` mutation streams racing on the same local state, no confirm, no rollback, no correlation). The spine should bake the **mechanical** state machine — optimistic apply → op-id correlation → server confirm/reject → stale-echo dedupe → rollback — and keep the **policy** (the optimistic value, the rollback, the conflict resolution) as a hand-written typed delta. This is the Class-A default (§7.1) extended to the write direction, and it kills *both* `as any`s in the flagship PlotGame flow.
 
@@ -694,7 +696,9 @@ TS (generated reconciler config):
 
 **Interaction.** Drives both halves: the **reconciler** (§3) uses `@server`/`@lww` to know which fields a steady-state echo may overwrite; the **write path** (§13.1) uses them to gate the optimistic arm. Consistency-checked against the manifest's `authority { S => class-b { … } }` (the manifest's coarse class must agree with the fields' fine classes). This is the field-level statement of "Class B stays explicit" (§7.2): a `@merge` field is the *only* way concurrent multi-writer merge becomes reachable, and it is visible in the schema.
 
-### 13.3 The typed subscription/query surface (`sync feed :: Post[] from query(...)`)  `Proposed`
+### 13.3 The typed subscription/query surface (`sync feed :: Post[] from query(...)`)  `Shipped (array form)`
+
+&gt; **Shipped 2026-07:** `para-preprocess` lowers `sync NAME :: SCHEMA[] from query(SPEC)` to `syncedQuery(SCHEMA, SPEC)` (`feeds.js`). The scalar degeneration is §13.7; the authority-side read-set liveness is step 3 of `para-sync-query-plan.md`.
 
 **Rationale.** Today `sync` replicates a *single keyed object*. Real apps sync *collections* — a feed, a filtered list, a paginated query — and today the stream payload of such a collection is the §5 `StreamTypes`/`SocketBase` `any` hole. Making a query a **schema projection** (the result type is `Post[]`, the filter is typed, the per-row deltas reconcile by row key) closes that `any` and makes collections first-class synced entities.
 
@@ -727,7 +731,9 @@ Runes (.pui):
 
 **Interaction.** Each row is a §3 replica (the reconcile spine scales to a collection by composition, not a new engine). The visibility projection (§6) applies per row (a feed of users projects each row by the viewer's class). Closes the §5 `StreamTypes` `any` hole (the L1 mandatory flow's untyped seam). Composes with §13.5 (an offline-queued mutation against a query row replays by the row's key).
 
-### 13.4 Presence / ephemeral-state channels  `Proposed`
+### 13.4 Presence / ephemeral-state channels  `Shipped`
+
+&gt; **Shipped 2026-07:** `para-preprocess` lowers `presence NAME :: SCHEMA in CHANNEL` to `presence(CHANNEL, SCHEMA)` (`presence.js`).
 
 **Rationale.** "Who is online," "who is typing," cursor positions, live viewer counts — **ephemeral** state that is *not* authoritative, *not* persisted, *not* reconciled by sequence (there is no Postgres-authoritative truth; the truth is "whoever is connected right now"). Forcing it through the synced-entity machine is wrong: it has no `sequence`, no durable baseline, and last-writer-disconnects is the correct GC. A distinct channel keeps the authoritative path clean and the ephemeral path honest.
 
@@ -756,7 +762,9 @@ Runes (.pui):
 
 **Interaction.** Shares the transport contract (§4) and the parse gate (§3.3) — a peer's published state crosses the same trust boundary — but **not** the reconcile machine (no sequence). This is the clean separation the authority model needs: authoritative state reconciles by sequence and persists; ephemeral state is room-scoped, last-writer-per-peer, disconnect-GC'd. Keeping them distinct is what stops "is X typing" from polluting the durable `sequence` stream.
 
-### 13.5 Offline / queued mutations with deterministic replay  `Proposed`
+### 13.5 Offline / queued mutations with deterministic replay  `Proposed (runtime primitive shipped)`
+
+&gt; The runtime machine exists (`queue.js`: `createQueuedIntent`); the `mutate queued` surface sugar does not yet.
 
 **Rationale.** A client that goes offline (or races a slow network) accumulates optimistic mutations (§13.1) that have not been confirmed. On reconnect they must **replay deterministically** against the *current* server sequence — not blindly re-send (the server state moved) and not silently drop (the user's intent is lost). A queued-mutation model with replay-against-the-sequence-stream makes offline a first-class, deterministic case rather than an `any`-shaped reconnection hack.
 
@@ -785,7 +793,9 @@ TS (generated):
 
 **Interaction.** Builds directly on §13.1 (a queued mutation *is* an optimistic mutation with a durable log) and §13.2 (re-base respects per-field authority). Replays against the §3 sequence stream (the reconciler's `sequence` *is* the replay anchor) and against §13.3 row keys for collection mutations. The deterministic, op-id-ordered, pure-arm replay is what keeps offline from being a silent-divergence footgun (the exact class the project exists to eliminate).
 
-### 13.6 Cross-entity transactional sync (atomic multi-key intents)  `Proposed`
+### 13.6 Cross-entity transactional sync (atomic multi-key intents)  `Proposed (runtime primitive shipped)`
+
+&gt; The runtime machine exists (`transaction.js`: `createTransaction`); the `transaction` surface sugar does not yet.
 
 **Rationale.** Some mutations span **multiple synced entities** atomically — move an item from `cart:A` to `cart:B`, transfer balance between two accounts, reassign a task across two boards. Applying them as independent §13.1 intents allows a torn state (one confirms, one rejects → the item exists in neither cart or both). An **atomic multi-key intent** makes the optimistic apply, the server confirm/reject, and the rollback span all keys as a unit — a transaction across the trust boundary.
 
@@ -820,6 +830,79 @@ TS (generated):
 
 **Interaction.** The atomic boundary is the natural extension of §13.1's single-key op-id to a group op-id; it composes with §13.2 (each arm respects its field authority), §13.5 (a queued transaction replays as a unit), and the reconciler's sequence ordering (each key still reconciles by its own `sequence`; the *transaction* is the optimistic/confirm/rollback unit, not a new reconcile key). This keeps multi-key atomicity *explicit and visible* — never an ambient distributed-transaction magic, consistent with the §7.2 anti-Meteor boundary.
 
+### 13.7 Scalar query sync (`sync NAME :: SCHEMA from query(...)`)  `Proposed`
+
+**Rationale.** §13.3 syncs collections; the equally common case is *one* entity selected by a typed predicate — "the user with this id", "the active session". Writing it as a one-element feed forces `[0]` indexing and array-shaped status onto a scalar value. The scalar form is the `limit: 1` degeneration of §13.3, sharing its entire machinery — and, crucially, it inherits the **liveness-by-read-set** property: because `query(SPEC)` is a typed spec over the schema spine (compilable by lockstep-pg), the authority knows exactly which rows the result depends on, so writes flowing through the authority (§13.1 intents, P4 handles) invalidate and re-publish *automatically*. No polling, no manual invalidation — the spine is what makes the query live.
+
+**Grammar.**
+
+```
+ScalarQueryDecl ::= "sync" Ident "::" Schema "from" "query" "(" QuerySpec ")" ";"
+                     ⟨Schema NOT arrayed — the absence of [] selects the scalar form⟩
+```
+
+**Static semantics.** The cell types as `Infer<S> | undefined`. `undefined` is a **membership fact** (no row matches — delivered on the membership channel), distinct from not-yet-loaded (`status: 'stale'` pre-baseline). A row deletion transitions the cell to `undefined`; it never silently retains a deleted row. `where` fields type against the spine (a predicate on a nonexistent field is a compile error — I3).
+
+**Reactive re-subscription (normative, new — applies to §13.3 and §13.8 too).** The `QuerySpec` is evaluated in a **tracked scope**. Client-reactive values referenced in it are the subscription's *params*; `subKey = stableSerialize(declId, params)`. On tracked change: unchanged `subKey` ⇒ no-op; changed ⇒ bind a fresh handle, keep the old value in the cell as a stale seed (`status: 'refetching'`), dispose the old handle immediately, swap on the new baseline. The shipped `from KEY` form keeps its evaluate-once semantics (back-compat; extension is a v2 audit item).
+
+**Dynamic semantics / desugar.**
+
+```
+# Desugar (proposed):  sync user :: User from query(...)
+Para (.pui):
+    sync user :: User from query({ where: u => u.id == id });
+Runes (.pui):
+    let user = $state(undefined);
+    $effect.pre(() => {                                  // reads of `id` tracked → re-key on change
+      const h = syncedOne(User, { where: (u) => u.id == id });
+      const seed = h.peek?.(); if (seed !== undefined) user = seed;
+      const un = h.subscribe?.((__v: User | undefined) => { user = __v; });
+      return () => { un?.(); h.dispose?.(); };
+    });
+```
+
+**Interaction.** `syncedOne` is a degenerate one-row `syncedQuery` (§13.3) — same per-row `createClientReplica`, same two envelope kinds; no new reconcile engine. Params crossing into `SPEC` are parse-gated server-side (the reverse direction of §3.3's gate — *both* directions of the boundary are gated). Composes with §13.1 (a mutate against the selected entity confirms through the same replica). Implementation: `para-sync-query-plan.md` §2–§3.
+
+### 13.8 Opaque server-source sync (`sync NAME :: SCHEMA from server EXPR + policy`)  `Proposed`
+
+**Rationale.** Not every value comes from the spine — hand-written SQL, an ORM call, a third-party API. The honest contract for an *opaque* server expression is fundamentally different from §13.7: the server **cannot know** when the result changes (no read-set), so liveness cannot be automatic. This form gives opaque sources the same replica machinery — SSR-seedable, parse-gated, reconciled — while making the refresh contract **syntactically mandatory**. A missing policy is a compile error naming the three options. This is the §2.2 visible-opt-out principle and the §7.2 anti-Meteor boundary applied to liveness: never fake it.
+
+**Grammar.**
+
+```
+ServerSyncDecl ::= "sync" Ident "::" Schema "from" "server" Expr Policy ";"
+Policy         ::= "every" DurationExpr        ⟨poll: shared timer per subscription key⟩
+                 | "on" Expr                    ⟨re-run when invalidate(KEY) publishes on the transport⟩
+                 | "once"                       ⟨seed only — a VISIBLE never-refreshes choice⟩
+```
+
+`server` is a **contextual keyword valid only after `from`** — the visible runtime-boundary marker. It is deliberately a keyword and never inferred from where an import resolves: implicit splitting is how server code leaks into client bundles. The runtime boundary is written in source exactly the way `::` writes the trust boundary.
+
+**Static semantics (escape analysis, normative).** The free identifiers of `EXPR` partition: (1) module imports → hoisted into a generated server artifact; an import used by both server expressions and client code in one file is a compile error (no silent double-bundling). (2) Client-reactive bindings → **typed wire params**: JSON-profile serializable, validator derivable (spine column, schema-branded type, or primitive) — a param with no derivable validator is a compile error (I3). Param changes re-key the subscription (§13.7's rule). (3) Locals inside `EXPR` travel with the artifact. (4) Forbidden captures — closures as params, DOM/component refs, `this`, mutable module state — each with a targeted diagnostic.
+
+**Both-ends gating.** The artifact's return value is parse-gated against `SCHEMA` **server-side before publish** (a server bug surfaces once at the boundary, not as reconcile chaos on N clients); envelopes parse-gate client-side exactly as §3.3; params parse-gate server-side on arrival. Neither end trusts the wire, in either direction.
+
+**Dynamic semantics / desugar.**
+
+```
+# Desugar (proposed):  sync stats :: Stats from server db.slowAggregate(orgId) every 30s
+Para (.pui):
+    sync stats :: Stats from server db.slowAggregate(orgId) every 30s;
+Client (runes, .pui):
+    // identical bridge to §13.7 — the client cannot tell L-query from L-server
+    let stats = $state(undefined);
+    $effect.pre(() => { const h = synced(__subKey("stats@file.pui", [orgId]), Stats); … });
+Server (generated <file>.server.pts — readable, ejectable):
+    export async function stats({ orgId }: { orgId: bigint }, ctx: SecureContext<…>) {
+      // param gate (inbound) → the opaque expression → schema gate (outbound)
+      return Stats.parse(await db.slowAggregate(orgId));
+    }
+    // host wiring: one shared 30s timer per subKey; deep-equal short-circuit;
+    // monotonic `sequence` per subKey on change → the §3 reconciler applies unchanged.
+```
+
+**Interaction.** The host publishes `SyncEnvelope`s, so §3's ingest machine, §4's transports, and §5's `SyncedHandle` apply verbatim — L-server differs from L-query *only* in who decides when to re-run. `on KEY` pairs with a one-line server helper `invalidate(KEY)` — the author-declared read-set. The fullstack projection (SvelteKit `+page.server.ts` seed loads via the shipped `seed` opt, an SSE endpoint speaking envelopes, POST endpoints for §13.1 intents) is specified as P9 in `para-sync-query-plan.md` §6 and lands in [→ ch:modules-projections-and-build] once proven. The pull-flavored client-only mirror (`derived NAME :: SCHEMA = EXPR`) is [→ ch:sources-async-and-native §10.7].
+
 ---
 
 ### Summary of proposed surface
@@ -832,4 +915,6 @@ TS (generated):
 | 13.4 | `presence NAME :: Schema in CHANNEL` | Ephemeral presence/typing/cursors — no sequence, disconnect-GC, distinct from authoritative entities. |
 | 13.5 | `mutate queued NAME of KEY { … }` | Offline mutations with deterministic op-id-ordered replay against the sequence stream. |
 | 13.6 | `transaction NAME { mutate … of A; mutate … of B }` | Atomic multi-key intents: all-or-nothing optimistic apply + group confirm/reject/rollback. |
+| 13.7 | `sync user :: User from query({ where })` | Scalar query sync: `limit 1` degeneration of 13.3; live via spine read-sets; reactive re-subscription. |
+| 13.8 | `sync stats :: Stats from server EXPR every/on/once` | Opaque server source: escape-analyzed server artifact, both-ends gating, *declared* refresh — never faked liveness. |
 

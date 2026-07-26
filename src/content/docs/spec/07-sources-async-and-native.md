@@ -190,7 +190,7 @@ Numbered settle (normative ordering):
 
 &gt; **Edge case (component cancel vs network cancel).** The keyword form passes `() => (EXPR)` — the thunk **ignores** the abort signal, so unmount drops the *result* (no stale state) but does not cancel the *network*. For true network cancellation, call `promiseSignal` directly and thread the signal: `source user = promiseSignal(s => fetch(url, { signal: s }))`. The keyword sugar covers the common case (component-side drop); the explicit form covers the abortable case. Both lower through the same bridge.
 
-&gt; **Edge case (re-fire on dependency change).** `async signal user = fetch(\`/api/user/${id}\`)…` is constructed **once** at declaration; it does **not** re-fire when `id` changes, because the producer is constructed outside any effect. To refetch on `id`, wrap the source in a `derived`/keyed pattern or use the proposed `retry`/keyed-source surface (§10.3). The Shipped form is fire-once-per-mount; this is a deliberate scope boundary (re-keying is reactivity, not the source's job).
+&gt; **Edge case (re-fire on dependency change).** `async signal user = fetch(\`/api/user/${id}\`)…` is constructed **once** at declaration; it does **not** re-fire when `id` changes, because the producer is constructed outside any effect. To refetch on `id`, wrap the source in a `derived`/keyed pattern or use the proposed `retry`/keyed-source surface (§10.3). The Shipped form is fire-once-per-mount; this is a deliberate scope boundary (re-keying is reactivity, not the source's job). The first-class re-keying form is the proposed query-derived cell, `derived NAME :: SCHEMA = EXPR` (§10.7).
 
 ### 3.4 Example
 
@@ -738,6 +738,51 @@ Runes (.pui), client:
   async signal user = fetchUser(id) :: User await;   // SSR-awaited, schema-gated seed
 </script>
 <h1>{user.data?.name}</h1>                            <!-- present in server HTML; hydrates without refetch -->
+```
+
+### 10.7 Query-derived cell (`derived NAME :: SCHEMA = EXPR`)  `Proposed`
+
+**Rationale.** §3.3's edge case draws a deliberate scope boundary: `async signal` is fire-once-per-mount, and "re-keying is reactivity, not the source's job" — the refetch-on-dependency-change case is deferred to "a derived/keyed pattern." This section is that pattern, made first-class. It is the **pull mirror** of sync's push: client-initiated, tracked, latest-wins, parse-gated — a value fetched *by* the client whenever its inputs change, with the same trust-boundary discipline an inbound sync envelope gets. No sequence reconcile, no authority — this is a source with a parse gate, which is why it lives in this chapter and not [→ ch:data-sync-and-authority].
+
+**Grammar.**
+
+```
+QueryDerivedDecl ::= "derived" Ident "::" Schema "=" Expr ";"
+```
+
+The `::` after the name is currently unused on `derived` — its presence is the whole discriminator: async initializer, tracked re-run, gated settle. Plain `derived x = expr` is untouched. The gate is **annotation-position** (on the cell) rather than the §10.1 expression-position spelling (`EXPR :: SCHEMA`) because the initializer *re-runs* — the gate is part of the cell's contract, not of one evaluation. Both spellings rhyme with `value :: Schema` [→ ch:type-and-schema-system] and gate identically.
+
+**Static semantics.** The cell types `{ data: Infer<S> | undefined, error, pending }` — the §3 `async signal` shape — with **stale-while-revalidate**: on re-run, `data` retains the previous value while `pending` flips true (contrast `async signal`, whose `data` starts `undefined` and never re-runs). A parse failure is a *state*, not a crash: the `Err` lands in `error`, branch-never-throw, the same inbound-gate mode sync uses [→ ch:data-sync-and-authority §3.3].
+
+**Dynamic semantics / desugar.** Signals read inside `EXPR` are tracked; any change re-runs it. Each run holds a run-id and an `AbortController` (the `promiseSignal` threading convention, §3.3): a superseded run is aborted and its settle discarded — no out-of-order clobber.
+
+```
+# Desugar (proposed):  derived NAME :: SCHEMA = EXPR
+Para (.pui):
+    derived user :: User = graphql.userById(id);
+Runes (.pui):
+    let user = $state({ data: undefined, error: undefined, pending: true });
+    $effect.pre(() => {                                   // reads of `id` tracked → re-run on change
+      const q = querySignal(s => (graphql.userById(id)), User);   // latest-wins + abort + parse gate
+      const seed = q.peek?.(); if (seed !== undefined) user = seed;
+      const un = q.subscribe?.((__v: typeof user) => { user = __v; });
+      return () => { un?.(); q.dispose?.(); };            // abort in-flight run before re-key/unmount
+    });
+```
+
+`querySignal` is `promiseSignal`'s tracked, gated sibling and lives beside it in `@lyku/para-signals` — it is client-pull with no reconcile, so it does **not** belong to `@lyku/para-sync`. The lowering is the standard bridge with the construct site moved *inside* `$effect.pre` (the re-keying §3.3 declined to give `async signal`).
+
+**Interaction.** Composes with §10.3 (`derived user :: User = fetchUser(id) retry 3 timeout 5s` — the modifiers wrap the producer inside each run). The push-flavored mirrors are [→ ch:data-sync-and-authority §13.7–§13.8] — the full taxonomy: `derived :: S =` (pull, gate) · `sync :: S from query()` (push, gate + reconcile, live) · `sync :: S from server … policy` (push, gate + reconcile, declared refresh). Implementation plan: `para-sync-query-plan.md` §5 (step 1 of the build order — fully client-side, ships independently of everything sync-side).
+
+**Example.**
+
+```pui
+<!-- .pui -->
+<script lang="ts">
+  prop id: string;
+  derived user :: User = graphql.userById(id);    // refetches when `id` changes; response gated by User
+</script>
+{#if user.data}<Profile user={user.data}/>{:else if user.pending}<Spinner/>{:else}<Err e={user.error}/>{/if}
 ```
 
 ---
