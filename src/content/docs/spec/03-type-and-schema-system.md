@@ -7,7 +7,7 @@ sidebar:
 
 # Chapter: The Schema Spine — Types, Schemas & Refinements
 
-&gt; **Status of this chapter:** Mixed. The six `schema` declaration forms, the `__paraFromSchema` lowering and its sibling type alias, the constraint brands (`StringOf`/`NumberOf`/`BigIntOf`/`BooleanOf`/`ArrayOf`/`ObjectOf`) with their extended-vs-standard variant collapse, the refinement and primitive aliases, `SchemaValue`/`Infer`/`InferFromSchema`/`Handles`, the `::` validation marker, and `is`/`is not` guards (including literal membership) are **Shipped** (in `language-surface.ts` and the JS mirrors today; the runtime decoration `__paraFromSchema` and the `::` parse-injection are owned by the canonical runtime, cited as evidence). Everything in *§12 Proposed extensions* — schema algebra, relations/foreign-keys, computed/derived fields & cross-field refinements, first-class `Option<T>`, co-located versioning/migration, and branded units/currency — is **Proposed** (net-new surface, not in the catalog).
+&gt; **Status of this chapter:** Mixed. The seven `schema` declaration forms, the registry lowering (`__paraSchemaDecl`/`__paraSchemaIngest`/`__paraSchemaRegister` + the sibling type alias), symbol-reference → `$ref` recursion with the escape-node check (§2.4), the capability modifiers `cyclic`/`schema(depth:)`/`identity: preserve` (§2.5), the constraint brands (`StringOf`/`NumberOf`/`BigIntOf`/`BooleanOf`/`ArrayOf`/`ObjectOf`) with their extended-vs-standard variant collapse, the refinement and primitive aliases, `SchemaValue`/`Infer`/`InferFromSchema`/`Handles`/`FromDecl`, the schema-driven msgpack codec (`.encode`/`.decode`, REF ext `0x50` — §7.5), the `ts<…>` extractor (§7.7, `@lyku/para-extract`), the `::` validation marker, and `is`/`is not` guards (including literal membership) are **Shipped** (in `language-surface.ts`, the canonical runtime, and `@lyku/para-schema`/`para-extract` today; revised 2026-07-27 — the earlier thunk/Proxy lowering this chapter once specified is deleted, see the §2 revision note). Everything in *§12 Proposed extensions* — schema algebra, relations/foreign-keys, computed/derived fields & cross-field refinements, first-class `Option<T>`, co-located versioning/migration, and branded units/currency — is **Proposed** (net-new surface, not in the catalog).
 &gt; **Cross-refs:** This chapter owns the **model** and its **TS-type projection** — the single source of truth from which every other projection derives. The boundary-gate *use* of `::` (handler entry, throw-on-`Err`) and the sync parse-gate use of `sync NAME :: S from KEY` are [→ ch:errors-results-and-validation] and [→ ch:data-sync-and-authority] respectively; this chapter defines what `::`/`is` *mean* (schema-bound), not how a handler or reconciler consumes them. The db/api/client/codec/reconciler **codegen mechanics** are [→ ch:modules-projections-and-build]; this chapter defines the spine those projections read, not the projections. `Result<T,E>` is shared with [→ ch:errors-results-and-validation]; it is *defined* here because `schema.parse` returns it. The keyword catalog this chapter conforms to is `src/language-surface.ts` [→ ch:overview-and-surfaces §3.1].
 
 ---
@@ -16,35 +16,39 @@ sidebar:
 
 The four pillars of Para are one idea viewed from four distances [→ ch:overview-and-surfaces §0]: a **schema** describes the *shape and constraints of a value at rest*; a **signal** describes that value *changing over time in one process* [→ ch:reactivity-core]; **sync** describes it *changing across a trust boundary* [→ ch:data-sync-and-authority]; a **source** describes it *driven by the outside world* [→ ch:sources-async-and-native]. This chapter owns the *at-rest* member — and because every other member reconciles, validates, and transports *the same value*, the schema is upstream of all three. That is the literal content of "the schema is the application": db model, api contract, typed client, server handles, boundary validation, wire codec, and client⇄server sync are **projections** of the `schema` declarations, not a stack assembled by hand [→ schema-is-the-application].
 
-This chapter specifies the spine itself: how a `schema` is declared (six surface forms, §1), what it lowers to (`__paraFromSchema` + a sibling type alias, §2), the **JSON-Schema-2020-12 body grammar** the model is written in (§3), the **brand machinery** that carries constraints into the TS type system (§4–§5), the **refinement and primitive aliases** that make that body legible (§6), the **runtime/type projection** (`SchemaValue`/`Infer`/`InferFromSchema`/`Handles`, §7), and the two schema-bound validation operators (`::`, §8; `is`/`is not`, §9) plus the `Result` they speak in (§10). §11 states the spine invariants; §12 proposes the net-new surface that closes the remaining "the schema is the application" gaps (relations, computed fields, versioning, units).
+This chapter specifies the spine itself: how a `schema` is declared (seven surface forms + capability modifiers, §1), what it lowers to (the schema registry + a sibling type alias, §2 — including symbol-reference → `$ref` recursion), the **JSON-Schema-2020-12 body grammar** the model is written in (§3), the **brand machinery** that carries constraints into the TS type system (§4–§5), the **refinement and primitive aliases** that make that body legible (§6), the **runtime/type projection** (`SchemaValue`/`Infer`/`InferFromSchema`/`Handles`, §7), and the two schema-bound validation operators (`::`, §8; `is`/`is not`, §9) plus the `Result` they speak in (§10). §11 states the spine invariants; §12 proposes the net-new surface that closes the remaining "the schema is the application" gaps (relations, computed fields, versioning, units).
 
 Three invariants frame everything:
 
 - **INV-schema-1 (one spine, sole source).** Every typed artifact that crosses a boundary (table column, route contract field, client return shape, wire field, synced cell) is *derived from* a `schema`, never hand-declared in parallel. A field that exists in a projection but not in a schema is the I3 gap this chapter exists to forbid: the model is **diffable against the live DB** [→ ch:modules-projections-and-build], so "derived from the spine" is mechanically checkable, and drift is a compile error.
-- **INV-schema-2 (glass-floor model).** A `schema` lowers to a single readable `const NAME = __paraFromSchema(() => ( …JSON-Schema-2020-12 literal… ))` plus a sibling `type NAME` alias (§2). The body is *literal JSON Schema you could have written by hand* — no reflection, no proprietary DSL AST. Outgrowing the projection means reading the lowering and overriding one projection [→ ch:modules-projections-and-build], never abandoning the model (I1).
+- **INV-schema-2 (glass-floor model).** A `schema` lowers to a single readable `const NAME = __paraSchemaDecl(import.meta.url, "NAME", …JSON-Schema-2020-12 literal… )` plus a sibling `type NAME` alias (§2). The body is *literal JSON Schema you could have written by hand* — no reflection, no proprietary DSL AST. Outgrowing the projection means reading the lowering and overriding one projection [→ ch:modules-projections-and-build], never abandoning the model (I1).
 - **INV-schema-3 (constraints are typed, both sides).** A constraint expressible in the body (`minLength`, `format`, `integer`, `enum`, …) is carried into the TS type via a **brand** (§4) under the extended variant, so the *full* constraint set — not just the base type — reaches both client and server. "Types-ish + hand-roll the size/enum checks in the handler" is exactly the A2 failure this discharges; the constraint lives once, in the schema, and projects everywhere (I3, A2).
 
 ---
 
-## 1. The `schema` declaration — six surface forms
+## 1. The `schema` declaration — seven surface forms
 
-`schema` is Para's **single shape primitive**. There is exactly one keyword; it has six surface forms that differ only in *where the JSON-Schema body comes from* and *whether a name/export is bound*. All six lower through the same runtime helper (`__paraFromSchema`, §2) and all six mint the same runtime shape (`SchemaValue<T,S>`, §7).
+`schema` is Para's **single shape primitive**. There is exactly one keyword; it has seven surface forms that differ only in *where the JSON-Schema body comes from* and *whether a name/export is bound*. All seven end in the same decoration step (§2.3) and all seven mint the same runtime shape (`SchemaValue<T,S>`, §7); the named forms additionally register under a stable ID so recursion is representable (§2.4).
 
 ### Grammar
 
 ```
-SchemaDecl   ::= Export? "schema" Ident SchemaSource          ⟨named forms⟩
+SchemaDecl   ::= Export? CyclicMod? "schema" ConfigList? Ident SchemaSource   ⟨named forms; modifiers §2.5⟩
                | "schema" SchemaBody                           ⟨F4: inline/anonymous, expression position⟩
 SchemaSource ::= SchemaBody                                    ⟨F1: brace body⟩
+               | "=" TsExtract                                 ⟨F7: checker-driven TS extraction, §7.7⟩
                | "=" Expr                                      ⟨F2: assignment⟩
                | "from" Expr                                   ⟨F3: ingestion⟩
+CyclicMod    ::= "cyclic" ("(" IntLiteral ")")?               ⟨capability, §2.5 — `=`/`from` forms only⟩
+ConfigList   ::= "(" ConfigEntry ("," ConfigEntry)* ")"       ⟨capability config, §2.5⟩
+TsExtract    ::= "ts" "<" "import" "(" StringLiteral ")" "." Ident ">"
 SchemaBody   ::= "{" SchemaField ("," SchemaField)* ","? "}"
 Export       ::= "export"
 SchemaField  ::= Ident "?"? ":" Type
 Type         ::= ⟨the schema-body type grammar — §3, §6⟩
 ```
 
-The catalog enumerates the recognizer patterns for each (`schema-decl`, `schema-from`, `schema-inline`, `export-schema-decl`, `export-schema-from`, `schema-bare`); the six surface forms are:
+The catalog enumerates the recognizer patterns for each (`schema-decl`, `schema-from`, `schema-inline`, `export-schema-decl`, `export-schema-from`, `schema-bare`, `cyclic-schema`, `schema-config-decl`, `schema-ts-extract`); the seven surface forms are:
 
 | # | Form | Where the body comes from | Binds | Status |
 |---|---|---|---|---|
@@ -54,6 +58,9 @@ The catalog enumerates the recognizer patterns for each (`schema-decl`, `schema-
 | **F4** | `schema { … }` | inline brace body, **no name** (expression position) | *(the expression value)* | Shipped |
 | **F5** | `export schema NAME { … }` / `= …` | as F1/F2, re-exported | `export const`/`type NAME` | Shipped |
 | **F6** | `export schema NAME from EXPR` | as F3, re-exported | `export const`/`type NAME` | Shipped |
+| **F7** | `schema NAME = ts<import('./x').T>` | **extracted from a TS type** by the checker at build time (§7.7) | `const NAME` + `type NAME` | Shipped |
+
+The named forms additionally accept the **capability modifiers** (`cyclic [(n)]` prefix; `(depth: …, identity: …)` config list — §2.5) on the `=`/`from` sources; modifiers on the F1 brace body are a compile error by design.
 
 **Lexical note (statement-position keyword detection).** `schema` fires as the keyword contextually [→ ch:overview-and-surfaces §1.1]: the catalog's `schema-bare` fallback explicitly *skips* `schema` when immediately followed by `=`, `.`, or `(` (`\b(schema)\b(?![\s]*[=.(])`), so `const schema = {}` (value), `schema.parse(x)` (member), and `schema(x)` (call) are **not** rewritten. This is what keeps the surface a strict superset: an identifier named `schema` survives untouched. The named forms additionally require `schema` + an identifier (`schema NAME`), and the `from` form requires `schema NAME from` as three tokens, so a property literally named `from` inside a body never triggers F3.
 
@@ -67,7 +74,7 @@ A `schema NAME …` declaration introduces **two bindings in one statement** (§
 
 ### Dynamic semantics
 
-At runtime the `const NAME` holds the decorated `SchemaValue` (§2.3) the instant the module evaluates; there is no lazy/async step (the `() => (…)` thunk in the lowering is evaluated eagerly by `__paraFromSchema`, §2). `NAME.parse(v)` and `NAME.is(v)` are available immediately. F4 (anonymous) produces the same value with no binding — it is consumed in place (e.g. a `request`/`response` slot of a handler model, §7.4).
+At runtime the `const NAME` holds the decorated `SchemaValue` (§2.3) the instant the module evaluates; there is no lazy/async step (the body is a plain eagerly-evaluated expression — recursion defers through `$ref` data, not through evaluation, §2.4). `NAME.parse(v)` and `NAME.is(v)` are available immediately. F4 (anonymous) produces the same value with no binding — it is consumed in place (e.g. a `request`/`response` slot of a handler model, §7.4).
 
 ### Examples
 
@@ -108,9 +115,11 @@ const getUser = {
 
 ---
 
-## 2. Lowering: `__paraFromSchema` + the sibling type alias
+## 2. Lowering: the schema registry + the sibling type alias
 
-All six forms lower to a call to the runtime helper **`__paraFromSchema`** (which mints the `SchemaValue`, §7, and attaches field accessors) plus, for the named forms, a sibling **type alias**. This is the glass floor (I1): the lowering is a `const` you could have written by hand calling one ordinary function, and a `type` alias that resolves to the JSON-Schema body.
+All *named* forms lower to a call into the **schema registry** — `__paraSchemaDecl` (F1-desugared/F2/F5), `__paraSchemaIngest` (F3/F6), `__paraSchemaRegister` (the DSL braces model) — plus a sibling **type alias**; the anonymous F4 keeps the plain decorator `__paraFromSchema`. This is the glass floor (I1): the lowering is a `const` you could have written by hand calling one ordinary function, and a `type` alias that resolves to the JSON-Schema body. Registration is what makes recursion representable (§2.4): every named declaration gets a **stable ID** — `import.meta.url + "#" + NAME` — under which references from this and other schemas resolve.
+
+&gt; **Revision note (2026-07).** An earlier revision of this chapter specified a thunk lowering (`__paraFromSchema(() => body)`) with lazy Proxy resolution for recursion. That mechanism is **deleted**: recursion is now represented as registry `$ref`s (§2.4), bodies are plain eagerly-evaluated expressions, and schema values are plain **acyclic JSON** (safe to `JSON.stringify`, safe to walk).
 
 ### 2.1 The named-declaration lowering (F1/F2/F3/F5/F6)
 
@@ -119,7 +128,7 @@ All six forms lower to a call to the runtime helper **`__paraFromSchema`** (whic
 Para:
     schema Order = { type: "object", properties: { id: { type: "bigint" } }, required: ["id"] };
 TS:
-    const Order = __paraFromSchema(() => ({ type: "object", properties: { id: { type: "bigint" } }, required: ["id"] }));
+    const Order = __paraSchemaDecl(import.meta.url, "Order", { type: "object", properties: { id: { type: "bigint" } }, required: ["id"] });
     type Order = (typeof Order)["schema"];
 ```
 
@@ -128,7 +137,7 @@ TS:
 Para:
     schema OrderExternal from orderJson;
 TS:
-    const OrderExternal = __paraFromSchema(() => (orderJson));
+    const OrderExternal = __paraSchemaIngest(import.meta.url, "OrderExternal", orderJson);
     type OrderExternal = (typeof OrderExternal)["schema"];
 ```
 
@@ -137,16 +146,19 @@ TS:
 Para:
     export schema Account = accountSchema;
 TS:
-    export const Account = __paraFromSchema(() => (accountSchema));
+    export const Account = __paraSchemaDecl(import.meta.url, "Account", accountSchema);
     export type Account = (typeof Account)["schema"];
 ```
 
 Rules:
-- The body is wrapped in a **thunk** `() => (EXPR)`. The thunk exists so the call site is a plain expression that tsc type-checks structurally (the helper's signature is `<S>(s: () => S) => SchemaValue<unknown, S> & S`, §7), and so the schema literal participates in inference without an eager allocation order hazard.
+- **The body is a plain expression, evaluated eagerly** — no thunk. (The old thunk existed to defer evaluation past TDZ for recursive references; §2.4's `$ref` rewrite removes the need — a self-reference never evaluates the referenced binding at declaration time.) Capability modifiers, when present (§2.5), arrive as a fourth argument.
+- Registration: the helper stamps non-enumerable `$id` (`import.meta.url + "#" + NAME`) and `$name` on the decorated value and stores it in the module-level registry under `$id`. Re-evaluating the module (HMR) re-registers under the same key.
+- `__paraSchemaIngest` is deliberately a **separate entry point** even though it delegates to `__paraSchemaDecl` today: ingestion-time checks (escape-node validation of foreign bodies, shell-constructibility) land there without touching the literal-declaration path.
+- The **DSL braces form** (`schema NAME { field: type }`) registers its model **as-is** via `__paraSchemaRegister` — no re-decoration, because the DSL's inline codegen'd `parse`/`validate` stay authoritative; registration exists so `$ref`s from JSON-literal bodies resolve to it, with the validator delegating to the model's own `.parse`.
 - The **sibling type alias** is `type NAME = (typeof NAME)["schema"]`, emitted as a *second statement* (the JS mirror emits it semicolon-prefixed on the same line — `;type NAME = …` — to preserve source columns; the spec form is two statements). It indexes the runtime value's `schema` member type, which *is* the JSON-Schema body type `S`. This is deliberately **not** spelled `Infer<typeof NAME>` even though the two are equivalent for the model's inferred shape: `(typeof NAME)["schema"]` resolves to the unwrapped body and skips the `{ parse, is, schema } & S` intersection walk, which is a measured **1.5–2.2× tsc speedup** on large spines. `Infer<typeof NAME>` (§7) remains the form *hand-written* code reaches for; the two coincide on the data shape.
 - The `export` keyword, when present (F5/F6), is threaded onto *both* the `const` and the `type` so the name is exported in both namespaces.
 
-&gt; **Edge case (F1 brace-body lowering in the IDE mirror).** The runtime emit for **all** named forms is the `const NAME = __paraFromSchema(…)` above; this is owned by the canonical runtime ([→ ch:overview-and-surfaces §3]). The IDE-only mirror (ts-plugin / LSP) takes a *shortcut* for the F1 brace form specifically: it rewrites `schema NAME { …fields… }` to `type NAME = { …fields… }` plus a `const NAME: { parse; schema }` *stub* (a non-evaluating value of the right type) so tsc gets hover/navigation without running `__paraFromSchema`. The stub is an editor optimization, not the runtime semantics; the spec lowering is the `__paraFromSchema` form, and the parity contract pins the runtime emit, not the IDE stub [→ ch:overview-and-surfaces §3.2].
+&gt; **Edge case (the IDE mirror's typing stubs).** The runtime emit for **all** named forms is the registry call above; this is owned by the canonical runtime ([→ ch:overview-and-surfaces §3]). The IDE-only mirror (ts-plugin / LSP) emits *non-evaluating typing stubs* instead: the F1 brace form becomes `type NAME = { …fields… }` plus a typed `const` stub, and the `=` form is wrapped in a thunk-shaped `__paraFromSchema(() => (…))` call purely so tsc sees the right structural type. The stubs are an editor optimization that never executes — the parity contract pins the runtime emit (the registry call), not the IDE stub [→ ch:overview-and-surfaces §3.2].
 
 ### 2.2 The inline/anonymous lowering (F4)
 
@@ -156,26 +168,72 @@ Para:
     const getUser = { request: schema { id: bigint }, response: schema { name: string } };
 TS:
     const getUser = {
-      request:  __paraFromSchema(() => ({ id: bigint })),
-      response: __paraFromSchema(() => ({ name: string })),
+      request:  __paraFromSchema({ id: bigint }),
+      response: __paraFromSchema({ name: string }),
     };
 ```
 
-F4 emits only the `__paraFromSchema(…)` call — no `const`, no alias — because it is an expression. Its TS *type* is recovered structurally by the helper's return (`SchemaValue<unknown, S> & S`), so `Infer<typeof getUser.request>` (§7.4) still works without a named alias. (The body `{ id: bigint }` here is F1-style sugar lowering to `{ properties: { id: { type: "bigint" } }, required: ["id"] }` — §3.)
+F4 emits only the `__paraFromSchema(…)` call — no `const`, no alias, **no registration** (no name means nothing to register; `$ref`s *inside* an anonymous body still resolve through the registry). Its TS *type* is recovered structurally by the helper's return (`SchemaValue<unknown, S> & S`), so `Infer<typeof getUser.request>` (§7.4) still works without a named alias. (The body `{ id: bigint }` here is F1-style sugar lowering to `{ properties: { id: { type: "bigint" } }, required: ["id"] }` — §3.)
 
 ### 2.3 The runtime helper
 
-`__paraFromSchema` is the runtime decoration step. Its contract:
+`__paraFromSchema` is the shared decoration step every form ends in (the named forms via `__paraSchemaDecl`'s eager path). Its contract:
 
 ```
-__paraFromSchema<S>(thunk: () => S): SchemaValue<unknown, S> & S
+__paraFromSchema<S>(body: S): SchemaValue<unknown, S> & S
 ```
 
-- It evaluates the thunk once to obtain the JSON-Schema body `S`.
-- It returns a value carrying `parse(v) → Result<T,string>`, `is(v) → v is T`, and `schema` (the body), with **field-navigation accessors** spread on (`User.id`, `User.email`, …) typed structurally via the `& S` intersection (§7.1).
+- It returns a value carrying `parse(v) → Result<T,string>`, `is(v) → v is T`, and `schema` (the body), with **field-navigation accessors** spread on (`User.id`, `User.email`, …) typed structurally via the `& S` intersection (§7.1), plus the wire-codec members `.encode`/`.decode` (§7.5), all non-enumerable where they are not the body's own keys.
 - It is **erasable to a readable function call** (I1): the public, non-keyword name is `fromSchema` (re-exported from `@lyku/para-schema`) for pure-TS/JS consumers who do not have the keyword; `__paraFromSchema` is its in-runtime name. No reflection, no proxy magic that a developer cannot open.
 
-&gt; **INV-schema-4 (one helper, all forms).** All six surface forms lower onto exactly one runtime entry point (`__paraFromSchema`) and one type-projection shape (`(typeof NAME)["schema"]` / `SchemaValue<T,S>`). There is no per-form special-casing in the *runtime*; the forms differ only at the surface (where the body and binding come from). This is what makes the spine a single thing to reason about, regardless of whether a schema was authored inline, assigned, or ingested.
+&gt; **INV-schema-4 (one decoration path, all forms).** Every surface form ends in exactly one decoration step and one type-projection shape (`(typeof NAME)["schema"]` / `SchemaValue<T,S>`); the named forms add exactly one thing on top — registration under a stable `$id`. There is no per-form special-casing in the *validator or codec*; the forms differ only at the surface (where the body and binding come from) plus whether a registry entry exists. This is what makes the spine a single thing to reason about, regardless of whether a schema was authored inline, assigned, or ingested.
+
+### 2.4 Symbol references → `$ref` — recursion without cyclic values
+
+Inside a schema-value position, a bare reference to an in-scope schema declaration's **own symbol** rewrites at visit time to a registry reference:
+
+```
+# Desugar:  self/forward reference → { $ref: "#Name" }
+Para:
+    export schema Comment = {
+      type: "object",
+      properties: { body: { type: "string" }, replies: { type: "array", items: Comment } },
+      required: ["body"],
+    };
+TS:
+    export const Comment = __paraSchemaDecl(import.meta.url, "Comment", {
+      type: "object",
+      properties: { body: { type: "string" }, replies: { type: "array", items: { $ref: "#Comment" } } },
+      required: ["body"],
+    });
+```
+
+- **No thunk, no TDZ dance:** the reference never evaluates the referenced binding at declaration time — it is data. Self-reference, forward reference, and mutual recursion all work identically; a fragment `#Name` resolves in the declaring module's registry namespace (the full ID is `<module-url>#Name`).
+- **Resolution is lazy, navigation preserves identity:** the registry resolves a `$ref` at first use, and navigating through one yields the *registered* schema value itself — `Tree.children.element === Tree` — so structural walks terminate by identity, not by depth luck.
+- **Schema values stay plain acyclic JSON.** `JSON.stringify(Comment.schema)` never throws; codegen and projections walk ordinary data.
+- **The escape-node check (first parse):** a `$ref` loop in a *plain* (non-`cyclic`) declaration must pass through an **escape node** — an optional property, a nullable/union arm, an array that may be empty — because a loop with every hop `required` can never be satisfied by any finite acyclic value. Violations are rejected when the declaration is first parsed against, not discovered as runaway recursion. Loops passing through a `cyclic` declaration (§2.5) are exempt — their values are legally cyclic.
+
+### 2.5 Capability modifiers — `cyclic`, `schema(depth:)`, `identity: preserve`
+
+```
+Decl        ::= Export? CyclicMod? "schema" ConfigList? Ident ("=" | "from") …
+CyclicMod   ::= "cyclic" ("(" IntLiteral ")")?           ⟨value cycles allowed; optionally ≤ n hops⟩
+ConfigList  ::= "(" "depth" ":" (IntLiteral | "unbounded") ("," "identity" ":" "preserve")? ")"
+```
+
+```parabun
+cyclic schema Node = { type: "object", properties: { next: Node }, required: [] };
+schema(depth: 32) Comment = { …replies: { type: "array", items: Comment }… };
+schema(identity: preserve) Doc = { … };
+```
+
+Capabilities lower as the fourth `__paraSchemaDecl` argument and are stamped **non-enumerably** as `$cyclic` / `$depth` / `$identity` on the declaration:
+
+- **`cyclic [(n)]`** licenses actual reference loops in *values*. Without it, the validator's in-flight tracking rejects a value that revisits an object already on the current path; with it, revisits reconcile (optionally bounded to cycles of ≤ n hops), and the wire codec (§7.5) switches to reference-tracked encoding.
+- **`depth: n`** caps recursive *nesting* per declaration along a path (path-scoped counters — mutual recursion counts each declaration separately). Absent, nesting is bounded only by the value being finite and acyclic. `depth: unbounded` is the explicit, visible spelling of "I mean it."
+- **`identity: preserve`** makes decode reconstruct shared references (the same object appearing twice decodes as one object, not two copies) — reference-tracked encoding without licensing cycles.
+- **Non-propagation:** capabilities do not cross declaration boundaries. A `cyclic` schema embedding a plain `Comment` does not make comment values cyclic; each declaration's caps govern its own nodes.
+- Modifiers on the DSL braces form (`cyclic schema X { … }`) are a **compile error** by design — the DSL's inline codegen'd validators carry no capability machinery.
 
 ---
 
@@ -217,6 +275,7 @@ Para adds exactly the extensions the spine's projections need; each is named so 
 - **`type: "bigint"`** — a 64-bit/arbitrary-precision integer at rest. Standard JSON Schema has no bigint; Para adds it because the DB projection needs `bigint`/snowflake columns and the wire codec needs a non-lossy integer (A1). It projects to `BigIntOf<C>` (§4) / `bigint`.
 - **Lockstep DB-type aliases** accepted in `format`/type position by F3 ingestion and the projection: `varchar`, `text`, `char`, `timestamptz`, `snowflake`, `numeric`, `jsonb`, `enum`. These are sugar the DB projection [→ ch:modules-projections-and-build] understands; they normalize to a standard `type`+`format` pair for validation.
 - The Para **field sugar** of F1 (`int`, `str`, `Email`, `[str](1..=10)`, postfix `?`) — §6. This is surface sugar that *expands to* the standard body above; it adds no new body keyword.
+- **Fragment `$ref`s** (`{ $ref: "#Name" }`) — standard 2020-12 syntax, Para-specific *resolution*: the fragment resolves in the declaring module's registry namespace (§2.4), and a bare schema-symbol reference in a body is sugar that compiles to exactly this node. A `$ref` to an unregistered name is a first-parse error, not a silent `any`.
 
 &gt; **INV-schema-5 (standard body, total coverage).** Every Para field-sugar form has an exact JSON-Schema-2020-12 expansion (§6). There is no field whose meaning lives *only* in Para and cannot be written as a standard body — which is precisely why F3 ingestion is a peer of F1 authoring: the two converge on the same document. A construct that could only be expressed by reaching outside 2020-12 would break F3 round-tripping and is rejected at the catalog level.
 
@@ -455,6 +514,32 @@ const handler: Handles<typeof getUser, AppCtx> = (req, ctx) => {
 
 `Ctx` is where the **typed auth/middleware context** threads — the A4 hole (custom auth forcing `any`). Because `Ctx` is an ordinary type parameter the application substitutes (`Handles<typeof M, SecureContext<Model>>`), a custom-auth context is *typed end-to-end* with no `any`; the spine never forces an escape (A4, [→ ch:errors-results-and-validation]).
 
+### 7.5 `.encode(v)` / `.decode(bytes)` — the schema-driven wire codec
+
+Every decorated schema value carries non-enumerable codec members: `NAME.encode(v) → Uint8Array` and `NAME.decode(bytes) → v`, a **schema-driven MessagePack** codec (the generation mechanics and the codec-as-projection framing are [→ ch:modules-projections-and-build §5]; the *surface* is here because it lives on `SchemaValue`). Two schema-aware behaviors distinguish it from a generic packer:
+
+- **Reference tracking** engages when the declaration is `cyclic` **or** `identity: preserve` (§2.5): objects are registered in preorder during encode, and a repeat emits a value-level backreference — MessagePack ext type `0x50` (`'P'`), reserved in `para-schema/msgpack-ext-ids.md`. Decode is shell-first (allocate, then fill), so cycles reconstruct without unbounded recursion, and in-decode depth/cycle bounds enforce the same `$depth`/`$cyclic` caps the validator does — a hostile byte stream cannot bypass the capability model.
+- **Two kinds of "ref" never mix:** schema-level `$ref` (§2.4) is a *registry* reference inside the schema IR; the `0x50` ext is a *value-level* backreference inside one encoded stream.
+
+### 7.6 `FromDecl<T, Name>` — the declaration-origin marker
+
+```ts
+type FromDecl<T, Name extends string> = T & { readonly [__paraDeclBrand]: Name };   // extended variant
+type FromDecl<T, _Name extends string> = T;                                          // standard variant
+```
+
+A phantom brand tying a *TS type* back to the *named declaration* it was generated from. Codegen (e.g. lyku's `gen-dts-rewrite`) emits `export type UserData = FromDecl<InferFromSchema<typeof User>, "User">` next to each exported declaration; the extractor (§7.7) recognizes the brand and links the type to the registry node instead of re-deriving its structure. Collapses to bare `T` in the standard variant (§5) — consumers without the `parabun` condition never see the brand.
+
+### 7.7 `ts<import('./x').T>` — checker-driven TS→schema extraction (F7)
+
+The reverse projection: deriving the *schema* from an existing **TS type**, resolved by the real TypeScript checker (generics instantiated, intersections collapsed, constraint brands recovered via the extended variant's mangled unique-symbol markers).
+
+```parabun
+schema User = ts<import('./models').User>;
+```
+
+The directive is **closed-form** (a string-literal import specifier + a type name — nothing the checker can't resolve in isolation). It follows the committed-artifact philosophy: `para-extract <file>` substitutes the site with the extracted JSON-Schema body in place, leaving the directive as a marker comment (`/* ts<…> */ { …body… }`) so re-extraction is idempotent and the artifact is reviewable in the diff. An **unsubstituted** directive that reaches runtime throws with the fix-it (`run para-extract`) rather than silently producing an empty schema. Named types route through `FromDecl` brands (§7.6) to registry `$ref`s (§2.4), so an extracted schema participates in recursion identically to a hand-written one. The extractor lives in `@lyku/para-extract` (checker lowering, sibling emission, `--check` drift gate).
+
 ---
 
 ## 8. `::` — the schema-bound validation marker
@@ -571,9 +656,9 @@ const user = r.value;                        // user: Infer<typeof User>
 ## 11. Spine invariants (summary)
 
 - **INV-schema-1** — every typed boundary artifact derives from a `schema` (sole source; drift is a compile error against the live DB).
-- **INV-schema-2** — a `schema` lowers to a readable `__paraFromSchema(() => ( JSON-Schema-2020-12 ))` + sibling alias; the body is hand-writable (glass floor, I1).
+- **INV-schema-2** — a `schema` lowers to a readable registry call (`__paraSchemaDecl(url, name, JSON-Schema-2020-12)`) + sibling alias; the body is hand-writable, the value plain acyclic JSON (glass floor, I1).
 - **INV-schema-3** — constraints are carried into the TS type via brands (full constraint set, both sides; A2).
-- **INV-schema-4** — all six forms lower onto one runtime helper and one type-projection shape.
+- **INV-schema-4** — all seven forms end in one decoration step and one type-projection shape; named forms add registration under a stable `$id`, nothing else.
 - **INV-schema-5** — every Para field sugar has an exact 2020-12 expansion (F1 and F3 converge).
 - **INV-schema-6** — extended and standard variants denote the same runtime-valid set; they differ only in compiler help.
 

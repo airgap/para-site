@@ -42,7 +42,7 @@ const examples = [
 // not pitched as a user-facing library — its function-call API is ugly
 // without the |> sugar. Page still exists at /docs/pipeline/ for the
 // language-internals doc, just not in the libs sidebar group.
-const libModules = ["signals", "sync", "kit", "arena", "parallel", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
+const libModules = ["schema", "signals", "sync", "kit", "arena", "parallel", "simd", "arrow", "csv", "rtp", "mcp"].map(slug => ({
   label: `@lyku/para-${slug}`,
   link: `${docsRoot}/${slug}/`,
 }));

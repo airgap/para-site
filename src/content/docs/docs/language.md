@@ -304,6 +304,26 @@ Lowers to `switch` (when arms are all literals or all Result/Option tags) or an 
 
 Companion: `Ok(x)` / `Err(e)` / `Some(x)` / `None` are constructor sugar for `{ tag: 'Ok', value: x }` etc.; `expr is Type` is a runtime type-guard that lowers to `Type.parse(expr).tag === 'Ok'` and narrows `expr` inside the `if` body via an injected typed predicate; `function f(req:: Type)` injects a parse-and-throw at entry.
 
+Beyond the field DSL, `schema` has an ingestion form and a recursion story
+([full reference](/docs/schema/)):
+
+```parabun
+schema External from orderJson;               // ingest an existing JSON Schema — same .parse/.schema
+schema Comment = {                             // self-reference compiles to { $ref: "#Comment" } — data, not evaluation
+  type: "object",
+  properties: { body: { type: "string" }, replies: { type: "array", items: Comment } },
+  required: ["body"],
+};
+cyclic schema Node = { … };                    // cyclic VALUES are licensed explicitly…
+schema(depth: 32) Thread = { … };              // …and nesting can be capped per declaration
+schema Account = ts<import('./m').Account>;    // extracted from a TS type by para-extract (checker-driven)
+```
+
+Recursive schemas are free (with an escape-node rule — a loop `required` at
+every hop is rejected at first parse); cyclic *values*, depth caps, and
+identity-preserving decode are per-declaration capabilities that the
+validator and the msgpack codec (`.encode`/`.decode`) both enforce.
+
 The same `is` keyword, with a **string/number literal union** on the right (instead of a capitalized `schema` name), is set-membership sugar:
 
 ```ts

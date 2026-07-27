@@ -25,6 +25,7 @@ This installs the `parabun` binary (with `pb` as a short alias) into `~/.parabun
 Install only the modules your code uses. Each module is its own npm package:
 
 ```bash
+npm install @lyku/para-schema      # schema brand types + FromDecl (the spine's type side)
 npm install @lyku/para-signals     # reactive primitives
 npm install @lyku/para-sync        # server-authoritative sync replicas
 npm install @lyku/para-kit         # fullstack sync projection (SvelteKit-shaped)
