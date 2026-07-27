@@ -5,7 +5,7 @@ description: Para's two namespaces — @lyku/para-* cross-runtime npm libraries 
 
 Para's two products ([Lang and Runtime](/docs/)) ship code across two npm-vs-binary namespaces. The split tells a reader at a glance whether an import is portable or needs the Runtime:
 
-- **`@lyku/para-*`** — nine cross-runtime libraries on npm. Pure JS / Wasm, no native dependencies. They run anywhere JS does — Node, Deno, Bun, browsers, ParaBun. This is most of Lang's runtime surface.
+- **`@lyku/para-*`** — a dozen cross-runtime libraries on npm. Pure JS / Wasm, no native dependencies. They run anywhere JS does — Node, Deno, Bun, browsers, ParaBun. This is most of Lang's runtime surface.
 - **`parabun:*`** — twelve native modules linked into the ParaBun binary. They wrap codec stacks, GPU compute, and hardware I/O — work that pure JS can't match. Only available when running on ParaBun.
 
 Both share the same import shape, so you don't have to think about which side you're on:
@@ -23,7 +23,10 @@ When you're on Parabun, `@lyku/para-*` libraries quietly use their `parabun:*` c
 
 | Module | `@lyku/para-*` | `parabun:*` | What it does |
 |---|:---:|:---:|---|
+| schema | ✓ | — | The spine's type side — brand types, `Infer`, `FromDecl` ([docs](/docs/schema/)) |
 | signals | ✓ | — | Reactive state — Signal / Computed / Effect |
+| sync | ✓ | — | Server-authoritative replicas — parse-gated, sequence-reconciled ([docs](/docs/sync/)) |
+| kit | ✓ | — | Fullstack sync projection — emit + host + SSE bridge ([docs](/docs/kit/)) |
 | parallel | ✓ | planned | Worker pool — pmap / preduce / psort + Mutex / Semaphore |
 | arena | ✓ | ✓ | Buffer pool + JSC-GC-deferring `scope()` |
 | lifecycle | ✓ | — | Process-state coordination — `keepAlive` with SIGINT/SIGTERM + onShutdown hook |
@@ -52,12 +55,16 @@ How to read it at a glance:
 - **— in `parabun:*`** → pure JS is already as fast as native here, so we don't ship one.
 - **`planned`** → on the roadmap. The `@lyku/para-*` library works today; the native fast path is tracked but not yet shipped.
 
-Two more npm packages back Para language features:
+More npm packages back Para language and tooling features:
 
 | Package | Backs which feature |
 |---|---|
 | `@lyku/para-pipeline` | `\|>` operator runtime + affine-chain `compile()` |
-| `@lyku/para-decimal` | Exact-decimal arithmetic for `0.1d` literals |
+| `@lyku/para-decimal` | Exact-decimal arithmetic for `0.1d` literals ([docs](/docs/decimal/)) |
+| `@lyku/para-extract` | The `ts<import('./x').T>` checker-driven schema extractor ([docs](/docs/schema/#the-ts-extractor--tsimportxt)) |
+| `@lyku/para-preprocess` | The `.pui` component preprocessor ([docs](/docs/pui/)) |
+| `@lyku/para-check` | `pui-check` — batch type-checking for `.pui` ([docs](/docs/pui/#type-checking--pui-check)) |
+| `@lyku/para-ui-native` | Native-reactive `.pui` adapters — parabun capability modules as `source` cells (pre-release) |
 
 ## What you can build
 
