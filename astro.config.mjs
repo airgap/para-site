@@ -20,6 +20,7 @@ const guides = [
   { label: "Install (libs)", link: `${docsRoot}/install-libs/` },
   { label: "Install (runtime)", link: `${docsRoot}/install-runtime/` },
   { label: "Language reference", link: `${docsRoot}/language/` },
+  { label: "Components (.pui)", link: `${docsRoot}/pui/` },
   { label: "Architecture", link: `${docsRoot}/architecture/` },
 ];
 // /playground is a standalone page, not a doc — keeping it in the

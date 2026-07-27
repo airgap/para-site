@@ -17,6 +17,7 @@ Try Lang in the browser at the **[Playground](/playground/)** — no install nee
 - **[Install (Lang)](/docs/install-libs/)** — compile `.pts` to JS plus the `@lyku/para-*` runtime packages (cross-runtime: Node / Bun / Deno / browsers).
 - **[Install (Runtime)](/docs/install-runtime/)** — single-script install for ParaBun on Linux / macOS.
 - **[Language reference](/docs/language/)** — every Lang extension with the JavaScript it desugars to.
+- **[Components (.pui)](/docs/pui/)** — Para's component filetype: setup, the declaration surface (`prop`/`signal`/`source`/sync), HMR, and `pui-check`.
 - **[Architecture](/docs/architecture/)** — how `@lyku/para-*` (cross-runtime npm) and `parabun:*` (native Runtime) split, with the full module index.
 - **Modules** — API references in the sidebar. Cross-runtime: `@lyku/para-schema` · `signals` · `sync` · `kit` · `parallel` · `arena` · `lifecycle` · `simd` · `csv` · `arrow` · `rtp` · `mcp`. Runtime-only: `parabun:llm` · `speech` · `vision` · `image` · `video` · `audio` · `camera` · `gpu` · `gpio` · `i2c` · `spi` · `assistant`. Plus `@lyku/para-pipeline` and `@lyku/para-decimal` which back Lang's `|>` operator and `Nd`-literal features.
 - **Examples** — worked projects across [frontend](/docs/examples/frontend/), [backend](/docs/examples/backend/), [edge](/docs/examples/edge/), [IoT](/docs/examples/iot-waterer/), [voice assistants](/docs/examples/voice-assistant/), and more.
