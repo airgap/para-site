@@ -30,6 +30,7 @@ const guides = [
 const examples = [
   { label: "Overview", link: `${docsRoot}/examples/` },
   { label: "Frontend (DOM)", link: `${docsRoot}/examples/frontend/` },
+  { label: "Live dashboard (fullstack sync)", link: `${docsRoot}/examples/live-dashboard/` },
   { label: "Backend (Node)", link: `${docsRoot}/examples/backend/` },
   { label: "Edge (Workers)", link: `${docsRoot}/examples/edge/` },
   { label: "Multi-plant waterer", link: `${docsRoot}/examples/iot-waterer/` },

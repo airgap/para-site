@@ -8,6 +8,7 @@ Each example is a complete project with file layout, source, build commands, and
 ## By host environment
 
 - **[Frontend](/docs/examples/frontend/)** — todo list with reactive DOM updates. Vite + vanilla DOM. Output is static.
+- **[Live dashboard](/docs/examples/live-dashboard/)** — fullstack sync in SvelteKit: keyed channels, a live typed query, an optimistic `mutate`, and a polled server aggregate, through `para-kit`'s emit + SSE loop.
 - **[Backend](/docs/examples/backend/)** — WebSocket server with per-connection signals and an SSE stats endpoint. Node 18+.
 - **[Edge](/docs/examples/edge/)** — Durable Object rate limiter with `when` blocks for once-per-window alerts. Cloudflare Workers.
 
