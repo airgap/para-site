@@ -10,7 +10,7 @@ Para is a parse-time syntax extension over TypeScript. The `.pts` parser lives i
 
 The transpiler emits standard `import`s of `@lyku/para-*` npm packages, so your bundler resolves them through normal node_modules — no aliases or bundler config needed.
 
-A standalone `@lyku/para-transpile` npm package (no ParaBun required) is on the roadmap. Until it ships, the build host needs ParaBun installed; runtime hosts (browser, Lambda, Workers, Node, Bun, Deno) do not.
+A standalone `@lyku/para-transpile` npm package (no ParaBun required) ships as a pre-release — it covers the core Lang operator surface and powers the site's [playground](/playground). ParaBun remains the canonical, full-surface build host (the schema forms and `.pui` pipeline live there); runtime hosts (browser, Lambda, Workers, Node, Bun, Deno) never need either.
 
 ## 1. Install ParaBun on the build host
 

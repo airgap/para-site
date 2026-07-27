@@ -68,7 +68,8 @@
       <p class="lede">
         The reactive forms desugar to imports from <code>@lyku/para-signals</code>; the rest desugar to plain JS. The
         <code>.pts</code> compiler today lives inside <a href="/runtime/">ParaBun</a>; a standalone
-        <code>@lyku/para-transpile</code> for non-ParaBun build hosts is in development.
+        <code>@lyku/para-transpile</code> (npm, pre-release) covers the core operator surface — it powers the
+        <a href="/playground">playground</a> — with full-surface parity in progress.
       </p>
 
       <h2 id="syntax">Syntax (Para Lang)</h2>
@@ -315,8 +316,9 @@
       <div class="install"><span class="prompt">$</span>parabun build src/main.pts --outdir dist/</div>
 
       <p class="caveat">
-        ParaBun is required for the build step today (it owns the <code>.pts</code> parser). A standalone
-        npm-installable transpiler (<code>@lyku/para-transpile</code>) is on the roadmap.
+        ParaBun owns the full <code>.pts</code> surface (schemas, <code>.pui</code>) and remains the canonical
+        build host; the standalone <code>@lyku/para-transpile</code> (npm, pre-release) covers the core operator
+        surface for non-ParaBun hosts.
       </p>
 
       <h2 id="examples">Examples</h2>
