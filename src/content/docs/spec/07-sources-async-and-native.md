@@ -7,7 +7,7 @@ sidebar:
 
 # Chapter: Sources, Async Data & Native/AI Integration
 
-&gt; **Status of this chapter:** Mixed. The *source convention* (`peek`/`subscribe`/`dispose`), the `source NAME = EXPR`, `async signal NAME = EXPR`, and `using NAME = EXPR` declaration forms, `promiseSignal`, the `from*` adapters (`fromAsyncIter`/`fromStream`/`fromEventTarget`/`fromStore`), the `throttled`/`debounced` rate-limiters, `proxySignal`, the `resource()`/`onDispose` handle, the `SourceHandle<T>` interface, and the `audioMeter` native-adapter pattern are all **Shipped** (in `@lyku/para-signals` / `@lyku/para-ui-native` / `para-preprocess` today). The 13 `parabun:*` native modules are **Shipped** runtime builtins; their *reactive surfacing through `source`* is **Shipped**, their *typed/constrained* surfacing is **Proposed** (§10.5). Everything in *Proposed Extensions* (§10) is **Proposed** (net-new surface, not in `language-surface.ts` today).
+&gt; **Status of this chapter:** Mixed. The *source convention* (`peek`/`subscribe`/`dispose`), the `source NAME = EXPR`, `async signal NAME = EXPR`, and `using NAME = EXPR` declaration forms, `promiseSignal`, the `from*` adapters (`fromAsyncIter`/`fromStream`/`fromEventTarget`/`fromStore`), the `throttled`/`debounced` rate-limiters, `proxySignal`, the `resource()`/`onDispose` handle, the `SourceHandle<T>` interface, and the `audioMeter` native-adapter pattern are all **Shipped** (in `@lyku/para-signals` / `@lyku/para-ui-native` / `para-preprocess` today). The 13 `parabun:*` native modules are **Shipped** runtime builtins; their *reactive surfacing through `source`* is **Shipped**, their *typed/constrained* surfacing is **Proposed** (§10.5). *Proposed Extensions* (§10) is **Proposed** except §10.7: the query-derived cell (`derived NAME :: SCHEMA = EXPR`) **Shipped 2026-07-26** — `querySignal` in `@lyku/para-signals`, the `para-preprocess` lowering, and the `language-surface.ts` catalog entry.
 &gt; **Cross-refs:** This chapter owns binding **external / async / native** producers into reactive cells via the source convention. The in-process reactive graph (`signal`/`derived`/`effect`, `WritableSignal`/`DerivedSignal`/`Effect`, drain) is [→ ch:reactivity-core] — a `source` is read with the *same* bare-value semantics a `signal` is. The `resource()`/`onDispose`/`alive`/`arena` lifecycle and `defer` are [→ ch:effects-lifecycle-concurrency]; this chapter cites `resource()` because every `from*`/rate-limiter is built on it, but its scope semantics are defined there. The `.pui` runes *bridge* (`$state` + `$effect.pre` + `onDestroy`) that all source declarations lower through is [→ ch:pui-component-model §`prop`/bridge]; this chapter shows the bridge because the source forms *are* the bridge's reason to exist. Server-replicated state (`sync`/`synced`, the reconciler) is [→ ch:data-sync-and-authority] — it is **also** a source (a value changing over a trust boundary) but adds a `(schema_version, sequence)` reconcile machine, so it has its own chapter. Schema validation of payloads (`::`, `is`, `Schema.parse`) is [→ ch:type-and-schema-system] and [→ ch:errors-results-and-validation]; this chapter *uses* the parse gate to type AI/native outputs (§10.1–10.2) but does not define it. The keyword catalog this chapter conforms to is `src/language-surface.ts` [→ ch:overview-and-surfaces §3.1].
 
 ---
@@ -740,7 +740,9 @@ Runes (.pui), client:
 <h1>{user.data?.name}</h1>                            <!-- present in server HTML; hydrates without refetch -->
 ```
 
-### 10.7 Query-derived cell (`derived NAME :: SCHEMA = EXPR`)  `Proposed`
+### 10.7 Query-derived cell (`derived NAME :: SCHEMA = EXPR`)  `Shipped`
+
+&gt; **Shipped 2026-07-26** (step 1 of `para-sync-query-plan.md`): `querySignal` in `@lyku/para-signals` (13 tests), the `para-preprocess` lowering (`lowerQueryDerivedDecls`, ordered before the plain `derived` pass, which would otherwise swallow `:: SCHEMA` as a type annotation), and the catalog entry. The desugar below is the shipped shape.
 
 **Rationale.** §3.3's edge case draws a deliberate scope boundary: `async signal` is fire-once-per-mount, and "re-keying is reactivity, not the source's job" — the refetch-on-dependency-change case is deferred to "a derived/keyed pattern." This section is that pattern, made first-class. It is the **pull mirror** of sync's push: client-initiated, tracked, latest-wins, parse-gated — a value fetched *by* the client whenever its inputs change, with the same trust-boundary discipline an inbound sync envelope gets. No sequence reconcile, no authority — this is a source with a parse gate, which is why it lives in this chapter and not [→ ch:data-sync-and-authority].
 
@@ -757,20 +759,24 @@ The `::` after the name is currently unused on `derived` — its presence is the
 **Dynamic semantics / desugar.** Signals read inside `EXPR` are tracked; any change re-runs it. Each run holds a run-id and an `AbortController` (the `promiseSignal` threading convention, §3.3): a superseded run is aborted and its settle discarded — no out-of-order clobber.
 
 ```
-# Desugar (proposed):  derived NAME :: SCHEMA = EXPR
+# Desugar (shipped):  derived NAME :: SCHEMA = EXPR
 Para (.pui):
     derived user :: User = graphql.userById(id);
 Runes (.pui):
     let user = $state({ data: undefined, error: undefined, pending: true });
+    let __qdv_user;                                       // UNTRACKED shadow of the latest cell value
     $effect.pre(() => {                                   // reads of `id` tracked → re-run on change
-      const q = querySignal(s => (graphql.userById(id)), User);   // latest-wins + abort + parse gate
-      const seed = q.peek?.(); if (seed !== undefined) user = seed;
-      const un = q.subscribe?.((__v: typeof user) => { user = __v; });
-      return () => { un?.(); q.dispose?.(); };            // abort in-flight run before re-key/unmount
+      const __qd_user = querySignal(() => (graphql.userById(id)), User, { prev: __qdv_user });
+      const __sd_user = __qd_user.peek?.();               // SWR seed: stale data + pending:true
+      if (__sd_user !== undefined) { __qdv_user = __sd_user; user = __sd_user; }
+      const __un_user = __qd_user.subscribe?.((__v: typeof user) => { __qdv_user = __v; user = __v; });
+      return () => { __un_user?.(); __qd_user.dispose?.(); };   // abort in-flight before re-key/unmount
     });
 ```
 
-`querySignal` is `promiseSignal`'s tracked, gated sibling and lives beside it in `@lyku/para-signals` — it is client-pull with no reconcile, so it does **not** belong to `@lyku/para-sync`. The lowering is the standard bridge with the construct site moved *inside* `$effect.pre` (the re-keying §3.3 declined to give `async signal`).
+`querySignal` is `promiseSignal`'s tracked, gated sibling and lives beside it in `@lyku/para-signals` — it is client-pull with no reconcile, so it does **not** belong to `@lyku/para-sync`. The lowering is the standard bridge with the construct site moved *inside* `$effect.pre` (the re-keying §3.3 declined to give `async signal`). One `querySignal` instance is one *run*; a dependency change re-keys by disposing it (abort + late-settle drop), which is what makes latest-wins need no run-id machinery.
+
+&gt; **Edge case (the shadow is load-bearing).** The previous value handed to `{ prev }` (stale-while-revalidate) is read from the plain `__qdv_` shadow, **never** from the `$state` cell inside the effect — that read would register the cell itself as a dependency, and every settle (`user = __v`) would re-trigger the effect: an infinite rebind/refetch loop. Keyword-form thunks are `() => (EXPR)` (component-side drop on dispose); for true network cancellation call `querySignal(s => fetch(u, { signal: s }), S)` directly — the same tradeoff as §3.3.
 
 **Interaction.** Composes with §10.3 (`derived user :: User = fetchUser(id) retry 3 timeout 5s` — the modifiers wrap the producer inside each run). The push-flavored mirrors are [→ ch:data-sync-and-authority §13.7–§13.8] — the full taxonomy: `derived :: S =` (pull, gate) · `sync :: S from query()` (push, gate + reconcile, live) · `sync :: S from server … policy` (push, gate + reconcile, declared refresh). Implementation plan: `para-sync-query-plan.md` §5 (step 1 of the build order — fully client-side, ships independently of everything sync-side).
 
