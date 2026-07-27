@@ -7,7 +7,7 @@ sidebar:
 
 # Chapter: Data Sync, Replication & Authority Model
 
-&gt; **Status of this chapter:** Mixed. The *read/reconcile* spine is **Shipped** (in `@lyku/para-sync` + `para-preprocess` today): the `sync NAME :: SCHEMA from KEY`, `sync NAME : TYPE from KEY`, and `synced NAME = ARGS` declaration forms; the `SyncedHandle` (`value`/`status`/`get`/`peek`/`subscribe`/`meta`/`stats`/`whenIdle`/`dispose`); `SyncEnvelope { value, schema_version, sequence }`; `createClientReplica` with its parse-gate / baseline / steady-state / gap rules; `ReplicaStatus` (`ok`/`stale`/`skew`/`refetching`); the `SyncTransport` contract with `InProcessTransport` / `NatsTransport`; the Class-A reconciliation default; and the domain-free visibility surface (`defineVisibility`/`classKeyOf`/`projectByClass`/`visibilityGate`/`createVisibilityCache`). *Proposed Extensions* (§13) is now mixed too (re-audited 2026-07-26): the Tier-2 write path (§13.1 `mutate` → `createIntent`), the array query surface (§13.3 → `syncedQuery`), and presence channels (§13.4 → `presence()`) are **Shipped** — `para-preprocess` lowering + `@lyku/para-sync` runtime, cataloged in `language-surface.ts` where a keyword applies; offline queued mutations (§13.5) and cross-entity transactions (§13.6) have shipped runtime primitives (`queue.js`, `transaction.js`) but no surface sugar, so their *surface* remains **Proposed**; per-field authority (§13.2) is fully **Proposed**; the scalar-query and server-source forms (§13.7–§13.8, added 2026-07-26) are **Proposed** — implementation plan in `para-sync-query-plan.md` (para repo).
+&gt; **Status of this chapter:** Mixed. The *read/reconcile* spine is **Shipped** (in `@lyku/para-sync` + `para-preprocess` today): the `sync NAME :: SCHEMA from KEY`, `sync NAME : TYPE from KEY`, and `synced NAME = ARGS` declaration forms; the `SyncedHandle` (`value`/`status`/`get`/`peek`/`subscribe`/`meta`/`stats`/`whenIdle`/`dispose`); `SyncEnvelope { value, schema_version, sequence }`; `createClientReplica` with its parse-gate / baseline / steady-state / gap rules; `ReplicaStatus` (`ok`/`stale`/`skew`/`refetching`); the `SyncTransport` contract with `InProcessTransport` / `NatsTransport`; the Class-A reconciliation default; and the domain-free visibility surface (`defineVisibility`/`classKeyOf`/`projectByClass`/`visibilityGate`/`createVisibilityCache`). *Proposed Extensions* (§13) is now mixed too (re-audited 2026-07-26): the Tier-2 write path (§13.1 `mutate` → `createIntent`), the array query surface (§13.3 → `syncedQuery`), and presence channels (§13.4 → `presence()`) are **Shipped** — `para-preprocess` lowering + `@lyku/para-sync` runtime, cataloged in `language-surface.ts` where a keyword applies; offline queued mutations (§13.5) and cross-entity transactions (§13.6) have shipped runtime primitives (`queue.js`, `transaction.js`) but no surface sugar, so their *surface* remains **Proposed**; per-field authority (§13.2) is fully **Proposed**; the scalar query form's client spine (§13.7: `syncedOne` + the tracked re-subscription bridge) **Shipped 2026-07-26**, with the authority-side read-set liveness still to come; server-source sync (§13.8) is **Proposed** — implementation plan in `para-sync-query-plan.md` (para repo).
 &gt; **Cross-refs:** This chapter owns the **fourth distance** of the one reactive idea — a value *changing across a trust boundary* [→ ch:overview-and-surfaces §0]. A `sync`/`synced` cell is **also a source** (§07's `peek`/`subscribe`/`dispose` convention) — it lowers through the *identical* `$state` + `$effect.pre` + `onDestroy` runes bridge [→ ch:sources-async-and-native §2, §07 INV-src-2] — but it adds a `(schema_version, sequence)` **reconcile machine** that a plain source has no need for, which is why it has its own chapter. The schema whose `parse` gate every envelope crosses, and the `schema_version` it carries, are defined in [→ ch:type-and-schema-system §`schema`, §`SchemaValue`]. The `::` / `is` parse-gate operators are [→ ch:type-and-schema-system, ch:errors-results-and-validation] — sync uses the gate in its **branch-on-`.tag`, never-throw** mode (a malformed delta triggers *recovery*, not a crash), the exact inverse of the throw-on-`Err` handler boundary. The `.pui` binding surface (how `sync`/`synced` bridge into a component, `prop`, the escape-analysis bridge) is [→ ch:pui-component-model]; this chapter shows the bridge only where the *reconcile* semantics depend on it. The **WRITE-path codegen** and the **wire codec** generation are [→ ch:modules-projections-and-build] — this chapter owns the read + reconcile *runtime and semantics*; the projections chapter owns the generation of the typed mutation call and the msgpack codec. The keyword catalog this chapter conforms to is `src/language-surface.ts` [→ ch:overview-and-surfaces §3.1]; the authority/transport configuration this chapter consumes (`authority { S => class-a }`, `transport nats {…}`) is declared once in the `.para` manifest [→ ch:overview-and-surfaces §5.1].
 
 ---
@@ -830,7 +830,9 @@ TS (generated):
 
 **Interaction.** The atomic boundary is the natural extension of §13.1's single-key op-id to a group op-id; it composes with §13.2 (each arm respects its field authority), §13.5 (a queued transaction replays as a unit), and the reconciler's sequence ordering (each key still reconciles by its own `sequence`; the *transaction* is the optimistic/confirm/rollback unit, not a new reconcile key). This keeps multi-key atomicity *explicit and visible* — never an ambient distributed-transaction magic, consistent with the §7.2 anti-Meteor boundary.
 
-### 13.7 Scalar query sync (`sync NAME :: SCHEMA from query(...)`)  `Proposed`
+### 13.7 Scalar query sync (`sync NAME :: SCHEMA from query(...)`)  `Shipped (client spine)`
+
+&gt; **Shipped 2026-07-26** (step 2 of `para-sync-query-plan.md`): `syncedOne` (`feeds.js` — the limit-1 composition over `syncedQuery`, 10 tests) and the `para-preprocess` tracked bridge (`lowerSyncOneDecls`, ordered between the feed pass and the single-object pass, 7 tests). The **ready gate** realizes the stale-seed rule: a fresh subscription's `peek()` returns `undefined` and its `subscribe` stays silent until the first membership fact, so a re-keyed binding keeps its stale cell value with no undefined flash — and after ready, `undefined` is a real "no row matches" fact. The authority-side read-set liveness is plan step 3; until it lands, a scalar query is snapshot-correct with refetch-on-re-key, and is not advertised as live.
 
 **Rationale.** §13.3 syncs collections; the equally common case is *one* entity selected by a typed predicate — "the user with this id", "the active session". Writing it as a one-element feed forces `[0]` indexing and array-shaped status onto a scalar value. The scalar form is the `limit: 1` degeneration of §13.3, sharing its entire machinery — and, crucially, it inherits the **liveness-by-read-set** property: because `query(SPEC)` is a typed spec over the schema spine (compilable by lockstep-pg), the authority knows exactly which rows the result depends on, so writes flowing through the authority (§13.1 intents, P4 handles) invalidate and re-publish *automatically*. No polling, no manual invalidation — the spine is what makes the query live.
 
@@ -848,18 +850,21 @@ ScalarQueryDecl ::= "sync" Ident "::" Schema "from" "query" "(" QuerySpec ")" ";
 **Dynamic semantics / desugar.**
 
 ```
-# Desugar (proposed):  sync user :: User from query(...)
+# Desugar (shipped):  sync user :: User from query(...)
 Para (.pui):
     sync user :: User from query({ where: u => u.id == id });
 Runes (.pui):
-    let user = $state(undefined);
+    let user = $state(undefined as any);
     $effect.pre(() => {                                  // reads of `id` tracked → re-key on change
-      const h = syncedOne(User, { where: (u) => u.id == id });
-      const seed = h.peek?.(); if (seed !== undefined) user = seed;
-      const un = h.subscribe?.((__v: User | undefined) => { user = __v; });
-      return () => { un?.(); h.dispose?.(); };
+      const __sq_user = syncedOne(User, { where: u => u.id == id });
+      const __ss_user = __sq_user.peek?.();              // ready-gated: undefined until membership
+      if (__ss_user !== undefined) user = __ss_user;
+      const __un_user = __sq_user.subscribe?.((__v: typeof user) => { user = __v; });
+      return () => { __un_user?.(); __sq_user.dispose?.(); };
     });
 ```
+
+The cell is deliberately **not reset** on re-key: it keeps the stale value while the fresh handle's ready gate keeps it silent until the new baseline — stale-while-revalidate falls out of the composition rather than needing explicit status plumbing in the binding.
 
 **Interaction.** `syncedOne` is a degenerate one-row `syncedQuery` (§13.3) — same per-row `createClientReplica`, same two envelope kinds; no new reconcile engine. Params crossing into `SPEC` are parse-gated server-side (the reverse direction of §3.3's gate — *both* directions of the boundary are gated). Composes with §13.1 (a mutate against the selected entity confirms through the same replica). Implementation: `para-sync-query-plan.md` §2–§3.
 
