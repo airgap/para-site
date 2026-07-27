@@ -233,6 +233,43 @@ signals.when(() => !tankEmpty.get(), () => log("tank refilled"));
 
 Pick plain `when` (or `signals.when`) for "user pressed button" / "page loaded" — anywhere faking the event at startup would be wrong. Reach for `start` / `whenStart` for safety, health, and connectivity alerts where missing the boot-bad case is worse than firing one extra time.
 
+## `promiseSignal(thunk)` — promise → `{ data, error, pending }` cell
+
+The producer behind the `.pui` `async signal x = EXPR` form. The thunk fires
+**synchronously** at construction (the request starts immediately) and
+receives an `AbortSignal`; `dispose()` aborts it *and* drops a late settle —
+no stale state after unmount. Fire-once-per-mount by design: it does not
+re-run when a dependency changes (that's `querySignal`, below).
+
+```ts
+import { promiseSignal } from "@lyku/para-signals";
+
+const user = promiseSignal(s => fetch(`/api/user/${id}`, { signal: s }).then(r => r.json()));
+user.peek();   // { data, error, pending } — pending: true until the settle
+```
+
+## `querySignal(thunk, schema, opts?)` — the tracked, gated sibling
+
+The producer behind `derived NAME :: SCHEMA = EXPR`
+([spec §10.7](/spec/07-sources-async-and-native/)): a client-pull async cell
+whose settle crosses `schema.parse` — `Ok` stores the **parsed** value, `Err`
+lands in `error` as a state, never a throw. One instance is one *run*: the
+`.pui` bridge constructs it inside a tracked scope, so reading a signal in
+the thunk makes a change re-key (dispose + fresh construct = latest-wins,
+no run-id machinery). `opts.prev` seeds stale-while-revalidate — a refetch
+shows the old `data` with `pending: true` instead of a flash to undefined.
+
+```ts
+import { querySignal } from "@lyku/para-signals";
+
+const found = querySignal(s => api.search(q, { signal: s }), Post, { prev: last });
+```
+
+```parabun
+// the .pui sugar — refetches when `id` changes, response gated by User
+derived user :: User = graphql.userById(id);
+```
+
 ## `resource(setup)` — explicit lifecycles
 
 Hardware modules emit signals tied to a real underlying resource (a mic, a camera, a file watcher, a websocket). When the resource closes, those signals should become inert and observers should unwind cleanly. `resource()` is the primitive that makes that lifecycle explicit:

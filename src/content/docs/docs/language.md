@@ -314,6 +314,55 @@ status is not 'open' | 'closed'                  // → (status !== 'open' && st
 
 It lowers to the strict-equality `||` chain (`is not` → the `!==`/`&&` De-Morgan chain) — the *exact* form `match`'s all-literal arm emits — so TS narrows the operand precisely as a hand-written chain would, and there's none of the per-evaluation array allocation/scan of `['open','pending','closed'].includes(order.status)`. The literal kind disambiguates from the schema guard (capitalized identifier → `schema`; quoted/numeric literal → membership; a lowercase identifier leaves `is` as a plain identifier). The operand must be a simple expression — an identifier or property path — so it is evaluated once and narrowing is preserved; bind a call's result to a variable first. String and numeric literals only.
 
+## The sync family (`.pui`): `sync`, `synced`, `presence`, `mutate`
+
+Component-scoped declarations binding **server-authoritative** state into
+read-only reactive cells — every wire crossing parse-gated by a schema, every
+cell auto-disposed on unmount. The full library reference is
+[`@lyku/para-sync`](/docs/sync/); the surface:
+
+```parabun
+sync user  :: User from `user:${id}`;                        // keyed push channel
+sync user  :: User from query({ where: u => u.id == id });   // typed scalar query (live)
+sync feed  :: Post[] from query({ limit: 50 });              // typed collection (per-row reconcile)
+sync stats :: Stats from server db.agg(orgId) every 30000;   // opaque server code + DECLARED refresh
+sync flags :  Flags from "flags:global";                     // single `:` = visible trusted opt-out
+synced cart = `cart:${id}`, { seed, stream };                // full-control synced() args
+
+presence cursors :: Cursor in `doc:${docId}`;                // ephemeral peers (no reconcile)
+
+mutate rename of user { optimistic(name) { user.name = name; } }   // Tier-2 optimistic write
+```
+
+Two rules carry the design. **`::` vs `:`** — the double colon is a runtime
+parse gate (the default; the wire is untrusted), a single colon is a TS type
+only and deliberately *visible* as the opt-out. **Liveness is tiered by what
+the server can know** — `query()` specs have knowable read-sets, so those
+channels invalidate automatically on writes; `server EXPR` is opaque, so its
+refresh policy (`every MS` / `on KEY` / `once`) is syntactically mandatory
+and never faked. The `server` marker also draws the *runtime* boundary: the
+expression is escape-analyzed out of the client build entirely (imports it
+uses hoist into a generated server artifact; component values it reads become
+wire params that re-key the subscription — see
+[`@lyku/para-kit`](/docs/kit/)).
+
+## `derived NAME :: SCHEMA = EXPR` — query-derived cells (`.pui`)
+
+The pull mirror of `sync`: a client-initiated async cell that **re-runs when
+signals read in the initializer change**, latest-wins (superseded runs are
+aborted), with each response parse-gated through the schema — a malformed
+payload is an `error` state, not a crash. Stale-while-revalidate: during a
+refetch the old `data` stays up with `pending: true`.
+
+```parabun
+prop id: string;
+derived user :: User = graphql.userById(id);   // refetches when `id` changes
+```
+
+The cell is the `async signal` shape (`{ data, error, pending }`); plain
+`derived x = expr` and `async signal` (fire-once) are unchanged. Runtime:
+[`querySignal`](/docs/signals/#querysignalthunk-schema-opts--the-tracked-gated-sibling).
+
 ## Diagnostics
 
 The LSP carries arity-based hints: *"could be memo"* / *"memo probably not worth it"* on free functions, full purity diagnostics on `pure` bodies, and JSON-Schema-keyword validation on `schema X = body` blocks (with did-you-mean suggestions for typo'd keys). The full grammar lives in [`LLMs.md`](https://github.com/airgap/parabun/blob/main/LLMs.md#language-extensions).

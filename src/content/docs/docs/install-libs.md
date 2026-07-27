@@ -26,6 +26,8 @@ Install only the modules your code uses. Each module is its own npm package:
 
 ```bash
 npm install @lyku/para-signals     # reactive primitives
+npm install @lyku/para-sync        # server-authoritative sync replicas
+npm install @lyku/para-kit         # fullstack sync projection (SvelteKit-shaped)
 npm install @lyku/para-parallel    # Worker-pool pmap / preduce
 npm install @lyku/para-arena       # Pool helper + no-op scope()
 npm install @lyku/para-simd        # Wasm v128 kernels

@@ -251,9 +251,30 @@
 <span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// translation, just whatever the MCP server advertises.</span></span>
 <span class="line"></span></code></pre>
 
+      <h3>Sync — a profile that follows the server</h3>
+      <p>
+        <a href="/docs/sync/"><code>@lyku/para-sync</code></a> replicates server-authoritative state into read-only
+        reactive cells — every envelope parse-gated by a schema, reconciled by
+        <code>(schema_version, sequence)</code>, stale and duplicate deliveries ignored, gaps recovered. Typed
+        queries stay live because the server knows their read-sets; opaque server code declares its refresh policy
+        instead. In <code>.pui</code> components the <code>sync</code> keyword does the binding
+        (<a href="/lang/">Para Lang</a>); this is the direct API:
+      </p>
+      <pre data-lang="pts"><code><span class="line"><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">import</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> { </span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7">synced</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#0DB9D7"> syncedOne</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> }</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF"> from</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF"> "</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">@lyku/para-sync</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">"</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// a keyed replica — the authority pushes, the cell follows</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> user</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> synced</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#22863A;--shiki-dark:#9ECE6A">user:</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">${</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">id</span><span style="--shiki-light:#D32F2F;--shiki-dark:#7DCFFF">}</span><span style="--shiki-light:#22863A;--shiki-dark:#89DDFF">`</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> User</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">)</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5">user</span><span style="--shiki-light:#6F42C1;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7">subscribe</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68">u</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> render</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">u</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">))</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#C2C3C5;--shiki-light-font-style:inherit;--shiki-dark:#51597D;--shiki-dark-font-style:italic">// a typed scalar query — live via read-set invalidation</span></span>
+<span class="line"><span style="--shiki-light:#D32F2F;--shiki-light-font-style:inherit;--shiki-dark:#9D7CD8;--shiki-dark-font-style:italic">const</span><span style="--shiki-light:#1976D2;--shiki-dark:#BB9AF7"> me</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> syncedOne</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5">(</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5">User</span><span style="--shiki-light:#212121;--shiki-dark:#89DDFF">,</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> {</span><span style="--shiki-light:#6F42C1;--shiki-dark:#7AA2F7"> where</span><span style="--shiki-light:#D32F2F;--shiki-dark:#89DDFF">:</span><span style="--shiki-light:#24292EFF;--shiki-dark:#E0AF68"> u</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> =></span><span style="--shiki-light:#1976D2;--shiki-dark:#C0CAF5"> u</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">.</span><span style="--shiki-light:#24292EFF;--shiki-dark:#7DCFFF">id</span><span style="--shiki-light:#D32F2F;--shiki-dark:#BB9AF7"> ==</span><span style="--shiki-light:#24292EFF;--shiki-dark:#C0CAF5"> id</span><span style="--shiki-light:#24292EFF;--shiki-dark:#9ABDF5"> })</span><span style="--shiki-light:#24292EFF;--shiki-dark:#89DDFF">;</span></span></code></pre>
+
       <h2 id="rest">The rest</h2>
-      <p>Three more libraries with their own docs:</p>
+      <p>More libraries with their own docs:</p>
       <ul>
+        <li>
+          <a href="/docs/kit/"><code>@lyku/para-kit</code></a> — the fullstack sync projection: server-artifact emitter + SSE bridge (SvelteKit-shaped)
+        </li>
         <li>
           <a href="/docs/arena/"><code>@lyku/para-arena</code></a> — typed-array <code>Pool</code> + scope helper
         </li>
