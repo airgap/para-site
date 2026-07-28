@@ -506,7 +506,9 @@ body {
   width: fit-content;
   max-width: 100%;
   font-family: var(--mono);
-  font-size: 11.5px;
+  /* 13px matches the code panes. Earlier rev shipped 11.5px items +
+     9.5px labels — below the ~12px accessibility floor. */
+  font-size: 13px;
 }
 .menu-group {
   display: flex;
@@ -524,11 +526,11 @@ body {
 }
 .menu-group-name {
   /* Fixed-width right-aligned label column so the three category
-     names read as one aligned rail. 5.2rem clears "PARA LANG" (the
-     longest) at 9.5px/0.14em tracking. */
-  flex: 0 0 5.2rem;
+     names read as one aligned rail. 6.5rem clears "PARA LANG" (the
+     longest) at 12px/0.14em tracking. */
+  flex: 0 0 6.5rem;
   text-align: right;
-  font-size: 9.5px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--cat) 60%, var(--text-faint));
@@ -544,7 +546,9 @@ body {
   background: transparent;
   font: inherit;
   color: var(--text-dim);
-  padding: 1px 8px;
+  /* 2px vertical padding + 13px text + borders ≈ a 25px-tall pill —
+     clears the 24px minimum touch-target size. */
+  padding: 2px 9px;
   border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
