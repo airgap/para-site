@@ -55,6 +55,8 @@ body {
   color: var(--pg-text);
   font-family: "Spectral", Georgia, "Times New Roman", serif;
   font-size: 14px;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0;
 }
 
 body {

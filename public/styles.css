@@ -7,12 +7,25 @@
    ─────────────────────────────────────────────────────────────────── */
 
 :root {
+  /* Dark cosmic palette (default). Light theme overrides further down
+     via `@media (prefers-color-scheme: light)`. Brand colors
+     (--star-*) are shared across themes; only neutrals flip. */
   --bg: #01020a;
   --bg-elev: #080b1a;
   --rule: #141b35;
   --text: #e8e6dd;
   --text-dim: #8a8b94;
   --text-faint: #4a4d5a;
+  /* Blend mode for chromatic overlays.
+     - Dark mode uses `plus-lighter` — true linear-additive
+       (R+R/G+G/B+B clipped at 1.0), what physicists call photon
+       addition. Blobs read as glowing light rather than the soft
+       asymptotic addition of `screen` (1-(1-a)(1-b)); overlap zones
+       brighten faster which sells the "cosmic emissive" effect.
+     - Light mode uses `multiply` — subtractive, so blobs tint the
+       bright bg toward their hue instead of doing nothing on white
+       (which is what `plus-lighter` / `screen` would do). */
+  --chromatic-blend: plus-lighter;
   /* Three star colors picked off the stellar-temperature spectrum:
      blue (B-class, ~10000K), yellow (G-class like our sun, ~5800K),
      red (M-class red dwarf or red giant, ~3500K). The Trisolaris
@@ -21,9 +34,92 @@
   --star-lib: #6db4ff;
   --star-lang: #10b981;
   --star-runtime: #ff5c4a;
+  /* Syntax-highlight tokens for the transpile demo. Dark-mode values
+     are the pre-existing hardcoded hex literals (light, desaturated
+     pastels that read on a near-black bg). Light-mode values flip to
+     darker, more saturated variants of the same hues so they contrast
+     against a near-white bg. */
+  /* Ghost-palette demo. The transpile panel was emerald, then
+     violet-haunted; now its chrome and syntax tokens use the same
+     three cool nebula hues as the splash background — pale will-o-
+     wisp green, spectral blue, moonlight white. The border is an
+     animated gradient through these three (see `.transpile` rule).
+     - --demo-accent: panel chrome highlight (dots, caret, focus,
+       pinned text). Spectral blue — visible against dark bg, plays
+     - with the gradient border.
+     - --syn-bg/text: code pane interior. Bg stays near-black with
+       a slight cool cast; text is moonlight-pale.
+     - --syn-kw / --syn-op / --syn-str / --syn-num: token colors at
+       high lightness, sampled from the ghost trio so the syntax
+       reads as cohesive with the panel chrome. */
+  --syn-bg: #0a0c14;
+  --syn-text: #e0e8f0;
+  /* Each token claims a distinct band in the white/blue/green ghost
+     spectrum so they're visually parseable instead of bleeding into
+     one another like the first pass (all at 30-45% saturation —
+     barely visible). Hue + lightness vary per token:
+       kw  = vivid will-o-wisp mint  (hue 150°, S 65%, L 70%)
+       op  = bright spectral blue    (hue 200°, S 90%, L 72%)
+       num = bright ghost cyan       (hue 180°, S 60%, L 72%)
+       str = pale mint-silver        (hue 160°, S 30%, L 82% — softer
+                                       so string literals recede next
+                                       to the brighter operator/kw
+                                       accents) */
+  --syn-kw: hsl(150 65% 70%);
+  --syn-op: hsl(200 90% 72%);
+  --syn-num: hsl(180 60% 72%);
+  --syn-str: hsl(160 30% 82%);
+  --demo-accent: hsl(200 75% 70%);
+  --accent: hsl(200 75% 70%);
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
   --sans: "Spectral", Georgia, "Times New Roman", serif;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Warm off-white bg mirrors the cream wordmark base; deep
+       cool-charcoal text gets just a hair of blue-violet undertone
+       to complement the warm bg (pure black on warm-white reads
+       slightly muddy). Brand colors stay saturated and high-
+       lightness so the chromatic shimmer is still visible against
+       the bright bg. */
+    --bg: #f8f7f2;
+    --bg-elev: #ffffff;
+    --rule: #d8d4c6;
+    --text: #1f1d2a;
+    --text-dim: #5a5860;
+    --text-faint: #a39f93;
+    --chromatic-blend: multiply;
+    /* Darker / more saturated syntax tokens so they contrast on
+       near-white. Same hue families as the dark-mode pastels — just
+       traversed down the lightness axis to L ~25-40% instead of
+       L ~75-85%. The transpile code pane bg becomes a near-cream
+       elevated panel, the body text becomes a deep mint-charcoal. */
+    /* Light-mode ghost palette: same three hue families as dark
+       (green / blue / pale-cool) shifted to lower lightness so
+       tokens contrast on near-white. Demo accent shifts from
+       moonlight blue to a darker spectral blue. */
+    --syn-bg: #f4f4ef;
+    --syn-text: #1f2530;
+    /* Light-mode ghost tokens — darker, more saturated than dark
+       mode (which goes the other way). Each token keeps its
+       distinct band from dark mode but mirrored: green keywords,
+       blue operators, cyan numbers, muted slate strings. */
+    --syn-kw: hsl(150 70% 28%);
+    --syn-op: hsl(200 85% 32%);
+    --syn-num: hsl(180 70% 28%);
+    --syn-str: hsl(210 25% 38%);
+    --demo-accent: hsl(200 65% 40%);
+    --accent: hsl(200 65% 40%);
+  }
+  /* The starfield canvas is additive light over a dark bg — it has
+     nothing to subtract from a near-white bg, so hide it. Layouts
+     fall back to a flat warm-cream bg which is the right look for
+     a light atmosphere page anyway. */
+  #__space {
+    display: none;
+  }
 }
 
 * {
@@ -40,6 +136,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0;
 }
 
 html {
@@ -65,9 +163,21 @@ body {
    Holds the live `.pts → JS` transpile demo. Two-column code panel
    sized to its content with a min-height floor — see /transpile.js
    for the animation. */
+/* (Earlier `.demo-tabs` / `.demo-tab` rules removed when the
+   Language/Runtime tabs were folded back into a single continuous
+   cycle. Color-coded progress dots — see `.transpile-dot[data-category]`
+   below — now telegraph upcoming demo type without separating pools.) */
+
 .hero-stage {
   position: relative;
-  width: clamp(320px, 78vw, 880px);
+  /* 78vw was leaving ~22% of the viewport as side gutters on
+     non-wide desktops (1024-1280px range), which made the panel
+     start smooshing well before the max-width cap engaged. Bumped
+     to 92vw so the panel claims more of the viewport at every
+     desktop size, with the cap also raised from 880 → 1080 so
+     wide displays get a roomier demo. Mobile (≤640px) overrides
+     to 100% below. */
+  width: clamp(320px, 92vw, 1080px);
   margin: 0 auto;
 }
 .hero {
@@ -93,9 +203,16 @@ body {
   }
   .transpile {
     flex-direction: column;
-    /* Stacked: total height ≈ 2× single-pane content + arrow. Each
-       pane covers up to 9 lines of code; budget ~160px per pane. */
-    min-height: 360px;
+    /* Fixed mobile height (not min-height): the panel must NOT
+       grow/shrink as snippets cycle, or the page jumps up and down
+       with every transition. Sized to fit the tallest snippet's 9-
+       line pane (~248px = 9 × 13px × 1.55 line-height + ~27px code
+       padding + ~40px header) on both rows + the ~26px arrow band
+       = ~522px. Short snippets show whitespace below — predictable
+       and stable beats tightly fitted but jittery. `overflow:
+       hidden` keeps the rotating border clean at the corners. */
+    height: 522px;
+    overflow: hidden;
   }
 }
 
@@ -108,13 +225,47 @@ body {
   position: relative;
   display: flex;
   align-items: stretch;
-  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
-  border: 1px solid color-mix(in srgb, var(--star-lang) 22%, transparent);
+  /* Two-layer background: solid inner panel (padding-box) + a
+     rotating conic ghost-palette gradient (border-box) showing
+     through the 1.5px transparent border. The conic gradient cycles
+     the three nebula colors so the border looks like the same mist
+     the splash background is made of. The `--border-angle` custom
+     property is registered via @property below so the rotation
+     interpolates smoothly. */
+  background:
+    color-mix(in srgb, var(--bg-elev) 70%, transparent) padding-box,
+    conic-gradient(
+        from var(--border-angle, 0deg) at 50% 50%,
+        hsl(150 60% 73%),
+        hsl(200 75% 70%),
+        hsl(210 20% 92%),
+        hsl(150 60% 73%)
+      )
+      border-box;
+  border: 1.5px solid transparent;
   border-radius: 8px;
-  overflow: hidden;
   box-shadow:
-    0 2px 30px color-mix(in srgb, var(--star-lang) 8%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--star-lang) 8%, transparent);
+    0 2px 30px hsl(200 75% 70% / 8%),
+    inset 0 1px 0 hsl(210 20% 92% / 8%);
+  animation: transpile-border-rotate 18s linear infinite;
+}
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes transpile-border-rotate {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transpile {
+    animation: none;
+  }
 }
 .transpile-col {
   flex: 1;
@@ -126,36 +277,90 @@ body {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
-  padding: 0.45rem 0.85rem;
-  background: color-mix(in srgb, var(--star-lang) 8%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+  padding: 0.65rem 0.85rem;
+  min-height: 2.5rem;
+  line-height: 1.2;
+  background: color-mix(in srgb, var(--demo-accent) 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--demo-accent) 18%, transparent);
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.06em;
 }
+
+/* Round the outer corners of each header pane to match the
+   `.transpile` panel's 8px radius. The panel has a 1.5px border, so
+   the inner content's effective radius is 8 - 1.5 = 6.5 ≈ 7px. The
+   `:has()` selectors target each column by its distinguishing inner
+   element so the rule stays correct even if column order changes.
+   Mobile (≤640px) stacks the columns vertically — the second
+   column then has its header BELOW the first, so giving it a
+   top-right radius would look broken. Wrap in min-width: 641px so
+   the radii only apply when columns are side-by-side. */
+@media (min-width: 641px) {
+  .transpile-col:has(.transpile-source-code) .transpile-header {
+    border-top-left-radius: 7px;
+  }
+  .transpile-col:has(.transpile-output-code) .transpile-header {
+    border-top-right-radius: 7px;
+  }
+}
 .transpile-tag {
-  color: #6ee7b7;
+  color: var(--accent);
   font-weight: 600;
   text-transform: uppercase;
 }
+
+/* "parabun only" pill — shown only on Runtime snippets via the
+   `.transpile.runtime-only` parent class. Subtle will-o-wisp tint so
+   the badge reads as a small annotation in the header rather than
+   competing with the snippet title. Hidden by default; revealed by
+   the parent-class rule below the dot styles. */
+.transpile-runtime-badge {
+  display: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(150 60% 73%);
+  background: color-mix(in srgb, hsl(150 60% 73%) 12%, transparent);
+  border: 1px solid color-mix(in srgb, hsl(150 60% 73%) 28%, transparent);
+  padding: 2px 6px 1px;
+  border-radius: 4px;
+  line-height: 1;
+  align-self: center;
+}
+.transpile.runtime-only .transpile-runtime-badge {
+  display: inline-block;
+}
+
 .transpile-title {
   color: var(--text-dim);
   font-style: italic;
-  font-size: 10px;
-  font-family: var(--sans);
+  font-size: 14px;
+  font-family: var(--serif);
   letter-spacing: 0;
+  font-variation-settings:
+    "opsz" 14,
+    "SOFT" 50,
+    "wght" 500;
 }
 .transpile-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0.4rem;
-  color: color-mix(in srgb, var(--star-lang) 65%, var(--text-dim));
+  padding: 0 0.6rem;
+  color: color-mix(in srgb, var(--demo-accent) 65%, var(--text-dim));
   font-family: var(--mono);
-  font-size: 18px;
-  background: color-mix(in srgb, var(--star-lang) 4%, transparent);
-  border-left: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
-  border-right: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+  /* Mobile renders `↓` at 18px inside a ~26px-tall divider band, so
+     the glyph reads as ~70% of band height — visually prominent.
+     Desktop's `→` sat at 18px in a 160-200px tall vertical column,
+     so even at identical font-size the arrow read as small. Bumped
+     to 28px so the desktop arrow carries comparable visual weight
+     to its mobile counterpart. */
+  font-size: 28px;
+  background: color-mix(in srgb, var(--demo-accent) 4%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--demo-accent) 18%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--demo-accent) 18%, transparent);
 }
 @media (max-width: 640px) {
   /* Stacked layout: arrow becomes a horizontal divider band with the
@@ -163,8 +368,8 @@ body {
   .transpile-arrow {
     border-left: none;
     border-right: none;
-    border-top: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--star-lang) 18%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--demo-accent) 18%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--demo-accent) 18%, transparent);
     padding: 0.25rem 0;
   }
   .transpile-arrow::before {
@@ -181,14 +386,37 @@ body {
     content: "↓";
     font-size: 18px;
   }
+  /* Tighter line-height on mobile so the stacked panes don't tower.
+     Font-size is set on the base `.transpile-code` rule and applies
+     here unchanged — used to override to 13px when the base was a
+     vw-clamp that floored at 10.5px, but the base is now a fixed
+     13px so the override would be a no-op. */
+  .transpile-code {
+    line-height: 1.5;
+  }
+}
+
+/* Slight bump on wide displays so monospace code doesn't look
+   miniscule on big monitors. Threshold picked to skip laptops
+   (≤1400px) where 13px is already comfortable. */
+@media (min-width: 1400px) {
+  .transpile-code {
+    font-size: 14px;
+  }
 }
 .transpile-code {
   margin: 0;
   padding: 0.85rem 1rem;
   font-family: var(--mono);
-  /* Slight font upper bound now that the panel is wider — gives the
-     longest snippets a fighting chance at staying on one line. */
-  font-size: clamp(10.5px, 1.05vw, 13px);
+  /* Fixed base size, not a vw-clamp. The earlier
+     `clamp(10.5px, 1.05vw, 13px)` shrank linearly between 640px and
+     1238px viewports — code in the 11-12px range was hard to read
+     and the gradual zoom-out as you resized felt unstable. 13px is
+     the same scale VSCode defaults to; lines that don't fit
+     horizontal-overflow via `overflow-x: auto` below. A small bump
+     to 14px on wide screens (handled in a separate min-width rule
+     below) keeps proportions sensible on large displays. */
+  font-size: 13px;
   line-height: 1.55;
   color: var(--text);
   white-space: pre;
@@ -207,24 +435,32 @@ body {
 /* Token colors. Para operators are the star — they get the boldest
    accent so first-time readers notice them. */
 .transpile .tk-op {
-  color: #fde68a; /* warm yellow — pops against emerald */
+  color: var(--syn-op); /* warm yellow — pops against emerald */
   font-weight: 600;
 }
 .transpile .tk-kw {
-  color: #6ee7b7;
+  color: var(--syn-kw);
   font-weight: 500;
 }
 .transpile .tk-str {
-  color: #c8e6a0;
+  color: var(--syn-str);
 }
 .transpile .tk-num {
-  color: #ffc78c;
+  color: var(--syn-num);
+}
+/* `//` line comments: muted italic so trailing annotations on the
+   schema demo's js output (`// runtime validator → Result`) read as
+   quiet narration that doesn't compete with the code. text-faint is
+   the same neutral used elsewhere for tertiary text. */
+.transpile .tk-cm {
+  color: var(--text-faint);
+  font-style: italic;
 }
 .transpile-caret {
   display: inline-block;
   width: 0.5em;
   margin-left: 1px;
-  color: #6ee7b7;
+  color: var(--accent);
   animation: transpile-caret-blink 1s steps(2) infinite;
 }
 @keyframes transpile-caret-blink {
@@ -239,27 +475,157 @@ body {
    becomes visible; .transpile.pinned just changes its color. */
 .transpile-progress {
   display: inline-flex;
-  gap: 5px;
+  /* Gap must be large enough to clear the dots' ::before tap-target
+     extension. Dot is 8px, ::before extends `inset: -3px` (14px wide
+     hit area, 7px to each side of the visible center). Gap of 8px
+     gives 16px center-to-center spacing, so each ::before stays 1px
+     clear of its neighbor's. Earlier rev had gap 5px + inset -8px
+     (24px hit areas overlapping by 11px each) — clicking a dot
+     reliably hit the wrong one. */
+  gap: 8px;
   align-items: center;
   margin-left: auto;
 }
 .transpile-dot {
-  width: 6px;
-  height: 6px;
+  position: relative;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  appearance: none;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--star-lang) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--star-lang) 35%, transparent);
+  background: color-mix(in srgb, var(--demo-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--demo-accent) 35%, transparent);
+  cursor: pointer;
   transition:
     background 240ms ease,
     transform 240ms ease,
-    border-color 240ms ease;
+    border-color 240ms ease,
+    box-shadow 240ms ease;
+}
+.transpile-dot:hover {
+  background: color-mix(in srgb, var(--demo-accent) 35%, transparent);
+  border-color: color-mix(in srgb, var(--demo-accent) 60%, transparent);
+}
+.transpile-dot:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
 }
 .transpile-dot.active {
-  background: #6ee7b7;
-  border-color: #6ee7b7;
+  background: var(--accent);
+  border-color: var(--accent);
   transform: scale(1.25);
-  box-shadow: 0 0 8px color-mix(in srgb, #6ee7b7 60%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
 }
+/* (Earlier rev tried per-category dot tints — spectral blue for
+   Lang dots, will-o-wisp green for Runtime — to telegraph upcoming
+   demo type. At 18% opacity color-mix the resting dots read
+   identical regardless of hue. The Runtime cue is now an explicit
+   "parabun only" badge in the source-pane header, set when the
+   current snippet's category === "runtime"; see
+   `.transpile-runtime-badge` below.) */
+/* Invisible padded tap target. Visible dot is 8px; `inset: -3px`
+   extends the clickable area to 14px (3px breathing room on each
+   side). Earlier rev used -8px (24px hit area), which on a 5px gap
+   put adjacent dots' hit areas 11px deep into each other — clicks
+   on dot N reliably triggered dot N-1 or N+1. Paired with the
+   parent's `gap: 8px` above, neighboring hit areas now stay 1px
+   apart. Trade-off: smaller tap target on touch, but the demo's
+   primary interaction is auto-cycle + click-anywhere-to-pause; the
+   dots are secondary. */
+.transpile-dot::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+}
+/* Hover tooltip — desktop / mouse-pointer only. Touch devices skip
+   this entirely (a tap is a navigation, not a preview), and rely on
+   the always-visible snippet name in `.transpile-title` instead.
+   The parent `.transpile` no longer has overflow:hidden, so the
+   tooltip can extend above the panel without being clipped. */
+@media (hover: hover) and (pointer: fine) {
+  /* Single shared tooltip element positioned via JS in viewport coords
+     (position: fixed) so it bypasses every ancestor's clipping and
+     can be clamped to the window edges using its actual measured
+     width. Hidden by default; .transpile-tooltip.visible reveals it. */
+  .transpile-tooltip {
+    position: fixed;
+    padding: 4px 8px;
+    background: var(--syn-bg);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--syn-text);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease;
+    z-index: 100;
+  }
+  .transpile-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Foldable regions inside the JS output pane (see transpile.js
+   installFolds). `.fold-btn` is the collapsed `…` button; click
+   expands it to a `.fold-body` span which is itself clickable to
+   collapse back. Styled to read as a peer of the surrounding code
+   (monospace, inline-flow) but with a soft accent tint so the
+   affordance is visible without distracting from the surrounding
+   highlighted tokens. */
+.fold-btn,
+.fold-body {
+  font: inherit;
+  font-family: inherit;
+  white-space: pre;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+.fold-btn {
+  /* Pill that sits between the surrounding braces. Padding is small
+     so it doesn't push the line height. */
+  display: inline;
+  padding: 0 0.45em;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--demo-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--demo-accent) 10%, transparent);
+  color: color-mix(in srgb, var(--demo-accent) 80%, var(--text));
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  vertical-align: baseline;
+  line-height: inherit;
+}
+.fold-btn:hover,
+.fold-btn:focus-visible {
+  background: color-mix(in srgb, var(--demo-accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--demo-accent) 50%, transparent);
+  outline: none;
+}
+.fold-body {
+  /* Expanded code keeps the same monospace flow as siblings; the
+     subtle tinted bg + inset border just hint that this region
+     itself is clickable. Display block so the contained newlines
+     render in the pre's natural flow. */
+  display: inline;
+  background: color-mix(in srgb, var(--demo-accent) 5%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--demo-accent) 30%, transparent);
+  border-radius: 0 3px 3px 0;
+  padding-left: 0.25em;
+  margin-left: -0.25em;
+}
+.fold-body:hover {
+  background: color-mix(in srgb, var(--demo-accent) 11%, transparent);
+  border-left-color: color-mix(in srgb, var(--demo-accent) 55%, transparent);
+}
+
 .transpile-paused-hint {
   font-family: var(--mono);
   font-size: 9px;
@@ -270,23 +636,63 @@ body {
   transition:
     opacity 160ms ease,
     color 160ms ease;
-  margin-left: 0.4rem;
+  /* Sits first inside the absolute-positioned `.transpile-controls`
+     cluster; `gap: 8px` on the cluster handles spacing, so no extra
+     left margin needed. */
 }
 .transpile.paused .transpile-paused-hint,
 .transpile.pinned .transpile-paused-hint {
   opacity: 1;
 }
 .transpile.pinned .transpile-paused-hint {
-  color: #fde68a;
+  color: var(--syn-op);
 }
 
-/* Right-side controls cluster: pause/play button next to progress
-   dots. Pushed right-aligned via margin-left: auto on the group. */
+/* Single-pane mode — Runtime demos (parabun:assistant / :llm / :gpio
+   etc.) that don't have a .pts → .js desugar to display. Hide the
+   middle arrow + the right (output) column; the left column already
+   has `flex: 1` so it expands to fill. The output column is selected
+   by `:has(.transpile-output-code)` rather than nth-child so the rule
+   keeps working if the HTML order ever changes. Mobile (stacked
+   layout) needs the same hide rules — the arrow strip + output pane
+   both fold away regardless of viewport. */
+.transpile.single .transpile-arrow,
+.transpile.single .transpile-col:has(.transpile-output-code) {
+  display: none;
+}
+.transpile.single .transpile-col:has(.transpile-source-code) {
+  /* Restore the rounded corners on BOTH sides of the source col since
+     the right edge no longer abuts the arrow band. Desktop only —
+     mobile is already a single column. */
+}
+@media (min-width: 641px) {
+  .transpile.single .transpile-col:has(.transpile-source-code) .transpile-header {
+    border-radius: 7px 7px 0 0;
+  }
+}
+/* Subtle Runtime tint — shift the source tag color toward will-o-wisp
+   green so the eye picks up "different demo type" without a jarring
+   palette change. Same trick the splash uses for the Runtime brand
+   card's hover hint. */
+.transpile.single .transpile-tag {
+  color: color-mix(in srgb, hsl(150 60% 73%) 55%, var(--text-dim));
+}
+
+/* Controls cluster — pause button, progress dots, and the paused-
+   hint label. Absolute-positioned top-right of the `.transpile`
+   panel (which is `position: relative`) so the cluster sits at the
+   corner regardless of which sub-panel is active. Earlier rev kept
+   them inside the source-col header, which anchored them at the
+   right edge of the source pane — mid-panel in split-pane mode.
+   z-index keeps them above the rotating border gradient. */
 .transpile-controls {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.85rem;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
+  z-index: 2;
 }
 .transpile-controls .transpile-progress {
   margin-left: 0;
@@ -295,25 +701,23 @@ body {
   width: 18px;
   height: 18px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--star-lang) 28%, transparent);
+  border: none;
   background: transparent;
   border-radius: 50%;
-  color: #6ee7b7;
+  color: var(--accent);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition:
     background 160ms ease,
-    border-color 160ms ease,
     color 160ms ease;
 }
 .transpile-pause-btn:hover {
-  background: color-mix(in srgb, var(--star-lang) 14%, transparent);
-  border-color: #6ee7b7;
+  background: color-mix(in srgb, var(--demo-accent) 14%, transparent);
 }
 .transpile-pause-btn:focus-visible {
-  outline: 1px solid #6ee7b7;
+  outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
 /* Pause icon = two short bars; play icon = right-pointing triangle.
@@ -338,22 +742,22 @@ body {
   margin-left: 2px;
 }
 .transpile.pinned .transpile-pause-btn {
-  color: #fde68a;
-  border-color: color-mix(in srgb, #fde68a 60%, transparent);
+  color: var(--syn-op);
 }
 /* Caret pause: when paused, halt the blink (steady block) so it
    visibly signals "stopped here" instead of "still typing". */
 .transpile.paused .transpile-caret {
   animation: none;
   opacity: 1;
-  color: #fde68a;
+  color: var(--syn-op);
 }
 
 /* ─── Timer bar (read-and-compare countdown) ───────────────────────
    Thin strip pinned to the bottom edge of the panel. Fills left→right
    over the hold duration; reaching the right edge = next snippet.
-   CSS-driven via `animation` so .paused freezes it via
-   animation-play-state — keeps in lockstep with the JS pausableSleep. */
+   Runs at real wall-clock during typing (pause doesn't halt animations),
+   then freezes during the HOLD beat when paused — gated by .holding so
+   the bar only pauses while autoplay would otherwise advance. */
 .transpile-timer {
   position: absolute;
   bottom: 0;
@@ -368,11 +772,14 @@ body {
   width: 100%;
   transform: scaleX(0);
   transform-origin: left center;
-  background: color-mix(in srgb, var(--star-lang) 32%, transparent);
+  background: color-mix(in srgb, var(--demo-accent) 32%, transparent);
 }
 .transpile.timing .transpile-timer-fill {
   animation: transpile-timer-fill linear forwards;
   animation-duration: 6500ms; /* JS overrides per snippet */
+}
+.transpile.paused.holding .transpile-timer-fill {
+  animation-play-state: paused;
 }
 @keyframes transpile-timer-fill {
   from {
@@ -381,9 +788,6 @@ body {
   to {
     transform: scaleX(1);
   }
-}
-.transpile.paused .transpile-timer-fill {
-  animation-play-state: paused;
 }
 
 /* ─── Evaporative dissolve ─────────────────────────────────────────
@@ -398,9 +802,6 @@ body {
 .transpile.evaporating .transpile-code .evap {
   animation: transpile-evap 700ms ease-out forwards;
   animation-delay: calc(var(--i, 0) * 4ms);
-}
-.transpile.paused .transpile-code .evap {
-  animation-play-state: paused;
 }
 @keyframes transpile-evap {
   to {
@@ -423,6 +824,78 @@ body {
   justify-content: center;
   padding: 2.5rem 1.5rem;
   gap: 2.5rem;
+}
+
+/* Very slight whole-page chromatic shimmer. Three soft brand-color
+   blobs (lang green, runtime red, chartreuse bridge) drift slowly
+   across the splash via a fixed-position overlay. `mix-blend-mode:
+   screen` makes the layer add light additively rather than tint
+   everything towards the colors — at 6% alpha the effect should
+   read as "the background is breathing" rather than a visible
+   color overlay. Pointer-events disabled so the layer doesn't
+   catch clicks meant for content underneath. */
+.splash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: var(--chromatic-blend);
+  background:
+    radial-gradient(circle 28rem at 50% 50%, hsl(150 60% 73% / 6%), transparent 60%),
+    radial-gradient(circle 32rem at 50% 50%, hsl(200 75% 70% / 6%), transparent 60%),
+    radial-gradient(circle 30rem at 50% 50%, hsl(210 20% 92% / 5%), transparent 60%);
+  background-size:
+    200% 200%,
+    200% 200%,
+    200% 200%;
+  background-position:
+    -50% -30%,
+    50% -30%,
+    0% 60%;
+  animation: splash-breathe 40s ease-in-out infinite;
+}
+
+@keyframes splash-breathe {
+  0% {
+    background-position:
+      -50% -30%,
+      50% -30%,
+      0% 60%;
+  }
+  33% {
+    background-position:
+      40% 20%,
+      -20% 40%,
+      60% -20%;
+  }
+  66% {
+    background-position:
+      -10% 50%,
+      30% -10%,
+      -40% 30%;
+  }
+  100% {
+    background-position:
+      -50% -30%,
+      50% -30%,
+      0% 60%;
+  }
+}
+
+/* Splash content sits above the overlay. Without explicit z-index,
+   the source-order children would still render below ::before
+   because the pseudo-element is later in the painting order than
+   a static-position child. */
+.splash > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash::before {
+    animation: none;
+  }
 }
 
 .splash-header {
@@ -449,18 +922,134 @@ body {
   font-weight: 700;
   margin: 0 0 0.4rem;
   letter-spacing: -0.04em;
-  color: var(--text);
   font-variation-settings:
     "opsz" 144,
     "SOFT" 0,
     "wght" 700,
     "WONK" 1;
-  /* Subtle cosmic glow — the wordmark sits in front of a starfield;
-     a faint near-white halo gives it a sense of being lit from
-     within rather than printed flat on the dark bg. */
+  /* Chromatic clouds — three soft radial-gradient blobs (cool blue,
+     magenta, gold) drift independently across the wordmark over a
+     warm cream base. Each blob is a circular gradient fading to
+     transparent so the cream shows through wherever no blob covers;
+     three blobs at different cycles and starting offsets means the
+     visible color in any glyph at any moment is a varying mix
+     rather than a single sweep. Background-size 200% 200% gives
+     each blob room to drift in 2D (vs the previous horizontal-only
+     sweep at 300% 100%). `ease-in-out` per cycle slows the drift
+     at the extremes, which reads as more organic than `linear`. */
+  background:
+    /* Aurora-inspired near-triad: lang green (162°), runtime red
+       (6°), violet (280°). Hue distances are 156° / 118° / 86° —
+       not perfectly triadic but no two colors are within 35° of
+       each other, so the composition reads as three distinct hues
+       rather than "two warms + one cool" or "traffic lights."
+       Real aurora palette: green from oxygen at lower altitude,
+       red from oxygen at higher altitude, violet from nitrogen —
+       on-theme with the cosmic starfield bg. Violet at 280° is
+       distinctly different from the dropped Lib's sky-blue 210°
+       so doesn't visually reintroduce Lib as a pillar. */
+    radial-gradient(circle at 50% 50%, hsl(150 60% 73%) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, hsl(200 75% 70%) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, hsl(210 20% 92%) 0%, transparent 40%), var(--text);
+  background-size:
+    200% 200%,
+    200% 200%,
+    200% 200%,
+    100% 100%;
+  background-position:
+    -40% -40%,
+    40% -40%,
+    -40% 40%,
+    0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: chromatic-clouds 18s ease-in-out infinite;
+  /* Brand-color halo — stacked text-shadows in the same lang green,
+     runtime red, and chartreuse bridge as the inner cloud blobs,
+     so the outer glow reads as a bleed of the brand palette
+     rather than a flat warm-cream halo. text-shadow reads from
+     the glyph alpha even with `color: transparent` + background-
+     clip, so the colored halos render through the transparent fill. */
   text-shadow:
-    0 0 32px color-mix(in srgb, var(--text) 22%, transparent),
-    0 0 80px color-mix(in srgb, var(--text) 12%, transparent);
+    0 0 24px hsl(150 60% 73% / 45%),
+    0 0 48px hsl(200 75% 70% / 35%),
+    0 0 96px hsl(210 20% 92% / 30%),
+    0 0 140px hsl(200 75% 70% / 15%);
+}
+
+@media (prefers-color-scheme: light) {
+  .splash-header h1 {
+    /* Light-mode halo uses the same three brand hues but at lower
+       lightness (35-45% vs 50-65% in dark mode) and lower alpha —
+       on a near-white bg, bright halos at 30-45% alpha disappear
+       because they're the same luminance as the bg. Darker hues
+       at 25-35% alpha render as a soft chromatic bleed instead. */
+    text-shadow:
+      0 0 24px hsl(150 50% 45% / 35%),
+      0 0 48px hsl(200 65% 50% / 28%),
+      0 0 96px hsl(210 18% 60% / 24%),
+      0 0 140px hsl(200 65% 50% / 12%);
+  }
+}
+
+@keyframes chromatic-clouds {
+  /* Each comma-separated position triple is one blob's offset; the
+     fourth position (0 0) is the cream base layer which never
+     moves. Each blob traces a wandering path that returns to its
+     start at 100%, producing a seamless loop. The three blobs are
+     phased so they don't all reach the same extreme at the same
+     time — the wordmark always has at least one warm-tinted region
+     somewhere. */
+  0% {
+    background-position:
+      -40% -40%,
+      40% -40%,
+      -40% 40%,
+      0 0;
+  }
+  25% {
+    background-position:
+      20% 30%,
+      -30% 60%,
+      50% -20%,
+      0 0;
+  }
+  50% {
+    background-position:
+      60% -20%,
+      40% 20%,
+      0% 60%,
+      0 0;
+  }
+  75% {
+    background-position:
+      -20% 30%,
+      60% -30%,
+      -30% 0%,
+      0 0;
+  }
+  100% {
+    background-position:
+      -40% -40%,
+      40% -40%,
+      -40% 40%,
+      0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-header h1 {
+    animation: none;
+    /* Park the gradient at its base position so the wordmark falls
+       back to the same warm cream state used before this change. */
+    background-position:
+      -40% -40%,
+      40% -40%,
+      -40% 40%,
+      0 0;
+  }
 }
 
 .splash-header p {
@@ -474,52 +1063,167 @@ body {
     "SOFT" 50;
 }
 
-.brands {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 17rem));
-  gap: 1.5rem;
-  width: 100%;
-  max-width: 56rem;
+.brands-aside {
+  /* Tiny framing line above the brand cards: signals that the two
+     products are independent, so visitors don't read the side-by-
+     side card layout as "Language → Runtime stack." Quiet italic
+     serif matches the section-aside voice used elsewhere on the
+     splash without competing with the wordmark or the cards. */
+  margin: 0 0 0.1rem 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  font-variation-settings:
+    "opsz" 14,
+    "SOFT" 50;
+  letter-spacing: 0.01em;
 }
 
-@media (max-width: 760px) {
-  .brands {
-    grid-template-columns: 1fr;
-    max-width: 22rem;
-  }
+.brands {
+  /* Stack the two product cards vertically so they don't visually
+     pair with the transpile demo's left/right pane layout
+     immediately above them. With the demo and the cards both being
+     two-column-side-by-side, the layout suggested "left card
+     describes left (pts) pane, right card describes right (js)
+     pane" — false, the cards are independent product doors. The
+     vertical stack reads as "menu of two products" instead. */
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 28rem;
+  justify-content: center;
 }
 
 .brand-card {
-  /* Per-card trinity tint + a brighter "accent" used as a second
-     color in the mesh background so the glow feels lit rather than
-     uniformly washed. Set per-card below. */
-  --tint: var(--star-lib);
+  /* Per-card brand tint + a brighter "accent" used as a second
+     color in the mesh background so the hover glow feels lit
+     rather than uniformly washed. Two brand cards (lang, runtime);
+     base tint defaults to lang and gets overridden by `.runtime`.
+     The dots and hover-mesh tint stay brand-identity colors; the
+     resting-state border uses the ghost palette so the cards read
+     as the same family of misty panels as the transpile demo. */
+  --tint: var(--star-lang);
   --tint-accent: white;
   display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto auto auto;
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
   column-gap: 0.7rem;
   row-gap: 0.18rem;
   align-items: baseline;
   padding: 1.25rem 1.4rem 1.1rem;
-  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
-  border: 1px solid var(--rule);
+  /* Local stacking context so the absolutely-positioned ::before
+     hover mesh can sit at z-index: -1 (behind the card content but
+     above the splash backdrop). Without isolation, z-index: -1
+     would punch through the card's stacking context entirely. */
+  position: relative;
+  isolation: isolate;
+  /* Two-layer background: solid inner panel (padding-box) + a
+     rotating conic ghost-palette gradient (border-box) cycling
+     through the three nebula colors. Matches the transpile
+     demo's gradient border with a longer 22s period (versus 18s)
+     so the two surfaces feel related without lock-step
+     synchronization. */
+  background:
+    color-mix(in srgb, var(--bg-elev) 95%, transparent) padding-box,
+    conic-gradient(
+        from var(--card-border-angle, 90deg) at 50% 50%,
+        hsl(150 60% 73%),
+        hsl(200 75% 70%),
+        hsl(210 20% 92%),
+        hsl(150 60% 73%)
+      )
+      border-box;
+  border: 2px solid transparent;
   border-radius: 12px;
   text-decoration: none;
   color: var(--text);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  /* Cheap GPU-only transitions: transform, box-shadow, border. No
-     canvas, no JS, no compositor surprises. */
+  /* Box-shadow has matched layer count at rest and hover so each
+     layer interpolates index-by-index (rest = 5 visible/placeholder
+     entries, hover = same 5 with different values). Layers that
+     should appear only on hover (outline ring, ghost glows,
+     brand-tint deep glow) are transparent at rest but occupy their
+     slot so the transition is smooth instead of snapping. Without
+     this, going from 3 → 5 box-shadow layers caused browsers to
+     pad the shorter list with zero-color zero-spread entries that
+     don't always animate cleanly. */
+  box-shadow:
+    0 0 0 1px transparent,
+    0 12px 32px -10px transparent,
+    0 24px 60px -16px transparent,
+    0 8px 24px -12px hsl(210 30% 5% / 0.7),
+    0 36px 100px -28px transparent,
+    inset 0 1px 0 hsl(210 25% 88% / 0.04),
+    inset 0 -1px 0 hsl(210 25% 50% / 0.15);
+  /* `background` is intentionally NOT in this transition list:
+     CSS doesn't interpolate `background-image` (only background-
+     color), so radial-gradients on rest vs hover would snap no
+     matter what duration you set. The hover mesh is handled via
+     a ::before pseudo-element below whose `opacity` fades in/out
+     — opacity IS interpolatable. transform + box-shadow cover the
+     other state changes. */
   transition:
-    transform 220ms cubic-bezier(0.2, 0.7, 0.25, 1),
-    box-shadow 220ms cubic-bezier(0.2, 0.7, 0.25, 1),
-    border-color 220ms ease,
-    background-color 220ms ease;
+    transform 320ms cubic-bezier(0.2, 0.7, 0.25, 1),
+    box-shadow 320ms cubic-bezier(0.2, 0.7, 0.25, 1);
+  animation: card-border-rotate 22s linear infinite;
 }
-.brand-card.lib {
-  --tint: var(--star-lib);
-  --tint-accent: #c8dfff; /* near-white blue — luminous accent */
+
+/* Hover mesh as a pseudo-element overlay. Sits inside the card's
+   2px transparent border (inset: 2px + matching inner radius 10px =
+   12px outer − 2px border), pointer-events-none so it doesn't
+   intercept the link click, opacity 0 at rest and 1 on hover.
+   Opacity transitions are smooth on every engine; `background-
+   image` transitions are not. */
+.brand-card::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 320ms cubic-bezier(0.2, 0.7, 0.25, 1);
+  background:
+    radial-gradient(ellipse 160% 130% at 25% 18%, hsl(150 60% 73% / 0.1), transparent 80%),
+    radial-gradient(ellipse 140% 130% at 78% 28%, hsl(200 75% 70% / 0.1), transparent 80%),
+    radial-gradient(ellipse 150% 140% at 60% 95%, hsl(210 20% 92% / 0.07), transparent 85%),
+    radial-gradient(ellipse 120% 120% at 90% 90%, color-mix(in srgb, var(--tint) 9%, transparent), transparent 75%);
+}
+
+.brand-card:hover::before,
+.brand-card:focus-visible::before {
+  opacity: 1;
+}
+
+@property --card-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes card-border-rotate {
+  to {
+    --card-border-angle: 360deg;
+  }
+}
+
+/* Stagger the two cards' border-rotation phases so they don't
+   show the same gradient slice at the same moment — gives the
+   pair a sense of independent breathing instead of moving in
+   lockstep. `.brand-card:nth-of-type(2)` is the second card
+   (runtime); offsets its rotation by half a turn. */
+.brand-card:nth-of-type(2) {
+  animation-delay: -11s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-card {
+    animation: none;
+  }
 }
 .brand-card.lang {
   --tint: var(--star-lang);
@@ -532,73 +1236,61 @@ body {
 
 .brand-card:hover,
 .brand-card:focus-visible {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   outline: none;
-  border-color: color-mix(in srgb, var(--tint) 75%, transparent);
-  /* Mesh-style background: 4 offset radial gradients at different
-     positions and intensities, mixing the accent (luminous near-white
-     trinity color) with the base trinity color. Different spots feel
-     slightly different — like real light bouncing around the card
-     rather than one flat tint. (Earlier iteration had a conic-
-     gradient sweep too; dropped because conic always shows a
-     visible seam at the 0°↔360° wrap-around point.) */
-  background:
-    radial-gradient(
-      ellipse 160% 130% at 22% 12%,
-      color-mix(in srgb, var(--tint-accent) 18%, transparent),
-      transparent 85%
-    ),
-    radial-gradient(ellipse 150% 120% at 78% 28%, color-mix(in srgb, var(--tint) 14%, transparent), transparent 85%),
-    radial-gradient(ellipse 140% 150% at 65% 95%, color-mix(in srgb, var(--tint) 9%, transparent), transparent 88%),
-    radial-gradient(
-      ellipse 135% 140% at 8% 70%,
-      color-mix(in srgb, var(--tint-accent) 6%, transparent),
-      transparent 90%
-    ),
-    color-mix(in srgb, var(--bg-elev) 85%, transparent);
-  /* Asymmetric multi-color shadow stack: the upper-right glow uses
-     the brighter accent (specular-ish highlight), the lower-left
-     uses the base trinity (cooler shadow side), and the cast
-     downward drop is the deepest. Mixed warmth makes it feel lit
-     from a directional source rather than evenly haloed. */
+  /* Box-shadow layer order MUST match the rest state declared on
+     `.brand-card` above (same 7 slots, transparent placeholders
+     swap to visible values). Without that index-by-index match,
+     the transition snaps. The radial-gradient hover mesh lives on
+     `.brand-card::before` (opacity-driven fade), not here — bg-
+     image transitions don't animate. */
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--tint) 60%, transparent),
-    -10px 8px 28px -8px color-mix(in srgb, var(--tint) 38%, transparent),
-    14px -4px 32px -10px color-mix(in srgb, var(--tint-accent) 30%, transparent),
-    0 22px 60px -14px color-mix(in srgb, var(--tint) 32%, transparent),
-    0 36px 100px -28px color-mix(in srgb, var(--tint) 22%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--tint-accent) 40%, transparent),
-    inset 0 -16px 36px -22px color-mix(in srgb, var(--tint) 35%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--tint) 28%, transparent),
+    0 12px 32px -10px hsl(200 75% 70% / 0.18),
+    0 24px 60px -16px hsl(150 60% 73% / 0.14),
+    0 8px 24px -12px transparent,
+    0 36px 100px -28px color-mix(in srgb, var(--tint) 12%, transparent),
+    inset 0 1px 0 hsl(210 25% 92% / 0.1),
+    inset 0 -1px 0 transparent;
 }
 
+/* No drop cap, no marker dot. Earlier revs tried L/R drop caps
+   and small dots in column 1; both invited the wrong reading.
+   "L" / "R" are unambiguously "Left" / "Right" abbreviations —
+   even with the cards stacked vertically, those letters paired
+   the cards back up with the transpile demo's left/right panes.
+   Stoplight dots before that signaled "status indicator" instead
+   of "brand mark." Solution: drop the column-1 affordance
+   entirely and let the brand-name itself be the typographic
+   anchor (styled below as a large Fraunces display caption). */
 .brand-dot {
-  grid-row: 1 / span 2;
-  align-self: center;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-.brand-dot[data-star="lib"] {
-  background: var(--star-lib);
-  box-shadow: 0 0 10px var(--star-lib);
-}
-.brand-dot[data-star="lang"] {
-  background: var(--star-lang);
-  box-shadow: 0 0 10px var(--star-lang);
-}
-.brand-dot[data-star="runtime"] {
-  background: var(--star-runtime);
-  box-shadow: 0 0 10px var(--star-runtime);
+  display: none;
 }
 
 .brand-name {
   font-family: var(--serif);
-  font-size: 1.32rem;
-  font-weight: 600;
-  letter-spacing: -0.012em;
+  /* Pumped from 1.32rem → 1.95rem after dropping the column-1
+     dot/dropcap — the brand-name is now the typographic focal
+     point of the card and earns the larger size + display axes.
+     Same Fraunces tuning family as the splash wordmark just one
+     OpSz step less monumental. */
+  font-size: 1.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-bottom: 0.15rem;
   font-variation-settings:
     "opsz" 144,
-    "SOFT" 30;
+    "SOFT" 20,
+    "wght" 700,
+    "WONK" 1;
+  /* Sympathy halo with the wordmark — same three ghost hues,
+     much dimmer (these cards are secondary to the wordmark in
+     hierarchy). */
+  text-shadow:
+    0 0 14px hsl(150 60% 73% / 0.22),
+    0 0 28px hsl(200 75% 70% / 0.18),
+    0 0 56px hsl(210 20% 92% / 0.12);
 }
 
 .brand-role {
@@ -607,12 +1299,12 @@ body {
   font-size: 0.92rem;
   color: var(--text-dim);
   font-variation-settings:
-    "opsz" 36,
-    "SOFT" 50;
+    "opsz" 18,
+    "SOFT" 50,
+    "wght" 500;
 }
 
 .brand-meta {
-  grid-column: 2;
   font-size: 0.86rem;
   line-height: 1.45;
   color: var(--text-dim);
@@ -625,19 +1317,6 @@ body {
   background: color-mix(in srgb, var(--bg-elev) 50%, transparent);
   padding: 0 4px;
   border-radius: 3px;
-}
-
-.brand-url {
-  grid-column: 2;
-  font-family: var(--mono);
-  font-size: 0.74rem;
-  color: var(--text-faint);
-  margin-top: 0.55rem;
-  letter-spacing: 0.02em;
-}
-.brand-card:hover .brand-url,
-.brand-card:focus-visible .brand-url {
-  color: var(--text-dim);
 }
 
 .splash-footer {

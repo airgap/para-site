@@ -1,19 +1,20 @@
 ---
-// Single "Para" brand for the consolidated docs. Lib / Lang / Runtime
-// are sub-sections of the same Para ecosystem (each with its own
-// landing under / / libs / lang / runtime), so the docs header doesn't
-// need to disambiguate between products — they all live here.
+// Para docs header brand. The splash's positioning is Lang + Runtime
+// as two equal products (Lib pillar dropped 2026-05-06); docs are the
+// shared reference for both. The wordmark borrows the splash's
+// Fraunces treatment — same display face, scaled down for nav, with a
+// muted ghost-halo that hints at the splash atmosphere without
+// dominating the chrome.
 //
-// The 3-body canvas + nav-3body.js is shared with the section
-// landings; the docs default to lib (the broadest-audience product)
-// for the heavy body since /docs/ pages don't carry a section.
+// Earlier rev embedded a `nav-3body.js` orbital-mechanics canvas next
+// to the wordmark, leftover from when Para had three pillars. That
+// metaphor went away with the Lib demotion; the canvas + script went
+// with it.
 ---
 
 <a href="/" class="site-title sl-flex">
-  <canvas class="nav-3body" data-current="lib" aria-hidden="true"></canvas>
   <span class="brand-active">Para</span>
 </a>
-<script src="/nav-3body.js" defer></script>
 
 <style>
   .site-title {
@@ -21,22 +22,22 @@
     align-items: center;
     font-family: "Fraunces", Georgia, serif;
     font-weight: 700;
-    font-size: 1.2rem;
-    letter-spacing: -0.012em;
+    font-size: 1.35rem;
+    letter-spacing: -0.018em;
     color: var(--pb-text);
     text-decoration: none;
     font-variation-settings:
       "opsz" 144,
-      "SOFT" 30;
+      "SOFT" 30,
+      "WONK" 1;
+    /* Subtler than the splash wordmark's full halo — this lives in
+       the nav chrome and shouldn't pull focus from page content. */
+    text-shadow:
+      0 0 12px color-mix(in srgb, var(--pb-ghost-blue) 18%, transparent),
+      0 0 24px color-mix(in srgb, var(--pb-ghost-green) 10%, transparent);
   }
   .brand-active {
     color: var(--pb-text);
     font-weight: 700;
-  }
-  .nav-3body {
-    display: inline-block;
-    width: 28px;
-    height: 28px;
-    margin-right: 8px;
   }
 </style>

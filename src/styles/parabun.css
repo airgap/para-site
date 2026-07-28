@@ -1,21 +1,35 @@
-/* ─── Para — minimal Starlight customization ──────────────────────────
+/* ─── Para — docs theme ──────────────────────────────────────────────
  *
- * Goal: lean on Starlight's default chrome for layout / scroll / nav,
- * and use this file ONLY for palette + fonts + a couple of small
- * markdown-content polish rules. Everything decorative (parallax,
- * starfield, backdrop-filter, floating-pill nav, mobile-TOC reflow)
- * was removed — those layers were flashy on desktop but unreliable
- * on mobile and stylistically nonstandard for a docs site.
+ * Keeps Starlight's chrome for layout / scroll / nav. Theme picks up
+ * the splash's ghost-palette vocabulary (will-o-wisp green / spectral
+ * blue / moonlight white) so /docs/ feels like the same site as the
+ * splash, without copying the splash's heavy atmospheric layers (the
+ * drifting `space.js` nebula canvas + rotating conic-gradient borders
+ * make sense as a one-shot landing flourish; on a docs page where a
+ * reader stays for ten minutes they'd be distracting).
+ *
+ * The split: PALETTE + FONTS are shared with the splash, DECOR is
+ * pared down to a single static atmospheric tint anchored bottom-
+ * right of the viewport so pages still read as cosmic rather than
+ * clinical. Code blocks borrow the splash transpile-panel's subtle
+ * ghost border (static, not rotating) so they feel like the same
+ * family of surfaces.
  *
  * Typography: Fraunces (display) + Spectral (body) + JetBrains Mono
- * (code). All from Google Fonts; loaded once at the top of the file.
+ * (code). Fraunces import includes the `ital` axis so italic
+ * headings / asides render with the real italic family, not the
+ * synthetic-slant fallback that the previous rev (without `ital`)
+ * gave us.
  * ──────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400..700,0..100;1,9..144,400..700,0..100&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap");
 
 /* ─── Dark palette (default) ──────────────────────────────────────── */
 :root,
 :root[data-theme="dark"] {
+  /* Backgrounds — slightly less black than the splash's `#01020a` so
+     long-form reading doesn't fatigue. The splash bg can be darker
+     because it has bright nebulae on top providing contrast. */
   --pb-bg: #050811;
   --pb-bg-elev: #0c1020;
   --pb-rule: #1a2240;
@@ -24,9 +38,19 @@
   --pb-text-dim: #8a8b94;
   --pb-text-faint: #4a4d5a;
 
-  --pb-accent: #6db4ff;
-  --pb-accent-strong: #9fcdff;
-  --pb-accent-soft: #1a2a44;
+  /* Ghost-palette trio shared with the splash (`/public/styles.css`).
+     Use these for: code-block borders, link underlines, callout
+     accents, atmospheric backdrop. */
+  --pb-ghost-green: hsl(150 60% 73%); /* will-o-wisp */
+  --pb-ghost-blue: hsl(200 75% 70%); /* spectral */
+  --pb-ghost-white: hsl(210 20% 92%); /* moonlight */
+
+  /* Primary accent maps to spectral blue. Keeps Starlight's
+     single-accent surfaces (link color, active-nav highlight, etc.)
+     coherent with the splash brand. */
+  --pb-accent: hsl(200 75% 70%);
+  --pb-accent-strong: hsl(200 85% 80%);
+  --pb-accent-soft: color-mix(in srgb, hsl(200 75% 70%) 18%, transparent);
 
   --sl-color-text-invert: var(--pb-bg);
 }
@@ -41,9 +65,16 @@
   --pb-text-dim: #5e574a;
   --pb-text-faint: #94897a;
 
-  --pb-accent: #1a4880;
-  --pb-accent-strong: #0c2c52;
-  --pb-accent-soft: #d6e0ee;
+  /* Ghost-palette darkened so the same nominal hues read with
+     adequate contrast against the cream bg. Same hues as dark
+     palette, just lower L. */
+  --pb-ghost-green: hsl(150 50% 35%);
+  --pb-ghost-blue: hsl(200 65% 40%);
+  --pb-ghost-white: hsl(210 30% 35%);
+
+  --pb-accent: hsl(200 65% 40%);
+  --pb-accent-strong: hsl(200 75% 25%);
+  --pb-accent-soft: color-mix(in srgb, hsl(200 65% 40%) 18%, transparent);
 
   --sl-color-text-invert: #ffffff;
 }
@@ -84,6 +115,46 @@
   --sl-line-height: 1.65;
 }
 
+/* ─── Atmospheric backdrop ────────────────────────────────────────── */
+/* A single static radial-gradient tint anchored bottom-right of the
+ * viewport — hint of the splash's ghost nebulae without the drifting
+ * canvas. Fixed-position so it stays put while the page scrolls; very
+ * low opacity so body text always wins for legibility. The light
+ * theme switches to a desaturated variant that doesn't fight the
+ * cream bg. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 85% 90%,
+      color-mix(in srgb, var(--pb-ghost-blue) 7%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 15% 10%,
+      color-mix(in srgb, var(--pb-ghost-green) 5%, transparent),
+      transparent 70%
+    );
+}
+
+:root[data-theme="light"] body::before {
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 85% 90%,
+      color-mix(in srgb, var(--pb-ghost-blue) 4%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 15% 10%,
+      color-mix(in srgb, var(--pb-ghost-green) 3%, transparent),
+      transparent 70%
+    );
+}
+
 /* ─── Markdown content polish ─────────────────────────────────────── */
 
 .sl-markdown-content {
@@ -97,44 +168,101 @@
   font-family: "Fraunces", Georgia, serif;
   letter-spacing: -0.018em;
   color: var(--pb-text);
+  /* Light ghost-halo on headings — matches splash wordmark texture
+     in a much subtler register. */
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--pb-ghost-blue) 14%, transparent),
+    0 0 32px color-mix(in srgb, var(--pb-ghost-white) 6%, transparent);
 }
 
 .sl-markdown-content h1 {
   font-weight: 600;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30;
 }
 
 .sl-markdown-content h2 {
   font-weight: 500;
   margin-block-start: 2.4em;
   padding-block-end: 0.4em;
+  /* Section divider — fade into ghost-blue at the right edge so the
+     rule reads as a chromatic accent rather than a flat hairline. */
   border-block-end: 1px solid var(--pb-rule);
+  background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in srgb, var(--pb-ghost-blue) 12%, transparent) 80%,
+      transparent
+    )
+    bottom / 100% 1px no-repeat;
+  font-variation-settings:
+    "opsz" 72,
+    "SOFT" 40;
 }
 
 .sl-markdown-content h3 {
   font-weight: 600;
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 50;
 }
 
-/* Lede — first paragraph after H1, italic in display face. */
+/* Lede — first paragraph after H1, italic in display face.
+   Real italic Fraunces now that the @import loads the ital axis. */
 .sl-markdown-content > h1 + p {
   font-family: "Fraunces", Georgia, serif;
   font-style: italic;
   font-size: 1.2rem;
   color: var(--pb-text-dim);
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 50;
 }
 
 .sl-markdown-content code:not(pre code) {
   background: var(--pb-bg-elev);
-  border: 1px solid var(--pb-rule);
+  border: 1px solid color-mix(in srgb, var(--pb-ghost-blue) 22%, var(--pb-rule));
   padding: 0.1em 0.4em;
   border-radius: 3px;
   font-size: 0.86em;
 }
 
+/* Code-block aesthetic borrowed from the splash transpile panel —
+ * static (not rotating) ghost-tinted border, slight elevation, soft
+ * inset highlight at top. Expressive Code shells render as
+ * <figure class="expressive-code"> in Starlight. */
+.sl-markdown-content .expressive-code .frame {
+  border: 1px solid color-mix(in srgb, var(--pb-ghost-blue) 28%, transparent);
+  border-radius: 8px;
+  box-shadow:
+    0 1px 0 hsl(210 20% 92% / 0.06) inset,
+    0 8px 28px -16px color-mix(in srgb, var(--pb-ghost-blue) 30%, transparent);
+}
+
 .sl-markdown-content blockquote {
-  border-inline-start: 3px solid var(--pb-accent);
+  border-inline-start: 3px solid var(--pb-ghost-blue);
   padding-inline-start: 1.1rem;
   color: var(--pb-text-dim);
   font-style: italic;
+  font-family: "Fraunces", Georgia, serif;
+  font-variation-settings:
+    "opsz" 18,
+    "SOFT" 50;
+}
+
+/* Links — ghost-blue underline + subtle hover lift. Default
+ * Starlight underline is functional but flat; ghost-blue brings
+ * the same accent the splash uses. */
+.sl-markdown-content a {
+  color: var(--pb-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--pb-ghost-blue) 50%, transparent);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 160ms ease;
+}
+.sl-markdown-content a:hover {
+  text-decoration-color: var(--pb-ghost-blue);
 }
 
 ::selection {

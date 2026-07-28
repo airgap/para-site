@@ -1,14 +1,21 @@
-// Static atmosphere for the umbrella splash:
-//   - one nebula per product (blue / emerald / red), corner-anchored
-//   - a starfield over the top
+// Atmospheric splash backdrop: three ghost-palette nebulae (will-o-
+// wisp green, spectral blue, moonlight white) that drift across the
+// splash on slow phased sine loops.
 //
-// Renders ONCE on init and again on resize. No animation loop, no
-// hover machinery, no per-frame work. The brand-card hover effects
-// live in CSS — see .brand-card:hover in styles.css. Canvas exists
-// only to provide the soft cosmic backdrop the page hierarchy sits on.
+// Drift was added 2026-05-11 after the corner-anchored static
+// version read as "three colors in three corners" instead of a
+// chromatic atmosphere. Each nebula now wanders within a wide
+// elliptical envelope (~0.4 of the viewport) at sub-Hz frequencies
+// — full cycles take 60-110 s per axis, so the motion is unhurried
+// rather than swimming. `prefers-reduced-motion: reduce` short-
+// circuits to a single static draw so the page stays accessible.
+//
+// Earlier revs also drew a fixed starfield (later black "void
+// specks" against the aurora). Removed because the dots read as
+// dust rather than stars on most displays; the nebulae alone now
+// carry the atmosphere.
 (() => {
   const SEED = 4242;
-  const STAR_COUNT = 260;
 
   const canvas = document.createElement("canvas");
   canvas.id = "__space";
@@ -35,43 +42,73 @@
     };
   }
 
-  // Three nebulae, one per product. Corner-anchored with a long
-  // gentle alpha tail so they bleed into each other instead of
-  // showing visible "junction" lines where two nebulae meet.
+  // Ghost-palette nebulae that drift across the splash on slow
+  // phased sine loops. Three blobs (will-o-wisp green, spectral
+  // blue, moonlight white) — warmer hues (red/violet/gold) were
+  // dropped 2026-05-11 in favor of an all-cool "haunted" mood.
+  // Brand colors still live in the lang/runtime cards; the
+  // splash atmospherics are intentionally desaturated and cool.
+  // Each blob's phased motion (different frequencies / starting
+  // offsets per axis) means the visible color at any point is a
+  // varying mix rather than a single corner-locked region.
+  //
+  // baseX/baseY = wander origin in canvas-fraction units.
+  // ampX/ampY  = how far each nebula drifts from its origin.
+  // freqX/freqY = cycles per second on each axis (very slow, ~0.01-0.02 ≈ 50-100 s).
+  // phaseX/phaseY = starting offset so blobs don't peak together.
   const nebulae = [
-    { x: 0.05, y: 0.15, rx: 0.95, ry: 0.85, color: [109, 180, 255], alpha: 0.18 },
-    { x: 0.5, y: 1.05, rx: 0.85, ry: 0.8, color: [16, 185, 129], alpha: 0.13 },
-    { x: 0.95, y: 0.12, rx: 0.95, ry: 0.85, color: [255, 92, 74], alpha: 0.17 },
+    {
+      baseX: 0.25,
+      baseY: 0.3,
+      ampX: 0.45,
+      ampY: 0.35,
+      freqX: 0.014,
+      freqY: 0.011,
+      phaseX: 0.0,
+      phaseY: 1.7,
+      rx: 0.95,
+      ry: 0.85,
+      color: [228, 234, 240],
+      alpha: 0.16,
+    },
+    {
+      baseX: 0.55,
+      baseY: 0.7,
+      ampX: 0.4,
+      ampY: 0.3,
+      freqX: 0.01,
+      freqY: 0.015,
+      phaseX: 2.3,
+      phaseY: 0.4,
+      rx: 0.85,
+      ry: 0.8,
+      color: [140, 220, 187],
+      alpha: 0.14,
+    },
+    {
+      baseX: 0.7,
+      baseY: 0.25,
+      ampX: 0.35,
+      ampY: 0.4,
+      freqX: 0.017,
+      freqY: 0.009,
+      phaseX: 4.1,
+      phaseY: 3.0,
+      rx: 0.95,
+      ry: 0.85,
+      color: [112, 184, 226],
+      alpha: 0.15,
+    },
   ];
 
-  // Stars. Three brightness tiers; mostly warm-white with a sprinkle
-  // of trinity-tinted accents.
+  // Stars removed — earlier revs drew black silhouettes ("void
+  // specks") to read as dark holes against the aurora, but they
+  // ended up looking like dust on the screen on most displays. The
+  // background is now just the drifting nebulae. `makeRng` stays
+  // initialized so future star-like passes can reuse the seeded
+  // RNG; no current consumers.
   const rng = makeRng(SEED);
-  const stars = [];
-  for (let i = 0; i < STAR_COUNT; i++) {
-    const r = rng();
-    let radius, alpha, halo;
-    if (r > 0.985) {
-      radius = 1.8 + rng() * 1.2;
-      alpha = 0.25 + rng() * 0.08;
-      halo = true;
-    } else if (r > 0.94) {
-      radius = 1.1 + rng() * 0.6;
-      alpha = 0.18 + rng() * 0.08;
-      halo = true;
-    } else {
-      radius = 0.5 + rng() * 0.6;
-      alpha = 0.08 + rng() * 0.12;
-      halo = false;
-    }
-    const ct = rng();
-    let color;
-    if (ct > 0.96) color = [109, 180, 255];
-    else if (ct > 0.93) color = [16, 185, 129];
-    else if (ct > 0.91) color = [255, 92, 74];
-    else color = [255, 250, 240];
-    stars.push({ x: rng(), y: rng(), radius, alpha, halo, color });
-  }
+  void rng; // silence unused-var lint until the next pass needs it
 
   let dpr = 1;
   let cssWidth = 0;
@@ -83,10 +120,28 @@
     cssHeight = window.innerHeight;
     canvas.width = Math.round(cssWidth * dpr);
     canvas.height = Math.round(cssHeight * dpr);
-    render();
+    // Force a render with the current animation time so the canvas
+    // doesn't go blank during the resize gap. The RAF loop will
+    // pick it up on the next frame either way.
+    render(currentTime);
   }
 
-  function render() {
+  // Time origin so `t` is small and sin() arguments stay numerically
+  // tame across long sessions. `currentTime` is the last value used
+  // for rendering — exposed so `resize()` can re-render at the same
+  // moment in the cycle.
+  const t0 = performance.now();
+  let currentTime = 0;
+  const reducedMotion =
+    typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function frame(now) {
+    currentTime = (now - t0) / 1000;
+    render(currentTime);
+    if (!reducedMotion) requestAnimationFrame(frame);
+  }
+
+  function render(t) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -97,11 +152,16 @@
     // displays.
     const vmax = Math.max(cssWidth, cssHeight);
 
-    // Nebulae first. Sized so their shape stays round (the rx/ry
-    // ratio governs aspect) regardless of viewport.
+    // Nebulae first. Position is `base + amp * sin(2π·freq·t + phase)`
+    // per axis — independent X/Y frequencies and phase offsets keep
+    // the three blobs from synchronizing into a parade. With three
+    // blobs at offset phases, the visible color at any point is a
+    // varying mix, not a "this corner is gold" composition.
     for (const n of nebulae) {
-      const cx = n.x * cssWidth;
-      const cy = n.y * cssHeight;
+      const nx = n.baseX + n.ampX * Math.sin(2 * Math.PI * n.freqX * t + n.phaseX);
+      const ny = n.baseY + n.ampY * Math.sin(2 * Math.PI * n.freqY * t + n.phaseY);
+      const cx = nx * cssWidth;
+      const cy = ny * cssHeight;
       const rx = n.rx * vmax;
       const ry = n.ry * vmax;
       const r = Math.max(rx, ry);
@@ -128,28 +188,10 @@
       ctx.restore();
     }
 
-    // Stars on top.
-    for (const s of stars) {
-      const x = s.x * cssWidth;
-      const y = s.y * cssHeight;
-      const [cr, cg, cb] = s.color;
-      if (s.halo) {
-        const haloR = s.radius * 2;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
-        grad.addColorStop(0, `rgba(${cr},${cg},${cb},${s.alpha})`);
-        grad.addColorStop(0.25, `rgba(${cr},${cg},${cb},${s.alpha * 0.35})`);
-        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, haloR, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = `rgba(${cr},${cg},${cb},${s.alpha})`;
-        ctx.beginPath();
-        ctx.arc(x, y, s.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    // Stars were drawn here in earlier revs (black silhouettes
+    // wandering on per-star sine phases). Removed because the dark
+    // dots read more like screen dust than celestial bodies. The
+    // nebulae alone carry the splash atmosphere now.
   }
 
   let resizeTimer = null;
@@ -158,9 +200,20 @@
     resizeTimer = setTimeout(resize, 80);
   });
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", resize);
-  } else {
+  function start() {
     resize();
+    if (reducedMotion) {
+      // Single static draw at t = 0. Same look every refresh —
+      // accessibility users get a consistent backdrop without motion.
+      render(0);
+    } else {
+      requestAnimationFrame(frame);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
   }
 })();

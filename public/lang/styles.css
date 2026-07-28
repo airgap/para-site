@@ -109,6 +109,8 @@ html {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0;
   text-rendering: optimizeLegibility;
   /* Smooth-scroll the page for anchor jumps. The h2[id] scroll-margin-top
    * already keeps targets clear of the sticky header. */
