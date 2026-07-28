@@ -71,6 +71,14 @@
   --syn-str: hsl(160 30% 82%);
   --demo-accent: hsl(200 75% 70%);
   --accent: hsl(200 75% 70%);
+  /* Demo-menu category tints (see .transpile-menu). Lang keeps the
+     spectral-blue accent, ParaBun keeps the will-o-wisp green the
+     single-pane tag already uses, and ParaKit takes a ghost violet —
+     a fourth band in the same pastel spectrum, distinct from all
+     three conic-border hues. */
+  --cat-lang: hsl(200 75% 70%);
+  --cat-kit: hsl(270 55% 78%);
+  --cat-runtime: hsl(150 60% 73%);
   --serif: "Fraunces", Georgia, "Times New Roman", serif;
   --sans: "Spectral", Georgia, "Times New Roman", serif;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
@@ -112,6 +120,11 @@
     --syn-str: hsl(210 25% 38%);
     --demo-accent: hsl(200 65% 40%);
     --accent: hsl(200 65% 40%);
+    /* Category tints traverse down the lightness axis like the rest
+       of the light-mode ghost palette. */
+    --cat-lang: hsl(200 65% 40%);
+    --cat-kit: hsl(270 45% 45%);
+    --cat-runtime: hsl(150 65% 30%);
   }
   /* The starfield canvas is additive light over a dark bg — it has
      nothing to subtract from a near-white bg, so hide it. Layouts
@@ -165,8 +178,9 @@ body {
    for the animation. */
 /* (Earlier `.demo-tabs` / `.demo-tab` rules removed when the
    Language/Runtime tabs were folded back into a single continuous
-   cycle. Color-coded progress dots — see `.transpile-dot[data-category]`
-   below — now telegraph upcoming demo type without separating pools.) */
+   cycle, then the anonymous progress dots removed in favor of the
+   named `.transpile-menu` below the panel — see its block further
+   down.) */
 
 .hero-stage {
   position: relative;
@@ -469,106 +483,106 @@ body {
   }
 }
 
-/* Progress dots (one per snippet) live in the right header. The
-   active dot is filled emerald and slightly enlarged. Hover/click
-   pause is announced via .transpile.paused → .transpile-paused-hint
-   becomes visible; .transpile.pinned just changes its color. */
-.transpile-progress {
-  display: inline-flex;
-  /* Gap must be large enough to clear the dots' ::before tap-target
-     extension. Dot is 8px, ::before extends `inset: -3px` (14px wide
-     hit area, 7px to each side of the visible center). Gap of 8px
-     gives 16px center-to-center spacing, so each ::before stays 1px
-     clear of its neighbor's. Earlier rev had gap 5px + inset -8px
-     (24px hit areas overlapping by 11px each) — clicking a dot
-     reliably hit the wrong one. */
-  gap: 8px;
-  align-items: center;
-  margin-left: auto;
+/* ─── Named demo menu ──────────────────────────────────────────────
+   Replaces the earlier anonymous progress dots (8px circles whose
+   only identification was a hover tooltip — invisible on touch, and
+   at 10+ snippets impossible to target or remember). Every demo is
+   listed by name under the panel, one row per product category:
+
+     PARA LANG   ..> chains  |> pipelines  para const  match …
+     PARAKIT     synced  from server
+     PARABUN     voice assistant  gpio  audio → gpio
+
+   Rendered by transpile.js renderMenu; each `.menu-group` carries
+   data-category, which selects the per-category `--cat` tint
+   (spectral blue / ghost violet / will-o-wisp green — see the
+   --cat-* vars in :root). The active item tracks the reel; clicking
+   any item jumps to that snippet. */
+.transpile-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.85rem auto 0;
+  width: fit-content;
+  max-width: 100%;
+  font-family: var(--mono);
+  font-size: 11.5px;
 }
-.transpile-dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  padding: 0;
+.menu-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+}
+.menu-group[data-category="lang"] {
+  --cat: var(--cat-lang);
+}
+.menu-group[data-category="kit"] {
+  --cat: var(--cat-kit);
+}
+.menu-group[data-category="runtime"] {
+  --cat: var(--cat-runtime);
+}
+.menu-group-name {
+  /* Fixed-width right-aligned label column so the three category
+     names read as one aligned rail. 5.2rem clears "PARA LANG" (the
+     longest) at 9.5px/0.14em tracking. */
+  flex: 0 0 5.2rem;
+  text-align: right;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cat) 60%, var(--text-faint));
+}
+.menu-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+.menu-item {
   appearance: none;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--demo-accent) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--demo-accent) 35%, transparent);
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: var(--text-dim);
+  padding: 1px 8px;
+  border-radius: 999px;
   cursor: pointer;
+  white-space: nowrap;
   transition:
-    background 240ms ease,
-    transform 240ms ease,
-    border-color 240ms ease,
-    box-shadow 240ms ease;
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
 }
-.transpile-dot:hover {
-  background: color-mix(in srgb, var(--demo-accent) 35%, transparent);
-  border-color: color-mix(in srgb, var(--demo-accent) 60%, transparent);
+.menu-item:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--cat) 12%, transparent);
 }
-.transpile-dot:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: 2px;
+.menu-item:focus-visible {
+  outline: 1px solid var(--cat);
+  outline-offset: 1px;
 }
-.transpile-dot.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  transform: scale(1.25);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+.menu-item.active {
+  color: color-mix(in srgb, var(--cat) 65%, var(--text));
+  background: color-mix(in srgb, var(--cat) 14%, transparent);
+  border-color: color-mix(in srgb, var(--cat) 45%, transparent);
 }
-/* (Earlier rev tried per-category dot tints — spectral blue for
-   Lang dots, will-o-wisp green for Runtime — to telegraph upcoming
-   demo type. At 18% opacity color-mix the resting dots read
-   identical regardless of hue. The Runtime cue is now an explicit
-   "parabun only" badge in the source-pane header, set when the
-   current snippet's category === "runtime"; see
-   `.transpile-runtime-badge` below.) */
-/* Invisible padded tap target. Visible dot is 8px; `inset: -3px`
-   extends the clickable area to 14px (3px breathing room on each
-   side). Earlier rev used -8px (24px hit area), which on a 5px gap
-   put adjacent dots' hit areas 11px deep into each other — clicks
-   on dot N reliably triggered dot N-1 or N+1. Paired with the
-   parent's `gap: 8px` above, neighboring hit areas now stay 1px
-   apart. Trade-off: smaller tap target on touch, but the demo's
-   primary interaction is auto-cycle + click-anywhere-to-pause; the
-   dots are secondary. */
-.transpile-dot::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-}
-/* Hover tooltip — desktop / mouse-pointer only. Touch devices skip
-   this entirely (a tap is a navigation, not a preview), and rely on
-   the always-visible snippet name in `.transpile-title` instead.
-   The parent `.transpile` no longer has overflow:hidden, so the
-   tooltip can extend above the panel without being clipped. */
-@media (hover: hover) and (pointer: fine) {
-  /* Single shared tooltip element positioned via JS in viewport coords
-     (position: fixed) so it bypasses every ancestor's clipping and
-     can be clamped to the window edges using its actual measured
-     width. Hidden by default; .transpile-tooltip.visible reveals it. */
-  .transpile-tooltip {
-    position: fixed;
-    padding: 4px 8px;
-    background: var(--syn-bg);
-    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--syn-text);
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(4px);
-    transition:
-      opacity 140ms ease,
-      transform 140ms ease;
-    z-index: 100;
+/* Mobile: the fixed label column would squeeze the item row into
+   heavy wrapping, so each category label sits above its items
+   instead — the menu becomes three compact labeled clusters. */
+@media (max-width: 640px) {
+  .transpile-menu {
+    width: 100%;
+    padding: 0 0.75rem;
+    gap: 0.55rem;
   }
-  .transpile-tooltip.visible {
-    opacity: 1;
-    transform: translateY(0);
+  .menu-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+  .menu-group-name {
+    flex: none;
+    text-align: left;
   }
 }
 /* Foldable regions inside the JS output pane (see transpile.js
@@ -678,13 +692,12 @@ body {
   color: color-mix(in srgb, hsl(150 60% 73%) 55%, var(--text-dim));
 }
 
-/* Controls cluster — pause button, progress dots, and the paused-
-   hint label. Absolute-positioned top-right of the `.transpile`
-   panel (which is `position: relative`) so the cluster sits at the
-   corner regardless of which sub-panel is active. Earlier rev kept
-   them inside the source-col header, which anchored them at the
-   right edge of the source pane — mid-panel in split-pane mode.
-   z-index keeps them above the rotating border gradient. */
+/* Controls cluster — pause button + the paused-hint label (the
+   progress dots that used to sit here became the named
+   `.transpile-menu` below the panel). Absolute-positioned top-right
+   of the `.transpile` panel (which is `position: relative`) so the
+   cluster sits at the corner regardless of which sub-panel is
+   active. z-index keeps it above the rotating border gradient. */
 .transpile-controls {
   position: absolute;
   top: 0.55rem;
@@ -693,9 +706,6 @@ body {
   align-items: center;
   gap: 8px;
   z-index: 2;
-}
-.transpile-controls .transpile-progress {
-  margin-left: 0;
 }
 .transpile-pause-btn {
   width: 18px;

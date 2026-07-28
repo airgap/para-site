@@ -27,11 +27,13 @@
       </header>
 
       <!-- Hero: live .pts → JS desugaring demo. See /transpile.js.
-           Earlier rev had Language/Runtime tabs above the panel; the
-           reel now cycles through both pools continuously and the
-           progress dots are color-coded by category (spectral blue =
-           Lang, will-o-wisp green = Runtime) so the viewer can tell
-           which type of demo is upcoming at a glance. -->
+           Earlier revs had Language/Runtime tabs above the panel,
+           then anonymous progress dots identified only by hover
+           tooltips. The reel now cycles continuously and every demo
+           is listed by name in the .transpile-menu nav below the
+           panel, grouped Para Lang / ParaKit / ParaBun (rendered by
+           transpile.js's renderMenu; per-category tint via the
+           --cat-* vars in styles.css). -->
       <div class="hero-stage">
         <div class="hero transpile" aria-hidden="true">
           <div class="transpile-col">
@@ -49,17 +51,15 @@
             </div>
             <pre class="transpile-code transpile-source-code"></pre>
           </div>
-          <!-- Demo controls (pause btn + progress dots + paused
-               hint) live OUTSIDE both column headers — they're
-               absolute-positioned top-right of the whole .transpile
-               panel via the `.transpile-controls` rule in styles.css.
-               Earlier rev had them inside the source-col header,
-               which kept them visible across split/single mode but
-               anchored them mid-panel rather than at the corner. -->
+          <!-- Demo controls (pause btn + paused hint) live OUTSIDE
+               both column headers — they're absolute-positioned
+               top-right of the whole .transpile panel via the
+               `.transpile-controls` rule in styles.css. Earlier rev
+               also held the progress dots here; snippet navigation
+               moved to the named .transpile-menu below the panel. -->
           <span class="transpile-controls">
             <span class="transpile-paused-hint" aria-hidden="true">paused</span>
             <button type="button" class="transpile-pause-btn" aria-label="pause" aria-pressed="false"></button>
-            <span class="transpile-progress" aria-label="snippet progress"></span>
           </span>
           <div class="transpile-arrow" aria-hidden="true">→</div>
           <div class="transpile-col">
@@ -72,6 +72,12 @@
             <div class="transpile-timer-fill"></div>
           </div>
         </div>
+        <!-- Named demo index — populated by transpile.js renderMenu.
+             Deliberately OUTSIDE the aria-hidden demo panel: the
+             items are real buttons (jump the reel to that demo), so
+             this doubles as the accessible listing of everything the
+             decorative animation shows. -->
+        <nav class="transpile-menu" aria-label="feature demos"></nav>
       </div>
 
       <div class="brands">

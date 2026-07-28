@@ -14,31 +14,34 @@
   const sourceTagEl = root.querySelector(".transpile-source-tag");
   if (!sourceEl || !outputEl) return;
 
-  // Hand-curated splash hero reel. Seven Lang snippets — each one
-  // shows a Para-distinctive construct on the left and its
-  // standard-JS desugaring on the right. The full feature atlas
-  // (20+ samples including stream fusion, early-exit, decimal, `::`
-  // validation, `schema from`, compile-time fold, etc.) lives in
-  // /playground — the splash is the hero reel; the playground is
-  // the full menu.
+  // Hand-curated splash hero reel — each snippet shows a
+  // Para-distinctive construct on the left and its standard-JS
+  // desugaring on the right. The full feature atlas (20+ samples
+  // including stream fusion, early-exit, decimal, `::` validation,
+  // `schema from`, compile-time fold, etc.) lives in /playground —
+  // the splash is the hero reel; the playground is the full menu.
   //
   // Ordering: lead with the most visually distinctive Para syntax
   // (..>, ..!, bare-dot lambda), then |>, then the namesake fan-out
   // (para const), then the headline-tagged features (match, signals,
-  // schema) with synced last — it parse-gates through the User
-  // schema the previous snippet declares, so the pair reads as one
-  // story. Earlier rev had a "compile-time fold" demo; dropped
-  // because it only applies to literal-input pipelines, which real
-  // code almost never has — it taught an optimization not a
-  // programming model.
-  // Each snippet declares its `category` so the demo can cycle within
-  // a single tab's pool. Lang snippets default to split-pane (mode
-  // omitted = 'split'); Runtime snippets are single-pane (mode:
-  // 'single'). Two snippet pools, one shared animation rig.
+  // schema), then the Kit pair — synced parse-gates through the User
+  // schema the schema snippet declares, so those read as one story —
+  // then the ParaBun hardware demos. Earlier rev had a "compile-time
+  // fold" demo; dropped because it only applies to literal-input
+  // pipelines, which real code almost never has — it taught an
+  // optimization not a programming model.
+  //
+  // Each snippet declares a `category` (lang | kit | runtime) and a
+  // short `menu` label; the named menu under the panel (see
+  // renderMenu below) groups them as Para Lang / ParaKit / ParaBun.
+  // Lang/Kit snippets default to split-pane (mode omitted = 'split');
+  // Runtime snippets are single-pane (mode: 'single'). Three snippet
+  // pools, one shared animation rig.
   const snippets = [
     {
       category: "lang",
       name: "promise chain (..>, ..!) + bare-dot lambda",
+      menu: "..> chains",
       pts: `fetch("/api/users")
   ..> .json()
   ..> .filter(.active)
@@ -51,6 +54,7 @@
     {
       category: "lang",
       name: "pipeline (|>) + bare-dot lambda",
+      menu: "|> pipelines",
       pts: `const top = items
   |> filter(.active)
   |> map(.score)
@@ -72,6 +76,7 @@
       // destructuring (formatted multi-line here for the panel).
       category: "lang",
       name: "para const: independent awaits fan out through Promise.all",
+      menu: "para const",
       pts: `para const cpu = bench.cpu(),
            gpu = bench.gpu(),
            mem = bench.mem()`,
@@ -84,6 +89,7 @@
     {
       category: "lang",
       name: "match: literal arms compile to a switch (jump table)",
+      menu: "match",
       pts: `const msg = match status {
   200 => "ok",
   400 | 404 => "client error",
@@ -103,6 +109,7 @@
     {
       category: "lang",
       name: "signals: reactive cells + effect",
+      menu: "signals",
       pts: `signal n = 0
 signal sq = n * n
 effect { console.log(sq) }
@@ -115,6 +122,7 @@ n.set(n.get() + 1)`,
     {
       category: "lang",
       name: "schema: one declaration, fast inline validator + JSON Schema",
+      menu: "schemas",
       pts: `schema User {
   id: int,
   email: Email,
@@ -167,9 +175,10 @@ n.set(n.get() + 1)`,
       // fourth distance of the reactive idea: a value changing across
       // a trust boundary. Read-only Tier-1: the server writes the
       // cell, the component reads it.
-      category: "lang",
+      category: "kit",
       name: "synced: server-authoritative live value, parse-gated over the wire",
       tag: ".pui",
+      menu: "synced",
       pts: `// read-only replica — the server writes, you read
 sync user :: User from \`user:\${id}\``,
       js: `// every envelope parse-gated by User, reconciled
@@ -181,6 +190,33 @@ $effect.pre(() =>
 onDestroy(() => __syn_user.dispose?.())`,
     },
     {
+      // The §13.8 opaque server source — the same `sync` form, but
+      // the expression after `server` runs server-side only. para-kit
+      // extracts it into a sibling `.server-sources.pts` artifact at
+      // build; the client bundle keeps nothing but the wire key
+      // (declId + positional params). The refresh policy is mandatory
+      // — liveness is never implied for opaque server code. Both
+      // emissions shown (client above, artifact below) because the
+      // split IS the feature.
+      category: "kit",
+      name: "from server: the call runs server-side; the client ships only its key",
+      tag: ".pui",
+      menu: "from server",
+      pts: `// db.* never reaches the client bundle
+sync stats :: Stats
+  from server db.slowAggregate(orgId) every 30000`,
+      js: `// client emission — just the wire key
+const __sv_stats = synced(
+  subKey("dash.pui#stats", [orgId]), Stats)
+
+// dash.server-sources.pts — build artifact
+import { db } from "./db.server.js"
+export const __paraServerSources = [{
+  run: ({ orgId }) => db.slowAggregate(orgId),
+  policy: { every: 30000 },
+}]`,
+    },
+    {
       // Single-pane mode: no parse-time desugar to show — the wow is
       // "this is the actual code that runs a full voice agent." Same
       // animation infrastructure as the Lang reels (typing, hold,
@@ -190,6 +226,7 @@ onDestroy(() => __syn_user.dispose?.())`,
       category: "runtime",
       name: "parabun:assistant — wake → STT → LLM → TTS, GPU-accelerated",
       mode: "single",
+      menu: "voice assistant",
       // No Para-specific syntax in this snippet — just imports +
       // top-level await. Tagged `.ts` to signal that it works as
       // plain TypeScript on ParaBun. The other Runtime demos use
@@ -211,6 +248,7 @@ await bot.run();`,
       category: "runtime",
       name: "parabun:gpio — Linux GPIO via uAPI v2",
       mode: "single",
+      menu: "gpio",
       pts: `import gpio from "parabun:gpio";
 
 const led    = gpio.out(17);
@@ -223,6 +261,7 @@ when button.value { led.toggle(); }`,
       category: "runtime",
       name: "parabun:audio + gpio — mic peak drives an LED via `->`",
       mode: "single",
+      menu: "audio → gpio",
       pts: `import gpio  from "parabun:gpio";
 import audio from "parabun:audio";
 
@@ -267,7 +306,7 @@ mic.peakLevel > 0.3 -> led.write;`,
     // `bun run codegen` in the parabun repo. The Jenkins `Codegen
     // check` stage fails if this block drifts from the catalog.
     const kw = isPara
-      ? /\b(pure|fun|cyclic|signal|derived|effect|source|sync|synced|mutate|when|arena|memo|defer|match|schema|parallel|para|is|every|const|let|var|function|return|await|async|new|class|if|else|true|false|null|import|from|export|default|as|switch|case|throw|for|of)\b/g
+      ? /\b(pure|fun|cyclic|signal|derived|effect|source|sync|synced|mutate|when|arena|memo|defer|match|schema|parallel|para|is|every|server|const|let|var|function|return|await|async|new|class|if|else|true|false|null|import|from|export|default|as|switch|case|throw|for|of)\b/g
       : /\b(const|let|var|function|return|await|async|new|class|if|else|true|false|null|import|from|export|default|as|switch|case|throw|for|of)\b/g;
     // ─── codegen:splash-keywords:end ────────────────────────────────
     const builtin = /\b(then|catch)\b/g;
@@ -342,71 +381,55 @@ mic.peakLevel > 0.3 -> led.write;`,
     );
   }
 
-  // ─── Progress dots ────────────────────────────────────────────────
-  const progressEl = root.querySelector(".transpile-progress");
+  // ─── Named demo menu ──────────────────────────────────────────────
+  // Replaces the earlier anonymous progress dots (identified only by
+  // hover tooltips). Every snippet is listed by name under the panel,
+  // grouped into the three product categories; the active item tracks
+  // the reel and clicking any item jumps to it. Rendered once at
+  // startup (the list is static); setActiveMenuItem just moves the
+  // `.active` class as the reel advances. Lives OUTSIDE the
+  // aria-hidden .transpile panel, so unlike the dots it's real,
+  // reachable navigation for screen readers too.
+  const menuEl = document.querySelector(".transpile-menu");
   const timerEl = root.querySelector(".transpile-timer-fill");
-  function renderProgress(i) {
-    if (!progressEl) return;
-    // Dots cover the whole reel + carry a `data-category` attr that
-    // CSS uses to color them by Lang / Runtime. Active dot keeps its
-    // own brighter accent on top of the category base color.
-    progressEl.innerHTML = activeSnippets()
-      .map((s, k) => {
-        const safeName = s.name.replace(/"/g, "&quot;");
-        const category = s.category ?? "lang";
-        return `<button type="button" class="transpile-dot${k === i ? " active" : ""}" data-i="${k}" data-category="${category}" data-name="${safeName}" aria-label="${safeName}"></button>`;
-      })
-      .join("");
+  const CATEGORIES = [
+    { key: "lang", label: "Para Lang" },
+    { key: "kit", label: "ParaKit" },
+    { key: "runtime", label: "ParaBun" },
+  ];
+  function renderMenu() {
+    if (!menuEl) return;
+    menuEl.innerHTML = CATEGORIES.map(cat => {
+      const items = activeSnippets()
+        .map((s, k) => ({ s, k }))
+        .filter(({ s }) => (s.category ?? "lang") === cat.key);
+      if (items.length === 0) return "";
+      const buttons = items
+        .map(({ s, k }) => {
+          // The short `menu` label is the visible text; the full
+          // descriptive `name` rides along as title/aria-label (it
+          // also shows in the panel header while the snippet plays).
+          const safeName = s.name.replace(/"/g, "&quot;");
+          return `<button type="button" class="menu-item" data-i="${k}" title="${safeName}" aria-label="${safeName}">${esc(s.menu ?? s.name)}</button>`;
+        })
+        .join("");
+      return `<div class="menu-group" data-category="${cat.key}"><span class="menu-group-name">${cat.label}</span><span class="menu-group-items">${buttons}</span></div>`;
+    }).join("");
   }
-  renderProgress(0);
-  if (progressEl) {
-    progressEl.addEventListener("click", e => {
-      const dot = e.target.closest(".transpile-dot");
-      if (!dot) return;
-      e.stopPropagation();
-      const idx = Number.parseInt(dot.dataset.i, 10);
-      if (Number.isInteger(idx)) jumpTo(idx);
-    });
-    // Single shared tooltip element. Lives at body root so position:
-    // fixed coords work in viewport space. Position is recomputed per
-    // hover; width clamps the tooltip to the window edges using its
-    // actual measured size (CSS pseudo-element widths can't be measured
-    // from JS reliably, hence the real-DOM rewrite).
-    let tip = root.querySelector(".transpile-tooltip");
-    if (!tip && matchMedia("(hover: hover) and (pointer: fine)").matches) {
-      tip = document.createElement("span");
-      tip.className = "transpile-tooltip";
-      document.body.appendChild(tip);
+  function setActiveMenuItem(i) {
+    if (!menuEl) return;
+    for (const btn of menuEl.querySelectorAll(".menu-item")) {
+      btn.classList.toggle("active", Number.parseInt(btn.dataset.i, 10) === i);
     }
-    const showTip = dot => {
-      if (!tip) return;
-      tip.textContent = dot.dataset.name || "";
-      tip.classList.add("visible");
-      // Measure AFTER setting text (and visible — needed for layout)
-      // but before painting, then reposition. The transform animation
-      // still smooths the appearance.
-      const rect = dot.getBoundingClientRect();
-      const tipRect = tip.getBoundingClientRect();
-      const margin = 8;
-      let left = rect.left + rect.width / 2 - tipRect.width / 2;
-      // Clamp to viewport — leave `margin` px on each side.
-      left = Math.max(margin, Math.min(left, window.innerWidth - tipRect.width - margin));
-      tip.style.left = `${left}px`;
-      tip.style.top = `${rect.top - tipRect.height - 8}px`;
-    };
-    const hideTip = () => {
-      if (tip) tip.classList.remove("visible");
-    };
-    progressEl.addEventListener("pointerover", e => {
-      const dot = e.target.closest(".transpile-dot");
-      if (dot) showTip(dot);
-    });
-    progressEl.addEventListener("pointerout", e => {
-      const dot = e.target.closest(".transpile-dot");
-      if (!dot) return;
-      // Don't hide if moving to another dot — pointerover will fire.
-      if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".transpile-dot")) return;
-      hideTip();
+  }
+  renderMenu();
+  setActiveMenuItem(0);
+  if (menuEl) {
+    menuEl.addEventListener("click", e => {
+      const btn = e.target.closest(".menu-item");
+      if (!btn) return;
+      const idx = Number.parseInt(btn.dataset.i, 10);
+      if (Number.isInteger(idx)) jumpTo(idx);
     });
   }
 
@@ -456,9 +479,9 @@ mic.peakLevel > 0.3 -> led.write;`,
   // advancing naturally. Distinguishes jump-cancel from stop-cancel.
   let pendingJumpIdx = null;
 
-  // `activeTab` + `activeSnippets()` are declared above (right after
-  // the `snippets` array) so the early `renderProgress(0)` call can
-  // see them without tripping the `let` temporal-dead-zone.
+  // `activeSnippets()` is declared above (right after the `snippets`
+  // array) so the early `renderMenu()` call can see it without
+  // tripping the `let` temporal-dead-zone.
 
   function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
@@ -663,7 +686,7 @@ mic.peakLevel > 0.3 -> led.write;`,
     // when a parabun:* module works on stock TypeScript.
     if (sourceTagEl) sourceTagEl.textContent = snip.tag ?? ".pts";
     if (titleEl) titleEl.textContent = snip.name;
-    renderProgress(idx);
+    setActiveMenuItem(idx);
 
     // Start the timer the moment text begins appearing so it tracks
     // the *whole* slide (typing + hold), not just the trailing hold.
@@ -746,9 +769,9 @@ mic.peakLevel > 0.3 -> led.write;`,
   }
 
   // Tab-switch logic removed when the reel was recombined into a
-  // single continuous cycle. Color-coded dots (set by
-  // `renderProgress` via `data-category`) now telegraph upcoming
-  // demo type without separating the pools.
+  // single continuous cycle. The named menu under the panel (see
+  // renderMenu) now identifies every demo and its product category
+  // without separating the pools.
 
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
     const s = snippets[0];
@@ -761,7 +784,7 @@ mic.peakLevel > 0.3 -> led.write;`,
       installFolds(outputEl, s.jsFolds, false);
     }
     if (titleEl) titleEl.textContent = s.name;
-    renderProgress(0);
+    setActiveMenuItem(0);
     return;
   }
 
