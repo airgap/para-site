@@ -179,10 +179,9 @@ n.set(n.get() + 1)`,
       name: "synced: server-authoritative live value, parse-gated over the wire",
       tag: ".pui",
       menu: "synced",
-      pts: `// read-only replica — the server writes, you read
-sync user :: User from \`user:\${id}\``,
-      js: `// every envelope parse-gated by User, reconciled
-// by (schema_version, sequence), auto-disposed
+      pts: `sync user :: User from \`user:\${id}\``,
+      js: `// every envelope parse-gated by User,
+// reconciled by (schema_version, sequence)
 const __syn_user = synced(\`user:\${id}\`, User)
 let user = $state(__syn_user.peek?.() ?? __syn_user)
 $effect.pre(() =>
@@ -202,14 +201,13 @@ onDestroy(() => __syn_user.dispose?.())`,
       name: "from server: the call runs server-side; the client ships only its key",
       tag: ".pui",
       menu: "from server",
-      pts: `// db.* never reaches the client bundle
-sync stats :: Stats
+      pts: `sync stats :: Stats
   from server db.slowAggregate(orgId) every 30000`,
-      js: `// client emission — just the wire key
+      js: `// the client bundle
 const __sv_stats = synced(
   subKey("dash.pui#stats", [orgId]), Stats)
 
-// dash.server-sources.pts — build artifact
+// dash.server-sources.pts (emitted at build)
 import { db } from "./db.server.js"
 export const __paraServerSources = [{
   run: ({ orgId }) => db.slowAggregate(orgId),
