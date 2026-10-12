@@ -197,8 +197,8 @@
 
       <h1>Configure your build</h1>
       <p class="lede">
-        Pick the modules you actually need. The configurator generates a <code>bun build --compile</code> command and
-        estimates the resulting binary size. Defaults to everything checked — uncheck what you don't need.
+        Pick the modules you actually need. The configurator previews a <code>parabun build --compile</code> command and
+        estimates the resulting binary size. Video, audio, camera, and Arrow start unchecked.
       </p>
 
       <div class="config-banner">
@@ -414,7 +414,7 @@
         const optional = GROUPS.flatMap(g => g.modules).filter(m => !m.locked);
         const off = optional.filter(m => !state[m.id]).map(m => m.id);
         const on = optional.filter(m => state[m.id]);
-        const onCount = on.length + GROUPS[0].modules.length; // core counts
+        const onCount = GROUPS.flatMap(g => g.modules).filter(m => m.locked || state[m.id]).length;
 
         // Generate the shortest-readable command. Use --without when most
         // modules are kept; --with when most are dropped.
@@ -430,7 +430,7 @@
           flag = onIds.length > 0 ? "--with=" + onIds : "--minimal";
         }
 
-        const command = `bun build --compile${flag ? " " + flag : ""} app.ts`;
+        const command = `parabun build --compile${flag ? " " + flag : ""} app.ts`;
         cmdEl.textContent = command;
 
         const totalSize = on.reduce((s, m) => s + m.size, 0) + GROUPS[0].modules.reduce((s, m) => s + m.size, 0);

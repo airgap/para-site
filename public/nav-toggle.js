@@ -32,6 +32,7 @@
     document.addEventListener("keydown", e => {
       if (e.key === "Escape") {
         for (const btn of document.querySelectorAll(".nav-toggle[aria-expanded='true']")) {
+          if (btn.closest(".nav-dropdown")?.contains(document.activeElement)) btn.focus();
           btn.setAttribute("aria-expanded", "false");
         }
       }
