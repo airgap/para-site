@@ -112,11 +112,15 @@
       menu: "signals",
       pts: `signal n = 0
 signal sq = n * n
+// 0 (initial run)
 effect { console.log(sq) }
+// 1 (effect re-runs)
 n++`,
       js: `const n = signal(0)
 const sq = derived(() => n.get() * n.get())
+// 0 (initial run)
 effect(() => console.log(sq.get()))
+// 1 (effect re-runs)
 n.set(n.get() + 1)`,
     },
     {
@@ -146,14 +150,21 @@ n.set(n.get() + 1)`,
 }`,
       jsFolds: [
         `
-    if (typeof v !== "object" || v === null) return { tag: "Err", error: "expected object" }
-    if (typeof v.id !== "number" || !Number.isInteger(v.id)) return { tag: "Err", error: "id: expected int" }
-    if (typeof v.email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v.email))
+    try {
+      return User.validate(JSON.parse(str))
+    } catch {
+      return { tag: "Err", error: "invalid JSON" }
+    }
+  `,
+        `
+    if (typeof obj !== "object" || obj === null) return { tag: "Err", error: "expected object" }
+    if (typeof obj.id !== "number" || !Number.isInteger(obj.id)) return { tag: "Err", error: "id: expected int" }
+    if (typeof obj.email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(obj.email))
       return { tag: "Err", error: "email: expected Email" }
-    if (v.age !== undefined && v.age !== null
-        && (typeof v.age !== "number" || !Number.isInteger(v.age) || v.age < 0 || v.age >= 150))
+    if (obj.age !== undefined && obj.age !== null
+        && (typeof obj.age !== "number" || !Number.isInteger(obj.age) || obj.age < 0 || obj.age >= 150))
       return { tag: "Err", error: "age: expected int" }
-    return { tag: "Ok", value: v }
+    return { tag: "Ok", value: obj }
   `,
         `
     type: "object",
@@ -542,6 +553,7 @@ mic.peakLevel > 0.3 -> led.write;`,
     span.className = "fold-body";
     span.innerHTML = highlight(body, isPara);
     span.setAttribute("role", "button");
+    span.tabIndex = 0;
     span.setAttribute("aria-expanded", "true");
     span.setAttribute("aria-label", "collapse");
     span.title = "click to collapse";
@@ -583,13 +595,27 @@ mic.peakLevel > 0.3 -> led.write;`,
     const btn = e.target.closest(".fold-btn");
     if (btn && outputEl.contains(btn)) {
       e.stopPropagation();
-      btn.replaceWith(makeFoldBody(btn._foldBody, btn._foldIsPara));
+      const body = makeFoldBody(btn._foldBody, btn._foldIsPara);
+      const focused = document.activeElement === btn;
+      btn.replaceWith(body);
+      if (focused) body.focus();
       return;
     }
     const span = e.target.closest(".fold-body");
     if (span && outputEl.contains(span)) {
       e.stopPropagation();
-      span.replaceWith(makeFoldBtn(span._foldBody, span._foldIsPara));
+      const btn = makeFoldBtn(span._foldBody, span._foldIsPara);
+      const focused = document.activeElement === span;
+      span.replaceWith(btn);
+      if (focused) btn.focus();
+    }
+  });
+
+  outputEl.addEventListener("keydown", e => {
+    const body = e.target.closest(".fold-body");
+    if (body && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      body.click();
     }
   });
 
