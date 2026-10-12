@@ -3,6 +3,9 @@ title: "@lyku/para-arrow"
 description: In-memory columnar tables, computes, and Arrow IPC reader/writer — wire-compatible with apache-arrow, pyarrow, polars, duckdb.
 ---
 
+> **Package availability:** `@lyku/para-arrow` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import arrow from "@lyku/para-arrow";
 ```

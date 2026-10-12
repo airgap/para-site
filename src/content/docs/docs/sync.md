@@ -17,7 +17,7 @@ branch-on-`.tag` you can open and override per entity, not a merge engine.
 
 In `.pui` components you rarely call this API directly — the `sync` /
 `synced` / `presence` / `mutate` keywords lower to it (auto-imported,
-auto-disposed on unmount). The [language page](/docs/language/#the-sync-family-pui)
+auto-disposed on unmount). The [language page](/docs/language/#the-sync-family-pui-sync-synced-presence-mutate)
 lists the sugar; this page is the library underneath.
 
 ## The declaration forms (.pui)

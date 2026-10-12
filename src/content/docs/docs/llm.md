@@ -154,7 +154,7 @@ Single high-level call. `audio` is mono 16 kHz `Float32Array` PCM in `[-1, 1]`. 
 
 ### `m.transcribeMel(mel, T, opts?)`
 
-Lower-level entry point. `mel` is a flat `[nMels, T]` row-major `Float32Array`. Use this when you've already computed the mel spectrogram (e.g. via [`audio.melSpectrogram(audio, { mode: "whisper" })`](/docs/audio/#mel-spectrogram)) or when integrating with a custom audio source.
+Lower-level entry point. `mel` is a flat `[nMels, T]` row-major `Float32Array`. Use this when you've already computed the mel spectrogram (e.g. via [`audio.melSpectrogram(audio, { mode: "whisper" })`](/docs/audio/#melspectrogramsamples-opts)) or when integrating with a custom audio source.
 
 ### `m.detectLanguage(mel, T)` / `m.detectLanguageFromEncoder(encoded)`
 

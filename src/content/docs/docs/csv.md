@@ -3,6 +3,9 @@ title: "@lyku/para-csv"
 description: Streaming RFC 4180 CSV parser with two output modes — row objects and per-column TypedArrays.
 ---
 
+> **Package availability:** `@lyku/para-csv` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import csv from "@lyku/para-csv";
 ```
