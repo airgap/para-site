@@ -3,6 +3,9 @@ title: "@lyku/para-kit"
 description: The fullstack projection for Para sync — emits escape-analyzed server artifacts from .pui declarations, hosts them, and bridges SyncEnvelopes over SSE. SvelteKit-shaped, web-standard underneath.
 ---
 
+> **Package availability:** `@lyku/para-kit` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import { createServerSourceHost, createSyncEndpoint, createSseTransport } from "@lyku/para-kit";
 ```

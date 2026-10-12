@@ -12,7 +12,17 @@
 // writes the result back. Idempotent — re-running it on already-
 // highlighted output produces the same output.
 
-import { createHighlighter } from "shiki";
+import { createHighlighter, bundledThemes } from "shiki";
+
+// Keep explanatory comments readable against the landing pages' tinted panels.
+const lightBase = (await bundledThemes["min-light"]()).default;
+const darkBase = (await bundledThemes["tokyo-night"]()).default;
+const lightTheme = { ...lightBase, name: "para-light", tokenColors: [
+  ...lightBase.tokenColors!, { scope: ["comment", "string.quoted.docstring.multi"], settings: { foreground: "#5a5860" } },
+] };
+const darkTheme = { ...darkBase, name: "para-dark", tokenColors: [
+  ...darkBase.tokenColors!, { scope: "comment", settings: { foreground: "#c1c7d0" } },
+] };
 import parabunTs from "../src/grammars/parabun-ts.tmLanguage.json" with { type: "json" };
 import parabunTsx from "../src/grammars/parabun-tsx.tmLanguage.json" with { type: "json" };
 import parabunJs from "../src/grammars/parabun-js.tmLanguage.json" with { type: "json" };
@@ -78,7 +88,7 @@ const highlighter = await createHighlighter({
   ],
   // Dual-theme: shiki emits per-span CSS variables for both themes; the
   // landing CSS picks `--shiki-light` or `--shiki-dark` from `[data-theme]`.
-  themes: ["min-light", "tokyo-night"],
+  themes: [lightTheme, darkTheme],
   langAlias: {
     parabun: "parabun-ts",
     pts: "parabun-ts",
@@ -102,7 +112,7 @@ for (const path of targets) {
       const targetLang = lang === "ts" ? "typescript" : lang;
       const html = highlighter.codeToHtml(code, {
         lang: targetLang,
-        themes: { light: "min-light", dark: "tokyo-night" },
+        themes: { light: "para-light", dark: "para-dark" },
         // No default color → both themes emit only as CSS variables on each
         // span. CSS rules under [data-theme="…"] pick the right one. Avoids
         // hard-coding either theme's hex into the markup, which would lock

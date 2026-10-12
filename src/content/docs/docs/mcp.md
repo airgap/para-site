@@ -3,6 +3,9 @@ title: "@lyku/para-mcp"
 description: Model Context Protocol — client and server. Stdio + WebSocket transports. Composes with parabun:assistant's tool dispatch.
 ---
 
+> **Package availability:** `@lyku/para-mcp` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import mcp from "@lyku/para-mcp";
 ```

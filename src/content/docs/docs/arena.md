@@ -3,6 +3,9 @@ title: "@lyku/para-arena"
 description: A pool of SharedArrayBuffer typed arrays. Per-chunk work doesn't allocate a fresh buffer.
 ---
 
+> **Package availability:** `@lyku/para-arena` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import arena, { Pool, scope } from "@lyku/para-arena";
 ```

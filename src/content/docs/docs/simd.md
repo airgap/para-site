@@ -3,6 +3,9 @@ title: "@lyku/para-simd"
 description: WebAssembly v128 kernels for Float32Array / Float64Array. Zero-copy when inputs are large.
 ---
 
+> **Package availability:** `@lyku/para-simd` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import simd from "@lyku/para-simd";
 ```

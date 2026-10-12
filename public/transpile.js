@@ -141,20 +141,16 @@ n.set(n.get() + 1)`,
       // styles `//` lines as `.tk-cm` so they read as quiet narration
       // instead of competing with the code.
       js: `const User = {
-  // parse string with validation
-  parse: str => { … },
-  // validate an object
+  // parse a value into an Ok or Err result
+  parse: obj => { … },
+  // validate is an alias for parse
   validate: obj => { … },
   // JSON Schema for OpenAPI and whatnot
   schema: { … }
 }`,
       jsFolds: [
         `
-    try {
-      return User.validate(JSON.parse(str))
-    } catch {
-      return { tag: "Err", error: "invalid JSON" }
-    }
+    return User.validate(obj)
   `,
         `
     if (typeof obj !== "object" || obj === null) return { tag: "Err", error: "expected object" }
@@ -428,7 +424,9 @@ mic.peakLevel > 0.3 -> led.write;`,
   function setActiveMenuItem(i) {
     if (!menuEl) return;
     for (const btn of menuEl.querySelectorAll(".menu-item")) {
-      btn.classList.toggle("active", Number.parseInt(btn.dataset.i, 10) === i);
+      const active = Number.parseInt(btn.dataset.i, 10) === i;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", String(active));
     }
   }
   renderMenu();
@@ -772,6 +770,11 @@ mic.peakLevel > 0.3 -> led.write;`,
 
   function jumpTo(idx) {
     if (!Number.isInteger(idx) || idx < 0 || idx >= activeSnippets().length) return;
+    if (reducedMotion) {
+      currentIdx = idx;
+      renderStatic(idx);
+      return;
+    }
     if (idx === currentIdx && running) return;
     pendingJumpIdx = idx;
     cancelled = true;
@@ -797,18 +800,25 @@ mic.peakLevel > 0.3 -> led.write;`,
   // renderMenu) now identifies every demo and its product category
   // without separating the pools.
 
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    const s = snippets[0];
+  function renderStatic(idx) {
+    const s = activeSnippets()[idx];
     root.classList.toggle("single", s.mode === "single");
     root.classList.toggle("runtime-only", s.category === "runtime");
     if (sourceTagEl) sourceTagEl.textContent = s.tag ?? ".pts";
     sourceEl.innerHTML = highlight(s.pts, true);
+    outputEl.innerHTML = "";
     if (s.mode !== "single") {
       outputEl.innerHTML = highlight(s.js, false);
       installFolds(outputEl, s.jsFolds, false);
     }
     if (titleEl) titleEl.textContent = s.name;
-    setActiveMenuItem(0);
+    setActiveMenuItem(idx);
+  }
+
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reducedMotion) {
+    if (pauseBtn) pauseBtn.hidden = true;
+    renderStatic(0);
     return;
   }
 

@@ -3,6 +3,9 @@ title: "@lyku/para-sort"
 description: Typed-array sort with automatic serial / parallel / GPU tier dispatch, plus a stable argsort. Numeric specialization — not a generic comparator sort.
 ---
 
+> **Package availability:** `@lyku/para-sort` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import sort from "@lyku/para-sort";
 ```

@@ -3,6 +3,9 @@ title: "@lyku/para-rtp"
 description: RFC 3550 packet pack / parse and a jitter buffer. Wire transport for the codec stack.
 ---
 
+> **Package availability:** `@lyku/para-rtp` is not published on public npm as of 2026-10-12. This reference covers the source-workspace implementation (and ParaBun’s bundled module where available). See [installation and availability](/docs/install-libs/#2-install-the-runtime-packages) before using it in a Node or browser project.
+
+
 ```ts
 import rtp from "@lyku/para-rtp";
 ```
