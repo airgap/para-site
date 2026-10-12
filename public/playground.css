@@ -14,7 +14,7 @@
   --pg-rule-strong: #2a3458;
   --pg-text: #e8e6dd;
   --pg-text-dim: #8a8b94;
-  --pg-text-faint: #4a4d5a;
+  --pg-text-faint: #a8abb8;
   --pg-star-primary: #6db4ff;
   --pg-star-companion: #ffa855;
   --pg-accent: var(--pg-star-primary);
@@ -33,7 +33,7 @@
   --pg-rule-strong: #b8af9a;
   --pg-text: #1a1812;
   --pg-text-dim: #5e574a;
-  --pg-text-faint: #94897a;
+  --pg-text-faint: #625b50;
   --pg-star-primary: #1a4880;
   --pg-star-companion: #b94a1f;
   --pg-accent: var(--pg-star-companion);
@@ -242,6 +242,8 @@ body {
 
 .pg-pane-head {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   justify-content: space-between;
   align-items: center;
   padding: 0.45rem 1rem;
@@ -300,6 +302,18 @@ body {
 }
 
 @media (max-width: 720px) {
+  .pg-bar {
+    flex-wrap: wrap;
+  }
+  .pg-sample {
+    order: 1;
+    width: 100%;
+    min-width: 0;
+  }
+  .pg-sample select {
+    flex: 1;
+    min-width: 0;
+  }
   .pg-main {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;

@@ -92,11 +92,11 @@
     </header>
     <main class="pg-main">
       <section class="pg-pane">
-        <div class="pg-pane-head"><span class="pg-pane-label">Para</span><span id="pg-status" class="pg-status"></span></div>
+        <div class="pg-pane-head"><span class="pg-pane-label">Para</span><span id="pg-status" class="pg-status" role="status" aria-live="polite"></span></div>
         <div id="pg-input" class="pg-editor"></div>
       </section>
       <section class="pg-pane">
-        <div class="pg-pane-head"><span class="pg-pane-label">JavaScript (output)</span></div>
+        <div class="pg-pane-head"><span class="pg-pane-label">JavaScript preview (not executed)</span></div>
         <div id="pg-output" class="pg-editor"></div>
       </section>
     </main>
@@ -113,7 +113,7 @@
       } from "@codemirror/language";
       import { tags as t } from "@lezer/highlight";
       import { closeBrackets } from "@codemirror/autocomplete";
-      import { transpile } from "@lyku/para-transpile";
+      import { compilePreview, nativeSamples } from "../lib/playground-compile.js";
 
       // Stellar Atlas highlight — keywords paint in the ParaBun companion
       // (amber), functions / types paint in the Para primary
@@ -128,7 +128,7 @@
         { tag: [t.variableName, t.propertyName], color: "#1a1812" },
         { tag: [t.string, t.special(t.string), t.regexp], color: "#7a3a1a" },
         { tag: [t.number, t.bool, t.null, t.atom], color: "#8a3614" },
-        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#94897a", fontStyle: "italic" },
+        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#625b50", fontStyle: "italic" },
         { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#5e574a" },
         { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#5e574a" },
         { tag: [t.typeName, t.className, t.namespace], color: "#1a4880", fontWeight: "500" },
@@ -148,7 +148,7 @@
         { tag: [t.variableName, t.propertyName], color: "#e8e6dd" },
         { tag: [t.string, t.special(t.string), t.regexp], color: "#e8c468" },
         { tag: [t.number, t.bool, t.null, t.atom], color: "#ffc78a" },
-        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#5a5d6a", fontStyle: "italic" },
+        { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#a8abb8", fontStyle: "italic" },
         { tag: [t.operator, t.derefOperator, t.compareOperator, t.logicOperator, t.arithmeticOperator], color: "#8a8b94" },
         { tag: [t.punctuation, t.bracket, t.paren, t.brace], color: "#8a8b94" },
         { tag: [t.typeName, t.className, t.namespace], color: "#6db4ff", fontWeight: "500" },
@@ -165,8 +165,7 @@
         return document.documentElement.dataset.theme === "dark" ? darkHighlight : lightHighlight;
       }
 
-      // Curated samples — every one round-trips through the standalone
-      // transpiler in <50 ms, exercises a single Para feature.
+      // Native-only examples are source previews, explicitly marked below.
       const SAMPLES = {
         welcome: `// Welcome to Para — pick a sample, or just start typing.
 // Output JavaScript shows up live on the right.
@@ -367,14 +366,14 @@ para const cpu = bench.cpu(),
             gpu = bench.gpu(),
             mem = bench.mem();
 `,
-        decimal: `// The 'd' suffix marks a decimal literal. Arithmetic on
-// decimals routes through .add / .mul methods so rounding
-// stays exact — the JS Number type can't represent 0.0825
-// or 0.1 + 0.2 without drift.
+        decimal: `// The 'd' suffix marks a decimal literal. Use explicit
+// .plus / .times methods for exact arithmetic; JS operators
+// do not perform exact decimal arithmetic.
 
+const subtotal = 100d;
 const rate = 0.0825d;
-const tax = subtotal * rate;
-const total = subtotal + tax;
+const tax = subtotal.times(rate);
+const total = subtotal.plus(tax);
 `,
         fusion: `// Pipelines of imported combinators from @lyku/para-pipeline
 // fuse at parse time: the chain lowers to a single loop
@@ -403,7 +402,7 @@ const topThree = scores
 // an array — no terminal combinator required, but still
 // a single fused loop under the hood.
 
-import { map, filter } from "@lyku/para-pipeline";
+import { map, filter, take } from "@lyku/para-pipeline";
 
 const TOP_3 = nums
   |> filter(x => x > 0)
@@ -424,6 +423,9 @@ const HAS_NEG = [1, 2, -3, 4] |> some(x => x < 0);
 
       const status = document.getElementById("pg-status");
       const sampleSel = document.getElementById("pg-sample");
+      for (const option of sampleSel.options) {
+        if (nativeSamples.has(option.value)) option.textContent += " (requires ParaBun)";
+      }
 
       function setStatus(text, kind = "ok") {
         status.textContent = text;
@@ -444,6 +446,7 @@ const HAS_NEG = [1, 2, -3, 4] |> some(x => x < 0);
           outputHighlight.of(syntaxHighlighting(pickHighlight(), { fallback: true })),
           javascript(),
           EditorView.editable.of(false),
+          EditorView.contentAttributes.of({ "aria-label": "JavaScript output", role: "textbox", "aria-readonly": "true", tabindex: "0" }),
           EditorView.theme({
             "&": { height: "100%", fontSize: "13px" },
             ".cm-scroller": { fontFamily: "JetBrains Mono, ui-monospace, monospace" },
@@ -470,15 +473,12 @@ const HAS_NEG = [1, 2, -3, 4] |> some(x => x < 0);
 
       function doTranspile(src) {
         const t0 = performance.now();
-        try {
-          const out = transpile(src);
-          const ms = Math.round(performance.now() - t0);
-          setOutput(out);
-          setStatus(`transpiled in ${ms} ms`, "ok");
-        } catch (e) {
-          setOutput(String(e?.stack ?? e));
-          setStatus("transpile error", "err");
-        }
+        const selected = sampleSel.value;
+        const nativeSample = nativeSamples.has(selected);
+        const result = compilePreview(src, nativeSample);
+        const ms = Math.round(performance.now() - t0);
+        setOutput(result.output);
+        setStatus(result.kind === "preview" ? `${result.message} (${ms} ms)` : result.message, result.kind);
       }
 
       // Input editor — JS-flavoured highlighting (the Para ops fall
@@ -489,6 +489,7 @@ const HAS_NEG = [1, 2, -3, 4] |> some(x => x < 0);
         extensions: [
           lineNumbers(),
           highlightActiveLine(),
+          EditorView.contentAttributes.of({ "aria-label": "Para source" }),
           history(),
           inputHighlight.of(syntaxHighlighting(pickHighlight(), { fallback: true })),
           bracketMatching(),

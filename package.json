@@ -8,6 +8,7 @@
     "highlight-landing": "bun run scripts/highlight-landing.ts"
   },
   "dependencies": {
+    "@babel/parser": "7.29.3",
     "@astrojs/starlight": "^0.38.4",
     "@codemirror/lang-javascript": "^6.2.2",
     "@codemirror/state": "^6.5.0",

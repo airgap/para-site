@@ -18,10 +18,10 @@ import { createHighlighter, bundledThemes } from "shiki";
 const lightBase = (await bundledThemes["min-light"]()).default;
 const darkBase = (await bundledThemes["tokyo-night"]()).default;
 const lightTheme = { ...lightBase, name: "para-light", tokenColors: [
-  ...lightBase.tokenColors!, { scope: ["comment", "string.quoted.docstring.multi"], settings: { foreground: "#5a5860" } },
+  ...lightBase.tokenColors!, { scope: ["comment", "punctuation.definition.comment", "string.quoted.docstring.multi"], settings: { foreground: "#5a5860" } },
 ] };
 const darkTheme = { ...darkBase, name: "para-dark", tokenColors: [
-  ...darkBase.tokenColors!, { scope: "comment", settings: { foreground: "#c1c7d0" } },
+  ...darkBase.tokenColors!, { scope: ["comment", "punctuation.definition.comment"], settings: { foreground: "#c1c7d0" } },
 ] };
 import parabunTs from "../src/grammars/parabun-ts.tmLanguage.json" with { type: "json" };
 import parabunTsx from "../src/grammars/parabun-tsx.tmLanguage.json" with { type: "json" };
