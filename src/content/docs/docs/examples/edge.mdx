@@ -1,55 +1,72 @@
 ---
 title: Edge example
-description: A Cloudflare Durable Object rate limiter in Para. Long-lived per-IP signals + a `when` block that logs the first request to cross the threshold (not every subsequent over-limit request).
+description: An in-memory Durable Object rate-limit demonstration with per-instance Para signals and one log per threshold crossing.
 ---
 
-Cloudflare Workers' `fetch` handlers are stateless — request → response, no long-lived state, no UI. There's no reactive work for Para to do there, and forcing it would just be ceremony. Where Para earns its keep on the edge is the **Durable Object**: a single instance per IP that lives across many requests, holding state Para's signals are built for.
+This example demonstrates reactive state in a Cloudflare Durable Object, with one object identity per IP. It allows the first 100 requests in a window and logs the first request that exceeds that limit.
 
-This page shows that Durable Object — the actual rate limiter logic. The `fetch` handler that calls into it is plain Workers code; a one-liner version is at the bottom for completeness, but it isn't where the Para syntax lives.
+**This is an in-memory demonstration.** An object can handle several requests while resident, but Cloudflare can discard its memory on hibernation, eviction, or restart. This example then starts a fresh counter and window. A production rate limiter that must enforce a window across restarts needs persistent storage; that is a different lifecycle contract. See [Durable Object lifecycle](https://developers.cloudflare.com/durable-objects/concepts/durable-object-lifecycle/).
+
+The Worker entry and Durable Object request method use ordinary JavaScript. Lexical Para signals live inside the constructor, where the request callback closes over them; `signal` is not used as a class-field modifier.
 
 ## src/limiter.pjs
 
 ```pjs
-export class RateLimiter {
-  signal count = 0;
-  signal windowStart = Date.now();
-  derived overLimit = count > 100;
+import { effect as observe, untrack } from "@lyku/para-signals";
 
+export class RateLimiter {
   constructor(state) {
-    this.state = state;
-    when overLimit {
-      console.log(`rate limit crossed: ${count} requests in window`);
-    }
+    signal count = 0;
+    signal windowStart = Date.now();
+    derived overLimit = count > 100;
+
+    let wasOverLimit = false;
+    observe(() => {
+      const isOverLimit = overLimit;
+      if (isOverLimit && !wasOverLimit) {
+        untrack(() => {
+          console.log(`rate limit crossed: ${count} requests in window`);
+          // First crossing: rate limit crossed: 101 requests in window
+        });
+      }
+      wasOverLimit = isOverLimit;
+    });
+
+    this.check = () => {
+      if (Date.now() - windowStart > 60_000) {
+        count = 0;
+        windowStart = Date.now();
+      }
+      count++;
+
+      return Response.json({
+        allowed: !overLimit,
+        remaining: Math.max(0, 100 - count),
+      });
+    };
   }
 
   async fetch(req) {
-    if (Date.now() - windowStart > 60_000) {
-      count = 0;
-      windowStart = Date.now();
-    }
-    count++;
-
-    return Response.json({
-      allowed: !overLimit,
-      remaining: Math.max(0, 100 - count),
-    });
+    return this.check();
   }
 }
 ```
 
 ### What's reactive and what isn't
 
-- **`signal count`** + **`signal windowStart`** — mutable cells holding per-IP state across many requests. Each request increments `count`; once a minute the window resets.
-- **`derived overLimit = count > 100`** — recomputes whenever `count` changes. Read-only; written using the `derived` keyword to make the intent explicit (writing `signal` here would auto-promote to the same shape, but `derived` says "you can't assign to this" at the declaration site).
-- **`when overLimit { ... }`** — fires once per false→true transition. Logs the first request that crosses the threshold; doesn't re-fire on every subsequent over-limit request until `count` drops back below 100 and rises again. This is the edge-triggered shape that's clumsy without language support — the alternative is hand-tracking the previous value or an unconditional `effect` that does its own diffing.
-
-The `fetch` method is plain JS — no Para sugar. That's fine: the per-call work isn't reactive, the cross-call state is. Putting the right tool at the right layer is the point.
+- `count` and `windowStart` belong to each resident object instance. The window resets on the first request more than 60 seconds after its start, rather than on a background timer.
+- `overLimit` is a lazy derived signal. Requests 1–100 are allowed; request 101 is rejected and logs the crossing. Further requests remain rejected without repeating the log until a new window begins.
+- `observe` aliases the published core `effect` API. `wasOverLimit` detects the false-to-true transition. `untrack` reads the count for logging without adding another dependency. This avoids the `when` helper that is bundled with Parabun but absent from npm `@lyku/para-signals@0.0.1-pre.4`.
+- The effect has the same lifetime as the instance and owns no timer or external resource. Storage is deliberately not added here; recreating the instance resets its state.
 
 ## The Worker entry that calls it
 
 The `fetch` handler that proxies requests through the Durable Object is plain Workers code; nothing reactive happens here, so it's plain JavaScript:
 
 ```pjs
+// src/index.pjs — Wrangler needs this named class export.
+export { RateLimiter } from "./limiter.pjs";
+
 export default {
   async fetch(req, env) {
     const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
@@ -59,11 +76,12 @@ export default {
     if (!allowed) {
       return new Response("rate limited", {
         status: 429,
-        headers: { "Cache-Control": "public, max-age=10", "Retry-After": "60" },
+        headers: { "Cache-Control": "no-store", "Retry-After": "60" },
       });
     }
     return Response.json({ ok: true, remaining }, {
-      headers: { "X-RateLimit-Remaining": String(remaining) },
+      headers: { "X-RateLimit-Remaining": String(remaining),
+        "Cache-Control": "no-store" },
     });
   },
 };
@@ -79,9 +97,11 @@ export default {
   "durable_objects": {
     "bindings": [{ "name": "RATE_LIMIT", "class_name": "RateLimiter" }]
   },
-  "migrations": [{ "tag": "v1", "new_classes": ["RateLimiter"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }]
 }
 ```
+
+This configuration creates a new SQLite-backed namespace. The example makes no storage writes, so its counters still reset when the instance is recreated. For an existing deployment, preserve its migration history.
 
 ## package.json
 
@@ -91,24 +111,27 @@ export default {
   "type": "module",
   "scripts": {
     "build": "parabun build src/index.pjs --target browser --outfile dist/index.js",
+    "dev": "parabun run build && wrangler dev",
     "deploy": "parabun run build && wrangler deploy"
   },
-  "dependencies": { "@lyku/para-signals": "*" },
+  "dependencies": { "@lyku/para-signals": "0.0.1-pre.4" },
   "devDependencies": { "wrangler": "^4" }
 }
 ```
 
 `--target browser` is correct for Workers — the V8 isolate runtime has web-platform globals but no Node APIs.
 
-## Build and deploy
+## Build and run locally
 
 ```bash
 parabun install
-parabun run deploy
+parabun run dev
 ```
 
-The output is standard JavaScript using `import "@lyku/para-signals"`. Wrangler bundles it like any other npm-using Worker.
+Use `curl http://localhost:8787` to exercise the local Worker. On a fresh object, the first response has `remaining: 99`; request 100 has `remaining: 0`; request 101 returns HTTP 429. For production publication, `parabun run deploy` is a separate step requiring your Cloudflare account.
 
-## TypeScript form
+The Parabun build bundles the published signals package into standard JavaScript. The entry exports both the Worker handler and `RateLimiter`, matching the Wrangler binding. The HTTP responses use `no-store` because the allowance depends on the caller and current window.
 
-If you prefer types, swap `src/limiter.pjs` for `src/limiter.pts`, declare the `Env` interface (`RATE_LIMIT: DurableObjectNamespace`), and type `state: DurableObjectState` on the class. Same compiled output either way.
+## Verification scope
+
+The `.pjs` source was compiled with Parabun `1.4.0-canary.1+117854cd6` ([release `parabun-117854cd62`](https://github.com/airgap/parabun/releases/tag/parabun-117854cd62)) and the published signals runtime above. Local tests with Miniflare `4.20260609.0` / workerd `1.20260609.1`, using the configured compatibility date, verified the named class binding, HTTP threshold behavior, independent IP state, one crossing log, and reset after runtime restart. Controlled-clock tests also cover the exact 60-second window boundary. These are local checks; production deployment and Cloudflare-managed eviction timing have not been tested.

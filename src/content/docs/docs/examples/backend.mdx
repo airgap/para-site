@@ -1,13 +1,13 @@
 ---
 title: Backend example
-description: A WebSocket server in Para with per-connection signals, an idle-timeout via a `when` block, and a server-wide reactive SSE stats endpoint. Runs on Node 18+.
+description: A WebSocket server in Para with per-connection signals, an idle timeout, and a server-wide reactive SSE stats endpoint. Runs as a long-lived Node service.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-A WebSocket server with per-connection reactive state, an idle-timeout implemented as a `when` block, and an HTTP `/stats` endpoint that streams server-wide counts as Server-Sent Events. Runs on Node 18+.
+A WebSocket server with per-connection reactive state, an idle timeout, and an HTTP `/stats` endpoint that streams server-wide counts as Server-Sent Events. Runs as a long-lived Node service.
 
-You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript superset). Both compile to identical output. The tabs below sync — pick one and the rest of the page follows.
+You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript superset). Both use the same runtime behavior. The tabs below sync — pick one and the rest of the page follows.
 
 ## Project layout
 
@@ -17,8 +17,7 @@ You can write this in either `.pts` (TypeScript superset) or `.pjs` (JavaScript 
 ```
 my-server/
 ├── src/server.pts
-├── package.json
-└── tsconfig.json
+└── package.json
 ```
 
 </TabItem>
@@ -40,6 +39,7 @@ my-server/
 
 ```pts
 import { createServer } from "node:http";
+import { effect as observe } from "@lyku/para-signals";
 import { WebSocketServer, type WebSocket } from "ws";
 
 signal totalConnections = 0;
@@ -53,14 +53,14 @@ const server = createServer((req, res) => {
     "cache-control": "no-cache",
   });
 
-  const stop = effect {
+  const stop = observe(() => {
     res.write(`data: ${JSON.stringify({
       active: totalConnections,
       messages: totalMessages,
     })}\n\n`);
-  };
+  });
 
-  req.on("close", () => stop());
+  res.on("close", stop);
 });
 
 const wss = new WebSocketServer({ server, path: "/ws" });
@@ -72,9 +72,10 @@ wss.on("connection", (ws: WebSocket) => {
 
   signal messages = 0;
   signal lastSeen = Date.now();
-  signal now      = Date.now() every 1_000;   // tick so `idle` recomputes
+  signal now      = Date.now();
   signal idle     = (now - lastSeen) > 60_000;
-  signal closed   = false;
+  let closed = false;
+  const tick = setInterval(() => { now = Date.now(); }, 1_000);
 
   ws.on("message", buf => {
     messages++;
@@ -85,19 +86,33 @@ wss.on("connection", (ws: WebSocket) => {
 
   ws.on("close", () => {
     closed = true;
-    now.stop();
+    clearInterval(tick);
+    stopIdle();
+    stopLog();
     totalConnections--;
   });
 
-  when idle && !closed {
-    console.log(`[${id}] idle 60s, closing`);
-    ws.close(1000, "idle timeout");
-  }
+  let wasIdle = false;
+  const stopIdle = observe(() => {
+    const isIdle = idle;
+    if (isIdle && !wasIdle && !closed) {
+      console.log(`[${id}] idle 60s, closing`);
+      ws.close(1000, "idle timeout");
+    }
+    wasIdle = isIdle;
+  });
 
-  effect { console.log(`[${id}] msgs=${messages} idle=${idle}`); }
+  const stopLog = observe(() => {
+    console.log(`[${id}] msgs=${messages} idle=${idle}`);
+    // First connection: [1] msgs=0 idle=false
+    // After its first message: [1] msgs=1 idle=false
+  });
 });
 
-server.listen(8080, () => console.log("listening on :8080"));
+const port = Number(process.env.PORT ?? 8080);
+server.listen(port, "127.0.0.1", () => {
+  console.log("listening", server.address());
+});
 ```
 
 </TabItem>
@@ -105,6 +120,7 @@ server.listen(8080, () => console.log("listening on :8080"));
 
 ```pjs
 import { createServer } from "node:http";
+import { effect as observe } from "@lyku/para-signals";
 import { WebSocketServer } from "ws";
 
 signal totalConnections = 0;
@@ -118,14 +134,14 @@ const server = createServer((req, res) => {
     "cache-control": "no-cache",
   });
 
-  const stop = effect {
+  const stop = observe(() => {
     res.write(`data: ${JSON.stringify({
       active: totalConnections,
       messages: totalMessages,
     })}\n\n`);
-  };
+  });
 
-  req.on("close", () => stop());
+  res.on("close", stop);
 });
 
 const wss = new WebSocketServer({ server, path: "/ws" });
@@ -137,9 +153,10 @@ wss.on("connection", ws => {
 
   signal messages = 0;
   signal lastSeen = Date.now();
-  signal now      = Date.now() every 1_000;   // tick so `idle` recomputes
+  signal now      = Date.now();
   signal idle     = (now - lastSeen) > 60_000;
-  signal closed   = false;
+  let closed = false;
+  const tick = setInterval(() => { now = Date.now(); }, 1_000);
 
   ws.on("message", buf => {
     messages++;
@@ -150,19 +167,33 @@ wss.on("connection", ws => {
 
   ws.on("close", () => {
     closed = true;
-    now.stop();
+    clearInterval(tick);
+    stopIdle();
+    stopLog();
     totalConnections--;
   });
 
-  when idle && !closed {
-    console.log(`[${id}] idle 60s, closing`);
-    ws.close(1000, "idle timeout");
-  }
+  let wasIdle = false;
+  const stopIdle = observe(() => {
+    const isIdle = idle;
+    if (isIdle && !wasIdle && !closed) {
+      console.log(`[${id}] idle 60s, closing`);
+      ws.close(1000, "idle timeout");
+    }
+    wasIdle = isIdle;
+  });
 
-  effect { console.log(`[${id}] msgs=${messages} idle=${idle}`); }
+  const stopLog = observe(() => {
+    console.log(`[${id}] msgs=${messages} idle=${idle}`);
+    // First connection: [1] msgs=0 idle=false
+    // After its first message: [1] msgs=1 idle=false
+  });
 });
 
-server.listen(8080, () => console.log("listening on :8080"));
+const port = Number(process.env.PORT ?? 8080);
+server.listen(port, "127.0.0.1", () => {
+  console.log("listening", server.address());
+});
 ```
 
 </TabItem>
@@ -170,10 +201,10 @@ server.listen(8080, () => console.log("listening on :8080"));
 
 ### Notes on the source
 
-- Module-level `signal` declarations (`totalConnections`, `totalMessages`) are server-wide state. Any tracked context that reads them recomputes when they change.
-- `signal idle = (Date.now() - lastSeen) > 60_000` is a derived signal; it recomputes when `lastSeen` changes. The 5-second `setInterval` re-writes `lastSeen` to its current value to force re-evaluation, since the elapsed time depends on wall-clock state that signals don't observe directly.
-- `when idle && !closed { ... }` fires once on the false→true transition. The 5-second tick that keeps re-evaluating `idle` does not re-fire the body unless the predicate transitions.
-- `effect { res.write(...) }` inside the `/stats` handler creates one effect per connected client. The effect returns a stop function, which the request's `close` handler calls to detach.
+- Module-level signals count connections and messages in this one server process. Each WebSocket has its own message count and idle clock.
+- The one-second timer updates `now`. The derived `idle` becomes true on the first tick more than 60 seconds after the last message. `wasIdle` makes the close action run only on a false-to-true transition.
+- `observe` is an alias for the published core `effect` function. It runs immediately and returns a disposer. The SSE response disposes its effect on close; each WebSocket clears its timer and disposes both effects on close.
+- The npm runtime used by Node does not export Parabun's `when` or `signalEvery` helpers. This example therefore uses the core effect API and a normal timer while retaining lexical `signal` declarations. An `effect { ... }` statement cannot be assigned to a variable to capture a disposer.
 
 ## package.json
 
@@ -185,12 +216,12 @@ server.listen(8080, () => console.log("listening on :8080"));
   "name": "my-server",
   "type": "module",
   "scripts": {
-    "build": "parabun build src/server.pts --target node --outfile dist/server.js",
+    "build": "parabun build src/server.pts --target node --external ws --outfile dist/server.js",
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "ws": "^8",
-    "@lyku/para-signals": "*", "@lyku/para-parallel": "*"
+    "ws": "8.21.0",
+    "@lyku/para-signals": "0.0.1-pre.4"
   },
   "devDependencies": { "@types/ws": "*" }
 }
@@ -204,12 +235,12 @@ server.listen(8080, () => console.log("listening on :8080"));
   "name": "my-server",
   "type": "module",
   "scripts": {
-    "build": "parabun build src/server.pjs --target node --outfile dist/server.js",
+    "build": "parabun build src/server.pjs --target node --external ws --outfile dist/server.js",
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "ws": "^8",
-    "@lyku/para-signals": "*", "@lyku/para-parallel": "*"
+    "ws": "8.21.0",
+    "@lyku/para-signals": "0.0.1-pre.4"
   }
 }
 ```
@@ -217,7 +248,7 @@ server.listen(8080, () => console.log("listening on :8080"));
 </TabItem>
 </Tabs>
 
-The `parabun build --target node` invocation emits standard `@lyku/para-*` imports that Node resolves through `node_modules` like any other npm package — no bundler plugin needed.
+The build bundles the published signals runtime and leaves `ws` external. Keep the installed production dependencies alongside `dist/server.js`. No `@lyku/para-parallel` dependency is needed.
 
 ## Build and run
 
@@ -227,4 +258,8 @@ parabun run build
 node dist/server.js
 ```
 
-The output is a single bundled JS file. For Lambda, upload `dist/server.js` as the handler.
+Open `http://127.0.0.1:8080/stats` to watch SSE counts and connect a WebSocket client to `ws://127.0.0.1:8080/ws`. `PORT` changes the listening port. The example binds to loopback for local development; configure the listening interface and your reverse proxy when hosting it.
+
+This is a long-lived Node process with open WebSocket/SSE connections and in-memory counters. Deploy it to a host that keeps that process running. It is not an AWS Lambda handler: Lambda needs an invocation handler and a separate WebSocket/event architecture.
+
+Verified with Parabun `1.4.0-canary.1+117854cd6` ([release `parabun-117854cd62`](https://github.com/airgap/parabun/releases/tag/parabun-117854cd62)), Node `26.0.0`, and the dependency versions above. Both language forms passed local HTTP/SSE and WebSocket tests. Controlled-clock checks verify idle timeout relative to the last message and cleanup. The install guide tracks newer releases; these results do not certify every compiler version.
